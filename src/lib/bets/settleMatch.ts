@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 import { gradeBet } from "@/lib/engine/grade";
 import { sseHub } from "@/lib/sse";
@@ -12,6 +12,9 @@ function err(message: string, httpStatus = 400, code = "error") {
  *
  * For live bets the effective score is (final − at-bet); Math.max(eff, 0) clamps
  * any VAR-reversal negative effective score to zero as documented.
+ * Clamping is symmetric within a (line, at-bet-score) cohort — fav and dog bettors
+ * of the same cohort always get mirrored outcomes; only cross-cohort asymmetry
+ * exists, which the house absorbs.
  *
  * INVARIANT: placeBet caps stakes at MAX_STAKE (1e9) and gradeBet accepts up to 1e12,
  * so grading can never throw on stake size. We do NOT add defensive wrapping here;
@@ -40,7 +43,8 @@ function gradeMatchTickets(
     )
     .all();
   for (const t of tickets) {
-    const line = lines.get(t.lineId)!;
+    const line = lines.get(t.lineId);
+    if (!line) throw err("bet/line match mismatch", 500, "data_integrity");
     const effHome = home - t.scoreHomeAtBet;
     const effAway = away - t.scoreAwayAtBet;
     const effFav = line.favSide === "home" ? effHome : effAway;
@@ -48,6 +52,9 @@ function gradeMatchTickets(
     // Clamp to 0: a live bet placed when the score was higher than the final
     // (e.g. after VAR reversal) would produce a negative effective score.
     // The documented behavior is to treat it as 0 (no goals on that side since bet).
+    // Clamping is symmetric within a (line, at-bet-score) cohort — fav and dog bettors
+    // of the same cohort always get mirrored outcomes; only cross-cohort asymmetry
+    // exists, which the house absorbs.
     const r = gradeBet({
       side: t.side,
       ballQ: line.ballQ,
@@ -66,8 +73,9 @@ function gradeMatchTickets(
 /**
  * Close the match day if every match on that day is now finished.
  * Idempotent: will not re-close an already-closed or settled day.
+ * Returns true if the day transitioned to 'closed' in this call, false otherwise.
  */
-function maybeCloseDay(tx: Db, matchDay: string, at: string) {
+function maybeCloseDay(tx: Db, matchDay: string, at: string): boolean {
   const unfinished = tx
     .select()
     .from(schema.matches)
@@ -78,7 +86,7 @@ function maybeCloseDay(tx: Db, matchDay: string, at: string) {
       ),
     )
     .all();
-  if (unfinished.length > 0) return;
+  if (unfinished.length > 0) return false;
   let day = tx
     .select()
     .from(schema.matchDays)
@@ -95,9 +103,9 @@ function maybeCloseDay(tx: Db, matchDay: string, at: string) {
       .set({ status: "closed", closedAt: at })
       .where(eq(schema.matchDays.id, day.id))
       .run();
-    // SSE broadcast is intentionally outside the transaction (consistent with postLine).
-    // Called from confirmFinalScore after commit — see that function for the broadcast.
+    return true;
   }
+  return false;
 }
 
 /**
@@ -109,7 +117,9 @@ function maybeCloseDay(tx: Db, matchDay: string, at: string) {
  *   not_found        — match does not exist
  *   already_finished — match is already finished; use correctScore instead
  *
- * SSE broadcast ('match_final') fires after the transaction commits.
+ * SSE broadcasts fire after the transaction commits:
+ *   'match_final'  — always
+ *   'day_closed'   — only when this call transitions the day to closed
  */
 export function confirmFinalScore(
   db: Db,
@@ -129,6 +139,8 @@ export function confirmFinalScore(
   ) {
     throw err("invalid score: must be integers in 0–99", 400, "bad_score");
   }
+  let dayClosed = false;
+  let matchDay = "";
   db.transaction((tx) => {
     const m = tx
       .select()
@@ -142,6 +154,7 @@ export function confirmFinalScore(
         400,
         "already_finished",
       );
+    matchDay = m.matchDay;
     tx.update(schema.matches)
       .set({
         status: "finished",
@@ -168,7 +181,16 @@ export function confirmFinalScore(
         .where(eq(schema.lines.id, l.id))
         .run();
     gradeMatchTickets(tx as unknown as Db, matchId, home, away, at);
-    maybeCloseDay(tx as unknown as Db, m.matchDay, at);
+    dayClosed = maybeCloseDay(tx as unknown as Db, m.matchDay, at);
+    tx.insert(schema.auditLog)
+      .values({
+        actorId: adminId,
+        action: "final_score",
+        subject: `match:${matchId}`,
+        detail: `${home}-${away}`,
+        at,
+      })
+      .run();
   });
   // Broadcast outside the transaction (consistent with postLine convention)
   sseHub.broadcast("match_final", {
@@ -176,17 +198,23 @@ export function confirmFinalScore(
     homeScore: home,
     awayScore: away,
   });
+  if (dayClosed) {
+    sseHub.broadcast("day_closed", { date: matchDay });
+  }
 }
 
 /**
  * Correct a previously confirmed final score and re-grade all non-void tickets.
  *
  * Blocked once the match day is settled (admin must reverse settlement first).
+ * Also blocked if any non-void ticket on this match has already been paid out
+ * (settlementId IS NOT NULL) — correction is unsafe until Task 17 lands.
  *
  * err codes:
- *   bad_score    — invalid score values
- *   not_finished — match is not finished (use confirmFinalScore)
- *   day_settled  — match day is already settled; correction is blocked
+ *   bad_score       — invalid score values
+ *   not_finished    — match is not finished (use confirmFinalScore)
+ *   day_settled     — match day is already settled; correction is blocked
+ *   tickets_settled — one or more tickets have been paid out; correction is blocked
  *
  * SSE broadcast ('match_final') fires after the transaction commits.
  */
@@ -226,6 +254,25 @@ export function correctScore(
         "match day already settled — correction blocked",
         400,
         "day_settled",
+      );
+    // Reject if any non-void ticket on this match has already been paid out.
+    // This closes the partial-payout window before Task 17 lands.
+    const paidTickets = tx
+      .select()
+      .from(schema.bets)
+      .where(
+        and(
+          eq(schema.bets.matchId, matchId),
+          ne(schema.bets.status, "void"),
+          isNotNull(schema.bets.settlementId),
+        ),
+      )
+      .all();
+    if (paidTickets.length > 0)
+      throw err(
+        "tickets already settled — correction blocked",
+        409,
+        "tickets_settled",
       );
     tx.update(schema.matches)
       .set({ homeScore: home, awayScore: away })

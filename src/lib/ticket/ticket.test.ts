@@ -47,3 +47,27 @@ it('builds the verification URL', () => {
   const { v, sig } = signTicket('WB-7K3F9')
   expect(ticketUrl('WB-7K3F9')).toBe(`https://bet.example.com/t/WB-7K3F9?v=${v}&sig=${sig}`)
 })
+
+it('fails closed on bad versions and malformed sigs', () => {
+  const { sig } = signTicket('WB-7K3F9')
+  for (const v of [0, -1, 1.5, NaN]) expect(verifyTicketSig('WB-7K3F9', v as number, sig)).toBe(false)
+  for (const bad of ['', sig.slice(0, 21), sig + 'A', 'é'.repeat(11)]) expect(verifyTicketSig('WB-7K3F9', 2, bad)).toBe(false)
+})
+
+it('signTicket throws on unknown versions', () => {
+  expect(() => signTicket('WB-X', 0)).toThrow()
+  expect(() => signTicket('WB-X', 99)).toThrow()
+})
+
+it('throws at call time when env missing', () => {
+  delete process.env.TICKET_SECRETS
+  expect(() => signTicket('WB-X')).toThrow(/TICKET_SECRETS/)
+  process.env.TICKET_SECRETS = 'secret-v1,secret-v2'
+  delete process.env.APP_ORIGIN
+  expect(() => ticketUrl('WB-X')).toThrow(/APP_ORIGIN/)
+})
+
+it('parses messy secret lists', () => {
+  process.env.TICKET_SECRETS = ' a , ,b ,'
+  expect(signTicket('WB-X').v).toBe(2)
+})

@@ -48,19 +48,31 @@ beforeEach(() => {
   const line = postLine(
     db,
     1,
-    { matchId: 1, favSide: "home", ballQ: 2, priceC: 90 },
+    { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
     NOW,
   );
   placeBet(
     db,
     2,
-    { matchId: 1, lineVersion: line.version, side: "fav", stakeMmk: 100_000 },
+    {
+      matchId: 1,
+      market: "ah",
+      lineVersion: line.version,
+      side: "fav",
+      stakeMmk: 100_000,
+    },
     NOW,
   ); // Zaw fav
   placeBet(
     db,
     3,
-    { matchId: 1, lineVersion: line.version, side: "dog", stakeMmk: 200_000 },
+    {
+      matchId: 1,
+      market: "ah",
+      lineVersion: line.version,
+      side: "dog",
+      stakeMmk: 200_000,
+    },
     NOW,
   ); // Thiri dog
   confirmFinalScore(db, 1, 1, 2, 0, NOW); // BRA -0.5 covers → Zaw +90,000, Thiri −200,000

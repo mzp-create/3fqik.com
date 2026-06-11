@@ -26,8 +26,9 @@ export function placeBet(
   playerId: number,
   input: {
     matchId: number;
+    market: "ah" | "ou";
     lineVersion: number;
-    side: "fav" | "dog";
+    side: "fav" | "dog" | "over" | "under";
     stakeMmk: number;
   },
   at: string,
@@ -43,6 +44,14 @@ export function placeBet(
       "bad_stake",
     );
 
+  // Validate side-market pairing: fav/dog ⇔ ah, over/under ⇔ ou
+  const ahSides = new Set<string>(["fav", "dog"]);
+  const ouSides = new Set<string>(["over", "under"]);
+  if (input.market === "ah" && !ahSides.has(input.side))
+    throw err("side must be 'fav' or 'dog' for ah market", 400, "bad_side");
+  if (input.market === "ou" && !ouSides.has(input.side))
+    throw err("side must be 'over' or 'under' for ou market", 400, "bad_side");
+
   // better-sqlite3 transactions are synchronous — drizzle exposes db.transaction
   return db.transaction((tx) => {
     const match = tx
@@ -54,7 +63,8 @@ export function placeBet(
     if (match.status === "finished")
       throw err("match finished", 400, "match_finished");
 
-    const line = latestLine(tx as unknown as Db, input.matchId);
+    // Version check against the specific market's latest line
+    const line = latestLine(tx as unknown as Db, input.matchId, input.market);
     if (!line || line.status === "closed")
       throw err("betting closed for this match", 400, "betting_closed");
     if (line.status === "suspended")
@@ -81,6 +91,7 @@ export function placeBet(
       throw err("match day is closed for betting", 409, "betting_closed");
 
     // limits: carve-out vs daily pool (spec §8)
+    // Limits span BOTH markets for a match — stakeOn sums by matchId regardless of market.
     // ATOMICITY WARNING: stakeOn uses synchronous SQLite aggregates — no await
     const stakeOn = (matchIds: number[]) =>
       matchIds.length === 0

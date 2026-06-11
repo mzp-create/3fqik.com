@@ -56,13 +56,13 @@ function bet(matchId: number, side: "fav" | "dog", stake: number) {
   const line = postLine(
     db,
     1,
-    { matchId, favSide: "home", ballQ: 3, priceC: 92 },
+    { matchId, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
     NOW,
   );
   return placeBet(
     db,
     2,
-    { matchId, lineVersion: line.version, side, stakeMmk: stake },
+    { matchId, market: "ah", lineVersion: line.version, side, stakeMmk: stake },
     NOW,
   );
 }
@@ -297,4 +297,148 @@ it("day_closed broadcast: fires exactly once with correct date when last match g
   } finally {
     unsub();
   }
+});
+
+// ── O2 NEW TESTS ─────────────────────────────────────────────────────────────
+
+it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", () => {
+  /*
+   * Setup:
+   *   Match 1 (BRA vs MEX), matchDay 2026-06-12
+   *   AH line:  BRA home fav, ballQ=3 (0.75 handicap), priceC=92 (p=0.92 > 0)
+   *   OU line:  ballQ=10 (2.5 goals × 4), priceC=90 (p=0.90 > 0)
+   *
+   * Bets:
+   *   Bet A — ah fav, stake 100,000 MMK, placed pre-match (score 0-0)
+   *   Bet B — ou over, stake 200,000 MMK, placed live at score 1-0
+   *   Bet C — ou under, stake 150,000 MMK, placed pre-match (score 0-0)
+   *
+   * Final score: BRA 2 – 1 MEX
+   *
+   * Hand math:
+   *
+   * Bet A (AH fav, pre-match, scoreAtBet 0-0):
+   *   effHome = 2−0 = 2, effAway = 1−0 = 1
+   *   favSide = home → effFav=2, effDog=1
+   *   ballQ=3 (quarter line → halves at ballQ=2 and ballQ=4):
+   *     half1 (ballQ=2, 0.5 ball): favMargin = 2−1−0.5 = 0.5 > 0 → win; half-net = 50k×0.92 = 46,000
+   *     half2 (ballQ=4, 1.0 ball): favMargin = 2−1−1.0 = 0.0 = push;  half-net = 0
+   *   combined: half_won, net = +46,000
+   *
+   * Bet B (OU over, live at 1-0, scoreAtBet home=1 away=0):
+   *   effHome = 2−1 = 1, effAway = 1−0 = 1
+   *   effTotal = 1+1 = 2; totalQ = 4×2 = 8; ballQ = 10
+   *   over margin = totalQ − ballQ = 8−10 = −2 < 0 → lose
+   *   p = 90 > 0: lose → net = −200,000
+   *   status: lost, net = −200,000
+   *
+   * Bet C (OU under, pre-match, scoreAtBet 0-0):
+   *   effHome = 2−0 = 2, effAway = 1−0 = 1
+   *   effTotal = 2+1 = 3; totalQ = 4×3 = 12; ballQ = 10
+   *   under margin = ballQ − totalQ = 10−12 = −2 < 0 → lose
+   *   p = 90 > 0: lose → net = −150,000
+   *   status: lost, net = −150,000
+   */
+
+  // Post AH line pre-match
+  const ahLine = postLine(
+    db,
+    1,
+    { matchId: 1, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    NOW,
+  );
+
+  // Post OU line pre-match (ballQ=10 = 2.5 goals × 4)
+  const ouLine = postLine(
+    db,
+    1,
+    { matchId: 1, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    NOW,
+  );
+
+  // Bet A: ah fav pre-match (score 0-0)
+  const betA = placeBet(
+    db,
+    2,
+    {
+      matchId: 1,
+      market: "ah",
+      lineVersion: ahLine.version,
+      side: "fav",
+      stakeMmk: 100_000,
+    },
+    NOW,
+  );
+  expect(betA.scoreHomeAtBet).toBe(0);
+  expect(betA.scoreAwayAtBet).toBe(0);
+
+  // Bet C: ou under pre-match (score 0-0) — placed before going live
+  const betC = placeBet(
+    db,
+    2,
+    {
+      matchId: 1,
+      market: "ou",
+      lineVersion: ouLine.version,
+      side: "under",
+      stakeMmk: 150_000,
+    },
+    NOW,
+  );
+  expect(betC.scoreHomeAtBet).toBe(0);
+  expect(betC.scoreAwayAtBet).toBe(0);
+
+  // Set match live at 1-0 before placing Bet B
+  db.update(schema.matches)
+    .set({ status: "live", homeScore: 1, awayScore: 0 })
+    .where(eq(schema.matches.id, 1))
+    .run();
+
+  // Bet B: ou over placed live at 1-0 (score snapshot 1-0)
+  const betB = placeBet(
+    db,
+    2,
+    {
+      matchId: 1,
+      market: "ou",
+      lineVersion: ouLine.version,
+      side: "over",
+      stakeMmk: 200_000,
+    },
+    NOW,
+  );
+  expect(betB.scoreHomeAtBet).toBe(1);
+  expect(betB.scoreAwayAtBet).toBe(0);
+
+  // Confirm final: BRA 2 – 1 MEX
+  confirmFinalScore(db, 1, 1, 2, 1, NOW);
+
+  const gA = db
+    .select()
+    .from(schema.bets)
+    .where(eq(schema.bets.id, betA.id))
+    .get()!;
+  const gB = db
+    .select()
+    .from(schema.bets)
+    .where(eq(schema.bets.id, betB.id))
+    .get()!;
+  const gC = db
+    .select()
+    .from(schema.bets)
+    .where(eq(schema.bets.id, betC.id))
+    .get()!;
+
+  // Bet A: AH fav pre-match → half_won, net = +46,000
+  // (half at 0.5: wins 46k; half at 1.0: push)
+  expect(gA.status).toBe("half_won");
+  expect(gA.netMmk).toBe(46_000);
+
+  // Bet B: OU over live at 1-0 → effective 2 goals < 2.5 → lost, net = −200,000
+  expect(gB.status).toBe("lost");
+  expect(gB.netMmk).toBe(-200_000);
+
+  // Bet C: OU under pre-match → effective 3 goals (full match) > 2.5 → lost, net = −150,000
+  expect(gC.status).toBe("lost");
+  expect(gC.netMmk).toBe(-150_000);
 });

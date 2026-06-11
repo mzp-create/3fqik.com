@@ -13,14 +13,21 @@ export async function POST(req: Request) {
     if (typeof body !== "object" || body === null)
       return fail("bad_request", "invalid body");
 
-    // Body validation: matchId integer, lineVersion integer, side 'fav'|'dog', stakeMmk integer
-    const { matchId, lineVersion, side, stakeMmk } = body;
+    // Body validation: matchId integer, market 'ah'|'ou', lineVersion integer,
+    // side widened to fav/dog/over/under (pairing validated in placeBet), stakeMmk integer
+    const { matchId, market, lineVersion, side, stakeMmk } = body;
     if (!Number.isInteger(matchId) || matchId <= 0)
       return fail("bad_request", "matchId must be a positive integer");
+    if (market !== "ah" && market !== "ou")
+      return fail("bad_request", 'market must be "ah" or "ou"');
     if (!Number.isInteger(lineVersion) || lineVersion <= 0)
       return fail("bad_request", "lineVersion must be a positive integer");
-    if (side !== "fav" && side !== "dog")
-      return fail("bad_request", 'side must be "fav" or "dog"');
+    const validSides = new Set(["fav", "dog", "over", "under"]);
+    if (!validSides.has(side))
+      return fail(
+        "bad_request",
+        'side must be "fav", "dog", "over", or "under"',
+      );
     if (
       !Number.isInteger(stakeMmk) ||
       stakeMmk < MIN_STAKE ||
@@ -34,7 +41,7 @@ export async function POST(req: Request) {
     const bet = placeBet(
       getDb(),
       me.id,
-      { matchId, lineVersion, side, stakeMmk },
+      { matchId, market, lineVersion, side, stakeMmk },
       nowIso(),
     );
     return ok({ ...bet, qrUrl: ticketUrl(bet.ticketNo) });
@@ -47,7 +54,7 @@ export async function GET() {
     const db = getDb();
 
     // Join bets → lines → matches to provide rich row context for Task 22's UI needs.
-    // Returns each bet with: match {homeTeam, awayTeam, stage}, line {favSide, ballQ, priceC},
+    // Returns each bet with: match {homeTeam, awayTeam, stage}, line {favSide, ballQ, priceC, market},
     // playerName (from session player's displayName), and qrUrl.
     const rows = db
       .select({
@@ -76,6 +83,7 @@ export async function GET() {
           favSide: schema.lines.favSide,
           ballQ: schema.lines.ballQ,
           priceC: schema.lines.priceC,
+          market: schema.lines.market,
         },
       })
       .from(schema.bets)

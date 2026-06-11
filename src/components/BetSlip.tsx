@@ -56,53 +56,79 @@ export function BetSlip({
   }
 
   return (
-    <div className="fixed inset-0 z-10 bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-10 bg-ink/40" onClick={onClose}>
       <div
-        className="fixed bottom-0 left-0 right-0 mx-auto max-w-md rounded-t-2xl bg-white p-4"
+        className="fixed bottom-0 left-0 right-0 mx-auto max-w-md rounded-t-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold">
-          {pickLabel(line, slip.match, slip.side)}
-        </h2>
-        {slip.match.status === "live" && (
-          <p className="text-sm text-red-600">
-            {t.scoreNow}: {slip.match.homeScore}–{slip.match.awayScore} ·{" "}
-            {t.liveNote}
-          </p>
-        )}
-        <input
-          className="my-3 w-full rounded-xl border p-4 text-xl"
-          inputMode="numeric"
-          value={mmk(stake)}
-          onChange={(e) =>
-            setStake(Number(e.target.value.replace(/\D/g, "")) || 0)
-          }
-        />
-        <div className="flex flex-wrap gap-2">
-          {CHIPS.map((c) => (
-            <button
-              key={c}
-              className="rounded-lg bg-gray-100 px-3 py-2 text-sm"
-              onClick={() => setStake(c)}
-            >
-              {c >= 1_000_000 ? `${c / 1_000_000}M` : `${c / 1_000}k`}
-            </button>
-          ))}
+        {/* Drag handle */}
+        <div className="flex justify-center pb-1 pt-3">
+          <div className="h-1 w-10 rounded-full bg-ink/20" />
         </div>
-        <div className="my-3 rounded-lg bg-gray-50 p-3 text-sm leading-6">
-          {t.outWin}: <b className="text-green-700">{signedMmk(p.win)}</b> ·{" "}
-          {t.outHalfWin}: {signedMmk(p.halfWin)}
-          <br />
-          {t.outLose}: <b className="text-red-600">{signedMmk(-p.lose)}</b> ·{" "}
-          {t.outHalfLose}: {signedMmk(-p.halfLose)} · {t.outPush}: 0
+
+        <div className="p-4 pb-8">
+          {/* Pick title */}
+          <h2 className="font-display text-lg text-ink">
+            {pickLabel(line, slip.match, slip.side)}
+          </h2>
+          {slip.match.status === "live" && (
+            <p className="text-sm text-ca">
+              {t.scoreNow}: {slip.match.homeScore}–{slip.match.awayScore} ·{" "}
+              {t.liveNote}
+            </p>
+          )}
+
+          {/* Stake input */}
+          <input
+            className="font-display my-3 w-full rounded-lg border border-ink/20 bg-white p-4 text-2xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+            inputMode="numeric"
+            value={mmk(stake)}
+            onChange={(e) =>
+              setStake(Number(e.target.value.replace(/\D/g, "")) || 0)
+            }
+          />
+
+          {/* Chips */}
+          <div className="flex flex-wrap gap-2">
+            {CHIPS.map((c) => (
+              <button
+                key={c}
+                className="rounded-full border border-ink/20 px-3 py-1.5 text-sm font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                onClick={() => setStake(c)}
+              >
+                {c >= 1_000_000 ? `${c / 1_000_000}M` : `${c / 1_000}k`}
+              </button>
+            ))}
+          </div>
+
+          {/* 5-outcome preview — 2-col grid */}
+          <div className="my-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-canvas p-3 text-sm leading-6">
+            <span className="text-ink/50">{t.outWin}</span>
+            <span className="font-semibold text-mx">{signedMmk(p.win)}</span>
+            <span className="text-ink/50">{t.outHalfWin}</span>
+            <span className="font-semibold text-mx">
+              {signedMmk(p.halfWin)}
+            </span>
+            <span className="text-ink/50">{t.outPush}</span>
+            <span className="font-semibold text-gray-500">0</span>
+            <span className="text-ink/50">{t.outHalfLose}</span>
+            <span className="font-semibold text-ca">
+              {signedMmk(-p.halfLose)}
+            </span>
+            <span className="text-ink/50">{t.outLose}</span>
+            <span className="font-semibold text-ca">{signedMmk(-p.lose)}</span>
+          </div>
+
+          {error && <p className="mb-2 text-center text-sm text-ca">{error}</p>}
+
+          {/* CONFIRM — bg-mx (placing money = green) */}
+          <button
+            className="w-full rounded-lg bg-mx p-4 text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+            onClick={confirm}
+          >
+            {t.confirmBet}
+          </button>
         </div>
-        {error && <p className="mb-2 text-center text-red-600">{error}</p>}
-        <button
-          className="w-full rounded-xl bg-green-700 p-4 text-lg font-bold text-white"
-          onClick={confirm}
-        >
-          {t.confirmBet}
-        </button>
       </div>
     </div>
   );

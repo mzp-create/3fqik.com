@@ -32,10 +32,33 @@ function formatMmt(isoStr: string): string {
   }).format(new Date(isoStr));
 }
 
+/** Stamp color based on ticket status */
+function stampClasses(status: string): string {
+  if (status === "won" || status === "half_won") {
+    return "border-mx text-mx";
+  }
+  if (status === "lost" || status === "half_lost") {
+    return "border-ca text-ca";
+  }
+  return "border-gray-400 text-gray-400";
+}
+
+/** Stamp label — shown only for graded tickets */
+function stampLabel(status: string): string | null {
+  if (status === "won") return "WON";
+  if (status === "half_won") return "½ WON";
+  if (status === "lost") return "LOST";
+  if (status === "half_lost") return "½ LOST";
+  if (status === "push") return "PUSH";
+  if (status === "void") return "VOID";
+  return null;
+}
+
 export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
   const { t } = useT();
   const [qr, setQr] = useState("");
   const [qrError, setQrError] = useState(false);
+  const stamp = stampLabel(b.status);
 
   useEffect(() => {
     QRCode.toDataURL(b.qrUrl, { width: 160 })
@@ -55,9 +78,10 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, 360, canvasHeight);
       ctx.fillStyle = "#000";
-      ctx.font = "bold 22px monospace";
+      // Ticket number larger/bolder for PNG
+      ctx.font = "bold 28px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(b.ticketNo, 180, 40);
+      ctx.fillText(b.ticketNo, 180, 44);
       ctx.font = "15px sans-serif";
       ctx.textAlign = "left";
       const rows: [string, string][] = [
@@ -96,35 +120,57 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
 
   return (
     <div>
-      <div className="rounded-xl border-2 border-dashed border-gray-500 p-4 text-center">
-        <p className="text-xs text-gray-400">
-          WORLDBET2026 · {t.ticket.toUpperCase()}
-        </p>
-        <p className="text-2xl font-bold tracking-widest">{b.ticketNo}</p>
-        <hr className="my-2" />
-        <dl className="text-left text-sm leading-7">
-          <Row k={t.player} v={b.playerName} />
-          <Row
-            k={t.match}
-            v={`${b.match.homeTeam} vs ${b.match.awayTeam} (${b.match.stage})`}
-          />
-          <Row k={t.pick} v={pickLabel(b.line, b.match, b.side)} />
-          <Row k={t.stake} v={`${mmk(b.stakeMmk)} MMK`} />
-          <Row k={t.scoreAtBet} v={`${b.scoreHomeAtBet}–${b.scoreAwayAtBet}`} />
-          <Row k={t.placed} v={formatMmt(b.placedAt)} />
-          <Row k={t.statusLbl} v={t[statusKey(b.status)]} />
-          {b.netMmk != null && (
-            <Row k={t.net} v={`${signedMmk(b.netMmk)} MMK`} />
-          )}
-        </dl>
-        {!qrError && qr && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={qr} alt="QR" className="mx-auto mt-2 h-40 w-40" />
+      {/* Event-ticket card */}
+      <div className="relative overflow-hidden rounded-xl border border-dashed border-ink/30 bg-white">
+        {/* Triband top bar */}
+        <div className="triband w-full" />
+
+        {/* Stamp overlay for graded tickets */}
+        {stamp && (
+          <div
+            className={`absolute right-3 top-6 rotate-[-8deg] rounded border-2 px-3 py-1 font-display text-sm uppercase opacity-80 ${stampClasses(b.status)}`}
+          >
+            {stamp}
+          </div>
         )}
-        <p className="text-xs text-gray-400">{t.scanToVerify}</p>
+
+        <div className="p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-ink/40">
+            WORLDBET<span className="font-display">26</span> ·{" "}
+            {t.ticket.toUpperCase()}
+          </p>
+          <p className="font-display mt-1 text-3xl tracking-wider text-ink">
+            {b.ticketNo}
+          </p>
+          <hr className="my-3 border-dashed border-ink/20" />
+          <dl className="text-left text-sm leading-7">
+            <Row k={t.player} v={b.playerName} />
+            <Row
+              k={t.match}
+              v={`${b.match.homeTeam} vs ${b.match.awayTeam} (${b.match.stage})`}
+            />
+            <Row k={t.pick} v={pickLabel(b.line, b.match, b.side)} />
+            <Row k={t.stake} v={`${mmk(b.stakeMmk)} MMK`} />
+            <Row
+              k={t.scoreAtBet}
+              v={`${b.scoreHomeAtBet}–${b.scoreAwayAtBet}`}
+            />
+            <Row k={t.placed} v={formatMmt(b.placedAt)} />
+            <Row k={t.statusLbl} v={t[statusKey(b.status)]} />
+            {b.netMmk != null && (
+              <Row k={t.net} v={`${signedMmk(b.netMmk)} MMK`} />
+            )}
+          </dl>
+          {!qrError && qr && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={qr} alt="QR" className="mx-auto mt-3 h-40 w-40" />
+          )}
+          <p className="mt-2 text-xs text-ink/40">{t.scanToVerify}</p>
+        </div>
       </div>
+
       <button
-        className="mt-2 w-full rounded-xl bg-gray-800 p-3 font-semibold text-white disabled:opacity-40"
+        className="mt-2 w-full rounded-lg bg-ink p-3 font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us disabled:opacity-40"
         onClick={save}
         disabled={qrError}
       >
@@ -137,8 +183,8 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-gray-500">{k}</dt>
-      <dd className="font-medium">{v}</dd>
+      <dt className="text-ink/50">{k}</dt>
+      <dd className="font-medium text-ink">{v}</dd>
     </div>
   );
 }

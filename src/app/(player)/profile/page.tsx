@@ -61,11 +61,18 @@ export default function ProfilePage() {
 
   return (
     <main className="mx-auto max-w-sm p-6">
-      <h1 className="mb-6 text-2xl font-bold">{t.changePin}</h1>
+      {/* Section header */}
+      <div className="mb-6 flex items-center gap-2">
+        <div
+          className="triband-skew"
+          style={{ height: "14px", width: "4px" }}
+        />
+        <h1 className="text-xl font-bold text-ink">{t.changePin}</h1>
+      </div>
 
       <div className="mb-6 flex flex-col gap-3">
         <input
-          className="rounded-xl border p-4 text-lg tracking-widest"
+          className="rounded-lg border border-ink/20 bg-white p-4 text-lg tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           type="password"
           inputMode="numeric"
           maxLength={6}
@@ -74,7 +81,7 @@ export default function ProfilePage() {
           onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))}
         />
         <input
-          className="rounded-xl border p-4 text-lg tracking-widest"
+          className="rounded-lg border border-ink/20 bg-white p-4 text-lg tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           type="password"
           inputMode="numeric"
           maxLength={6}
@@ -83,7 +90,7 @@ export default function ProfilePage() {
           onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
         />
         <input
-          className="rounded-xl border p-4 text-lg tracking-widest"
+          className="rounded-lg border border-ink/20 bg-white p-4 text-lg tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           type="password"
           inputMode="numeric"
           maxLength={6}
@@ -91,31 +98,39 @@ export default function ProfilePage() {
           value={newPin2}
           onChange={(e) => setNewPin2(e.target.value.replace(/\D/g, ""))}
         />
-        {pinError && <p className="text-center text-red-600">{pinError}</p>}
+        {pinError && <p className="text-center text-sm text-ca">{pinError}</p>}
         {pinSuccess && (
-          <p className="text-center text-green-700">{t.changePin} ✓</p>
+          <p className="text-center text-sm text-mx">{t.changePin} ✓</p>
         )}
         <button
-          className="rounded-xl bg-green-700 p-4 text-lg font-bold text-white"
+          className="rounded-lg bg-ink p-4 text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           onClick={handleChangePin}
         >
           {t.changePin}
         </button>
       </div>
 
-      <hr className="my-6" />
+      <hr className="my-6 border-ink/10" />
 
       <div className="mb-6">
-        <p className="mb-3 font-semibold">{t.language}</p>
+        <p className="mb-3 font-semibold text-ink">{t.language}</p>
         <div className="flex gap-3">
           <button
-            className={`flex-1 rounded-xl border p-3 font-semibold ${lang === "en" ? "border-green-700 bg-green-50 text-green-700" : "text-gray-500"}`}
+            className={`flex-1 rounded-lg border p-3 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us ${
+              lang === "en"
+                ? "border-mx bg-mx/10 text-mx"
+                : "border-ink/20 text-ink/50"
+            }`}
             onClick={() => handleLanguage("en")}
           >
             English
           </button>
           <button
-            className={`flex-1 rounded-xl border p-3 font-semibold ${lang === "mm" ? "border-green-700 bg-green-50 text-green-700" : "text-gray-500"}`}
+            className={`flex-1 rounded-lg border p-3 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us ${
+              lang === "mm"
+                ? "border-mx bg-mx/10 text-mx"
+                : "border-ink/20 text-ink/50"
+            }`}
             onClick={() => handleLanguage("mm")}
           >
             မြန်မာ
@@ -123,10 +138,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <hr className="my-6" />
+      <hr className="my-6 border-ink/10" />
 
       <button
-        className="w-full rounded-xl bg-red-600 p-4 text-lg font-bold text-white"
+        className="w-full rounded-lg bg-ca p-4 text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us disabled:opacity-50"
         onClick={handleLogout}
         disabled={loggingOut}
       >

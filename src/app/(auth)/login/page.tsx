@@ -30,17 +30,27 @@ function LoginForm() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-3 p-6">
-      <h1 className="text-center text-3xl font-bold">⚽ {t.appName}</h1>
+    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 bg-canvas p-6">
+      {/* App name hero */}
+      <div className="text-center">
+        <p className="text-sm font-semibold uppercase tracking-widest text-ink/50">
+          FIFA World Cup
+        </p>
+        <h1 className="text-4xl font-bold text-ink">
+          WorldBet<span className="font-display text-5xl">26</span>
+        </h1>
+        <div className="triband-skew mx-auto mt-2 w-32" />
+      </div>
+
       <input
-        className="rounded-xl border p-4 text-lg"
+        className="rounded-lg border border-ink/20 bg-white p-4 text-lg text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         inputMode="tel"
         placeholder={t.phone}
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
       />
       <input
-        className="rounded-xl border p-4 text-lg tracking-widest"
+        className="rounded-lg border border-ink/20 bg-white p-4 text-lg tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         inputMode="numeric"
         maxLength={6}
         type="password"
@@ -48,14 +58,14 @@ function LoginForm() {
         value={pin}
         onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
       />
-      {error && <p className="text-center text-red-600">{error}</p>}
+      {error && <p className="text-center text-sm text-ca">{error}</p>}
       <button
-        className="rounded-xl bg-green-700 p-4 text-lg font-bold text-white"
+        className="rounded-lg bg-ink p-4 text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         onClick={submit}
       >
         {t.login}
       </button>
-      <a className="text-center text-blue-600 underline" href="/register">
+      <a className="text-center text-sm text-us underline" href="/register">
         {t.register}
       </a>
     </main>

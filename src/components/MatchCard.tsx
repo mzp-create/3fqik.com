@@ -44,45 +44,74 @@ export function MatchCard({
 
   return (
     <div
-      className={`mb-3 rounded-xl border p-3 ${l?.status === "suspended" ? "opacity-50" : ""}`}
+      className={`mb-3 rounded-xl border border-ink/10 bg-white p-3 shadow-sm ${l?.status === "suspended" ? "opacity-50" : ""}`}
     >
-      <div className="flex justify-between text-sm">
-        <span className="font-semibold">
-          {m.homeTeam} vs {m.awayTeam}{" "}
-          <span className="text-gray-400">· {m.stage}</span>
+      {/* Eyebrow: stage + kickoff/live */}
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wider text-ink/40">
+          {m.stage}
         </span>
         {m.status === "live" ? (
-          <span className="font-bold text-red-600">
-            ● {t.live} {m.homeScore}–{m.awayScore}
+          <span className="flex items-center gap-1.5 rounded-sm bg-ca px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+            <span className="live-dot h-1.5 w-1.5 rounded-full bg-white" />
+            {t.live}
           </span>
         ) : (
-          <span className="text-gray-500">{kickoff}</span>
+          <span className="text-xs text-ink/40">{kickoff}</span>
         )}
       </div>
-      {!l && <p className="mt-2 text-center text-sm text-gray-400">—</p>}
+
+      {/* Teams */}
+      <p className="font-semibold text-ink">
+        {m.homeTeam} vs {m.awayTeam}
+        {m.status === "live" && m.homeScore != null && (
+          <span className="ml-2 font-display text-lg text-ca">
+            {m.homeScore}–{m.awayScore}
+          </span>
+        )}
+      </p>
+
+      {!l && <p className="mt-2 text-center text-sm text-ink/30">—</p>}
       {l && l.status === "closed" && (
-        <p className="mt-2 text-center text-sm text-gray-400">—</p>
+        <p className="mt-2 text-center text-sm text-ink/30">—</p>
       )}
       {l && l.status === "suspended" && (
         <p className="mt-2 text-center text-sm">⏸ {t.suspended}</p>
       )}
       {l && l.status === "active" && (
         <div className="mt-2 flex gap-2">
+          {/* Favorite tile — green left rail */}
           <button
-            className="flex-1 rounded-lg bg-green-50 p-3 font-semibold"
+            className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
             onClick={() => onPick("fav")}
           >
-            {fav} −{ball(l.ballQ)}
-            <br />
-            <span className="text-green-700">{price(l.priceC)}</span>
+            <span className="absolute inset-y-0 left-0 w-1.5 bg-mx" />
+            <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+              {fav}
+            </span>
+            <span className="block pl-2 text-xs text-ink/50">
+              −{ball(l.ballQ)}
+            </span>
+            <span className="font-display block pl-2 text-xl text-mx">
+              {price(l.priceC)}
+            </span>
           </button>
+
+          {/* Underdog tile — blue left rail */}
           <button
-            className="flex-1 rounded-lg bg-blue-50 p-3 font-semibold"
+            className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
             onClick={() => onPick("dog")}
           >
-            {dog} +{ball(l.ballQ)}
-            <br />
-            <span className="text-blue-700">{price(l.priceC)}</span>
+            <span className="absolute inset-y-0 left-0 w-1.5 bg-us" />
+            <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+              {dog}
+            </span>
+            <span className="block pl-2 text-xs text-ink/50">
+              +{ball(l.ballQ)}
+            </span>
+            <span className="font-display block pl-2 text-xl text-us">
+              {price(l.priceC)}
+            </span>
           </button>
         </div>
       )}

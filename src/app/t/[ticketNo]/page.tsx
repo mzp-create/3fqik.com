@@ -35,10 +35,12 @@ export default async function VerifyTicket({
   if (!valid || !bet) {
     return (
       <main className="mx-auto max-w-sm p-6 text-center">
-        <h1 className="text-2xl font-bold text-red-600">
-          ✕ NOT A VALID TICKET
-        </h1>
-        <p className="mt-2 text-gray-500">
+        <div className="mb-4 rounded-lg bg-ca px-4 py-3">
+          <h1 className="font-display text-2xl text-white">
+            ✕ NOT A VALID TICKET
+          </h1>
+        </div>
+        <p className="mt-2 text-ink/50">
           This QR code does not verify. The ticket may be forged.
         </p>
       </main>
@@ -77,10 +79,10 @@ export default async function VerifyTicket({
 
   return (
     <main className="mx-auto max-w-sm p-6">
-      <h1 className="text-center text-2xl font-bold text-green-600">
-        ✓ VERIFIED TICKET
-      </h1>
-      <dl className="mt-4 space-y-2 rounded-xl border-2 border-dashed p-4">
+      <div className="mb-4 rounded-lg bg-mx px-4 py-3 text-center">
+        <h1 className="font-display text-2xl text-white">✓ VERIFIED TICKET</h1>
+      </div>
+      <dl className="space-y-2 rounded-xl border border-dashed border-ink/30 bg-white p-4">
         <Row k="Ticket" v={bet.ticketNo} />
         <Row k="Player" v={player.displayName} />
         <Row
@@ -107,8 +109,8 @@ export default async function VerifyTicket({
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-gray-500">{k}</dt>
-      <dd className="text-right font-medium">{v}</dd>
+      <dt className="text-ink/50">{k}</dt>
+      <dd className="text-right font-medium text-ink">{v}</dd>
     </div>
   );
 }

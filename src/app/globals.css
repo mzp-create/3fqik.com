@@ -1,26 +1,57 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-canvas: #fafaf7;
+  --color-ink: #14161b;
+  --color-mx: #007a33;
+  --color-ca: #e03c31;
+  --color-us: #0a3a82;
+  --color-gold: #f5b335;
+  --font-display: var(--font-anton), sans-serif;
+  --font-sans: var(--font-geist-sans), sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* Triband: 3 equal horizontal stripes — mx-green / ca-red / us-blue */
+.triband {
+  height: 5px;
+  background: linear-gradient(
+    to right,
+    #007a33 0% 33.33%,
+    #e03c31 33.33% 66.66%,
+    #0a3a82 66.66% 100%
+  );
+}
+
+.triband-skew {
+  height: 5px;
+  background: linear-gradient(
+    to right,
+    #007a33 0% 33.33%,
+    #e03c31 33.33% 66.66%,
+    #0a3a82 66.66% 100%
+  );
+  transform: skewX(-12deg);
+}
+
+/* LIVE pulse dot — motion only when user has no reduced-motion preference */
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }

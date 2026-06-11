@@ -14,16 +14,27 @@ export function Tabs({ isAdmin }: { isAdmin: boolean }) {
     ...(isAdmin ? [{ href: "/admin", label: "🛠️" }] : []),
   ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-md border-t bg-white">
-      {tabs.map((tab) => (
-        <Link
-          key={tab.href}
-          href={tab.href}
-          className={`flex-1 p-4 text-center font-medium ${path === tab.href ? "text-green-700" : "text-gray-500"}`}
-        >
-          {tab.label}
-        </Link>
-      ))}
+    <nav className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-md border-t border-ink/10 bg-white">
+      {tabs.map((tab) => {
+        const active = path === tab.href;
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className={`relative flex-1 p-4 text-center font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us ${
+              active ? "text-ink" : "text-gray-400"
+            }`}
+          >
+            {tab.label}
+            {active && (
+              <span
+                className="triband absolute bottom-0 left-1/2 -translate-x-1/2"
+                style={{ width: "80%", height: "3px" }}
+              />
+            )}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

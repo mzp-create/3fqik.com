@@ -29,9 +29,9 @@ type BalanceDay = {
 };
 
 const DAY_STATUS_COLORS = {
-  open: "bg-green-100 text-green-800",
-  closed: "bg-yellow-100 text-yellow-800",
-  settled: "bg-gray-100 text-gray-600",
+  open: "border border-us text-us",
+  closed: "border border-ca text-ca",
+  settled: "bg-mx text-white",
 };
 
 export default function BalancePage() {
@@ -49,9 +49,9 @@ export default function BalancePage() {
 
   return (
     <main className="p-3">
-      {error && <p className="mt-8 text-center text-red-600">{error}</p>}
+      {error && <p className="mt-8 text-center text-sm text-ca">{error}</p>}
       {days.length === 0 && !error && (
-        <p className="mt-8 text-center text-gray-400">{t.noDays}</p>
+        <p className="mt-8 text-center text-ink/40">{t.noDays}</p>
       )}
       {days.map((day) => {
         const net = day.items.reduce((s, i) => s + (i.netMmk ?? 0), 0);
@@ -63,17 +63,28 @@ export default function BalancePage() {
               : t.daySettled;
 
         return (
-          <section key={day.date} className="mb-4 rounded-xl border p-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold">{day.date}</h2>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${DAY_STATUS_COLORS[day.status]}`}
-              >
-                {dayStatusLabel}
-              </span>
+          <section
+            key={day.date}
+            className="mb-4 rounded-xl border border-ink/10 bg-white p-3"
+          >
+            {/* Section header with triband accent */}
+            <div className="mb-1 flex items-center gap-2">
+              <div
+                className="triband-skew"
+                style={{ height: "14px", width: "4px" }}
+              />
+              <div className="flex flex-1 items-center justify-between">
+                <h2 className="font-bold text-ink">{day.date}</h2>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${DAY_STATUS_COLORS[day.status]}`}
+                >
+                  {dayStatusLabel}
+                </span>
+              </div>
             </div>
+
             <div
-              className={`mt-1 text-lg font-bold ${net > 0 ? "text-green-700" : net < 0 ? "text-red-600" : "text-gray-600"}`}
+              className={`mt-1 font-display text-lg ${net > 0 ? "text-mx" : net < 0 ? "text-ca" : "text-gray-500"}`}
             >
               {net === 0
                 ? t.evenDay
@@ -81,15 +92,18 @@ export default function BalancePage() {
                   ? `${t.housePays}: ${mmk(net)} MMK`
                   : `${t.youPay}: ${mmk(-net)} MMK`}
             </div>
+
             {day.ref && (
-              <p className="text-xs text-gray-500">
+              <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-gold/20 px-2 py-0.5 text-xs font-semibold text-ink">
+                <span className="text-gold">●</span>
                 {t.settledRef} · {day.ref}
               </p>
             )}
             {!day.ref && day.status !== "settled" && (
-              <p className="text-xs text-gray-400">{t.unsettled}</p>
+              <p className="text-xs text-ink/40">{t.unsettled}</p>
             )}
-            <ul className="mt-2 divide-y text-sm">
+
+            <ul className="mt-2 divide-y divide-ink/5 text-sm">
               {day.items.map((item) => {
                 const fav =
                   item.favSide === "home" ? item.homeTeam : item.awayTeam;
@@ -102,27 +116,27 @@ export default function BalancePage() {
                 return (
                   <li key={item.id} className="py-2">
                     <div className="flex justify-between">
-                      <span className="font-mono text-xs text-gray-500">
+                      <span className="font-mono text-xs text-ink/40">
                         {item.ticketNo}
                       </span>
-                      <span className="text-xs font-semibold uppercase">
+                      <span className="text-xs font-semibold uppercase text-ink/60">
                         {t[statusKey(item.status)]}
                       </span>
                     </div>
-                    <div className="text-gray-700">{pickStr}</div>
-                    <div className="flex justify-between text-xs text-gray-500">
+                    <div className="text-ink/80">{pickStr}</div>
+                    <div className="flex justify-between text-xs text-ink/50">
                       <span>
                         {t.stake}: {mmk(item.stakeMmk)} MMK
                       </span>
                       {item.netMmk != null && (
                         <span
-                          className={
+                          className={`font-display ${
                             item.netMmk > 0
-                              ? "text-green-700"
+                              ? "text-mx"
                               : item.netMmk < 0
-                                ? "text-red-600"
-                                : ""
-                          }
+                                ? "text-ca"
+                                : "text-gray-500"
+                          }`}
                         >
                           {t.net}: {signedMmk(item.netMmk)} MMK
                         </span>

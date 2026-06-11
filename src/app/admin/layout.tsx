@@ -21,12 +21,18 @@ export default async function AdminLayout({
   ];
   return (
     <I18nProvider initial={me.language}>
-      <nav className="flex gap-3 overflow-x-auto border-b bg-amber-50 p-3 text-sm font-semibold">
+      <nav className="relative flex gap-3 overflow-x-auto bg-ink p-3 text-sm font-semibold">
         {nav.map(([href, label]) => (
-          <Link key={href} href={href}>
+          <Link
+            key={href}
+            href={href}
+            className="text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+          >
             {label}
           </Link>
         ))}
+        {/* Triband bottom border */}
+        <div className="triband absolute bottom-0 left-0 right-0" />
       </nav>
       <div className="mx-auto max-w-md p-3">{children}</div>
     </I18nProvider>

@@ -16,7 +16,13 @@ function RegisterForm() {
   });
   const [error, setError] = useState("");
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setForm((f) => ({
+      ...f,
+      [k]:
+        k === "pin" || k === "pin2"
+          ? e.target.value.replace(/\D/g, "")
+          : e.target.value,
+    }));
 
   async function submit() {
     if (form.pin !== form.pin2) {

@@ -10,6 +10,7 @@ export default async function PlayerLayout({
 }) {
   const me = await currentPlayer();
   if (!me) redirect("/login");
+  if (me.mustChangePin) redirect("/profile");
   return (
     <I18nProvider initial={me.language}>
       <div className="mx-auto max-w-md pb-20">{children}</div>

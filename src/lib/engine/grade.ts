@@ -28,14 +28,16 @@ function halfNet(outcome: HalfOutcome, halfStake: number, priceC: number): numbe
 }
 
 function roundHalfAwayFromZero(x: number): number {
-  return Math.sign(x) * Math.round(Math.abs(x))
+  const r = Math.sign(x) * Math.round(Math.abs(x))
+  return r === 0 ? 0 : r
 }
 
 export function gradeBet(i: GradeInput): GradeResult {
-  if (!Number.isInteger(i.ballQ) || i.ballQ < 0) throw new Error('invalid ballQ')
+  if (i.side !== 'fav' && i.side !== 'dog') throw new Error('invalid side')
+  if (!Number.isInteger(i.ballQ) || i.ballQ < 0 || i.ballQ > 40) throw new Error('invalid ballQ')
   if (!Number.isInteger(i.priceC) || i.priceC === 0 || i.priceC < -100 || i.priceC > 100)
     throw new Error('invalid priceC')
-  if (!Number.isInteger(i.stake) || i.stake <= 0) throw new Error('invalid stake')
+  if (!Number.isInteger(i.stake) || i.stake <= 0 || i.stake > 1_000_000_000_000) throw new Error('invalid stake')
   if (!Number.isInteger(i.effFav) || !Number.isInteger(i.effDog) || i.effFav < 0 || i.effDog < 0)
     throw new Error('invalid effective score')
 

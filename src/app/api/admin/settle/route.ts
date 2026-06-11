@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/session";
-import { dayBoard } from "@/lib/accounting/queries";
+import { dayBoard, playerDayItems } from "@/lib/accounting/queries";
 import { markPlayerPaid, voidTicket } from "@/lib/accounting/settle";
 import { ok, fail, handle } from "@/lib/api";
 import { nowIso } from "@/lib/time";
@@ -11,7 +11,13 @@ export async function GET(req: Request) {
     const date = new URL(req.url).searchParams.get("date");
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date))
       return fail("bad_request", "date query param required (YYYY-MM-DD)");
-    return ok(dayBoard(getDb(), date));
+    const db = getDb();
+    const board = dayBoard(db, date);
+    const rowsWithTickets = board.rows.map((r) => ({
+      ...r,
+      tickets: playerDayItems(db, r.playerId, date),
+    }));
+    return ok({ ...board, rows: rowsWithTickets });
   });
 }
 

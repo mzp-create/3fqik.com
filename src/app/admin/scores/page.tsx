@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
+import { todayMmt } from "@/lib/client/format";
 
 type MatchRow = {
   id: number;
@@ -17,16 +18,25 @@ type ScoreLocal = { home: number; away: number };
 
 export default function ScoresPage() {
   const [matches, setMatches] = useState<MatchRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
   const [scores, setScores] = useState<Record<number, ScoreLocal>>({});
   const [busy, setBusy] = useState<Record<number, boolean>>({});
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [globalError, setGlobalError] = useState("");
 
-  const reload = () =>
+  const reload = () => {
+    setLoading(true);
     api<MatchRow[]>("/api/matches")
       .then((ms) => {
-        const relevant = ms.filter((m) => m.status !== "scheduled" || true);
-        setMatches(relevant);
+        const today = todayMmt();
+        const relevant = ms.filter(
+          (m) =>
+            m.status === "live" ||
+            m.status === "finished" ||
+            (m.status === "scheduled" && m.matchDay === today),
+        );
+        setMatches(ms);
         setScores((prev) => {
           const next = { ...prev };
           for (const m of relevant) {
@@ -39,10 +49,13 @@ export default function ScoresPage() {
           }
           return next;
         });
+        setLoading(false);
       })
-      .catch((e) =>
-        setGlobalError(e instanceof Error ? e.message : "Failed to load"),
-      );
+      .catch((e) => {
+        setGlobalError(e instanceof Error ? e.message : "Failed to load");
+        setLoading(false);
+      });
+  };
 
   useEffect(() => {
     reload();
@@ -108,14 +121,33 @@ export default function ScoresPage() {
   }
 
   if (globalError) return <p className="text-red-600">{globalError}</p>;
+  if (loading) return <p className="text-gray-500">Loading…</p>;
+
+  const today = todayMmt();
+  const visible = showAll
+    ? matches
+    : matches.filter(
+        (m) =>
+          m.status === "live" ||
+          m.status === "finished" ||
+          (m.status === "scheduled" && m.matchDay === today),
+      );
 
   return (
     <main>
       <h1 className="mb-4 text-lg font-bold">Scores</h1>
-      {matches.length === 0 && (
-        <p className="text-gray-500">No matches found.</p>
-      )}
-      {matches.map((m) => {
+      <div className="flex items-center justify-between mb-3">
+        {visible.length === 0 && !showAll && (
+          <p className="text-gray-500 text-sm">No matches today.</p>
+        )}
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="ml-auto text-xs border px-2 py-1 rounded text-gray-600"
+        >
+          {showAll ? "Show relevant" : "Show all"}
+        </button>
+      </div>
+      {visible.map((m) => {
         const s = scores[m.id] ?? { home: 0, away: 0 };
         const isBusy = busy[m.id] ?? false;
         const err = errors[m.id] ?? "";

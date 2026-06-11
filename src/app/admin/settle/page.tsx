@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
-import { mmk, signedMmk, ball, price } from "@/lib/client/format";
+import { mmk, signedMmk, ball, price, todayMmt } from "@/lib/client/format";
 
 type TicketItem = {
   ticketNo: string;
@@ -37,28 +37,26 @@ type DayBoard = {
   houseNet: number;
 };
 
-function todayMmt(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Yangon",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
 export default function SettlePage() {
   const [date, setDate] = useState(todayMmt);
   const [board, setBoard] = useState<DayBoard | null>(null);
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
 
-  const reload = (d: string) =>
+  const reload = (d: string) => {
+    setLoading(true);
     api<DayBoard>(`/api/admin/settle?date=${d}`)
-      .then(setBoard)
-      .catch((e) =>
-        setError(e instanceof Error ? e.message : "Failed to load"),
-      );
+      .then((b) => {
+        setBoard(b);
+        setLoading(false);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : "Failed to load");
+        setLoading(false);
+      });
+  };
 
   useEffect(() => {
     reload(date);
@@ -121,7 +119,9 @@ export default function SettlePage() {
 
       {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
-      {board && (
+      {loading && <p className="text-gray-500">Loading…</p>}
+
+      {!loading && board && (
         <>
           <div className="flex items-center gap-3 mb-4">
             <span
@@ -227,11 +227,7 @@ export default function SettlePage() {
                               </div>
                             </div>
                             <button
-                              disabled={
-                                busy[voidKey] ||
-                                t.settlementId != null ||
-                                t.status === "void"
-                              }
+                              disabled={busy[voidKey] || t.settlementId != null}
                               onClick={() => voidTicket(t.ticketNo)}
                               className="border border-red-300 text-red-600 text-xs px-2 py-0.5 rounded shrink-0 disabled:opacity-40"
                             >

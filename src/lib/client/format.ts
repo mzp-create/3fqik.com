@@ -3,6 +3,16 @@ export const signedMmk = (n: number) =>
   (n > 0 ? "+" : "") + n.toLocaleString("en-US");
 export const ball = (q: number) => (q / 4).toString();
 export const price = (c: number) => (c / 100).toFixed(2);
+
+/** Today's date in Myanmar Time (MMT, UTC+6:30), formatted YYYY-MM-DD. */
+export function todayMmt(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Yangon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
 export function pickLabel(
   l: { favSide: "home" | "away"; ballQ: number; priceC: number },
   m: { homeTeam: string; awayTeam: string },

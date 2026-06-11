@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
-import { ball, price, mmk } from "@/lib/client/format";
+import { ball, price, mmk, todayMmt } from "@/lib/client/format";
 
 type Line = {
   id: number;
@@ -31,12 +31,21 @@ type FormState = {
   priceCInput: string; // raw string for the price input
 };
 
-function initForm(): FormState {
+function initForm(line?: Line | null): FormState {
+  if (line) {
+    return {
+      favSide: line.favSide,
+      ballQ: line.ballQ,
+      priceC: line.priceC,
+      priceCInput: (line.priceC / 100).toFixed(2),
+    };
+  }
   return { favSide: "home", ballQ: 4, priceC: 92, priceCInput: "0.92" };
 }
 
 export default function LinesPage() {
   const [matches, setMatches] = useState<MatchRow[]>([]);
+  const [showAll, setShowAll] = useState(false);
   const [forms, setForms] = useState<Record<number, FormState>>({});
   const [limits, setLimits] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<Record<number, boolean>>({});
@@ -51,7 +60,8 @@ export default function LinesPage() {
         setForms((prev) => {
           const next = { ...prev };
           for (const m of active) {
-            if (!next[m.id]) next[m.id] = initForm();
+            // Always re-seed from the line so form stays in sync after reload
+            next[m.id] = initForm(m.line);
           }
           return next;
         });
@@ -166,13 +176,40 @@ export default function LinesPage() {
 
   if (globalError) return <p className="text-red-600">{globalError}</p>;
 
+  const today = todayMmt();
+  // Derive tomorrow in MMT by formatting "now + 24 h" in the same timezone
+  const tomorrow = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Yangon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(Date.now() + 86400000));
+  const visible = showAll
+    ? matches
+    : matches.filter(
+        (m) =>
+          m.status === "live" ||
+          (m.status === "scheduled" &&
+            (m.matchDay === today || m.matchDay === tomorrow)),
+      );
+
   return (
     <main>
       <h1 className="mb-4 text-lg font-bold">Lines Desk</h1>
-      {matches.length === 0 && (
-        <p className="text-gray-500">No active or scheduled matches today.</p>
-      )}
-      {matches.map((m) => {
+      <div className="flex items-center justify-between mb-3">
+        {visible.length === 0 && !showAll && (
+          <p className="text-gray-500 text-sm">
+            No live or upcoming matches today/tomorrow.
+          </p>
+        )}
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="ml-auto text-xs border px-2 py-1 rounded text-gray-600"
+        >
+          {showAll ? "Show relevant" : "Show all"}
+        </button>
+      </div>
+      {visible.map((m) => {
         const f = forms[m.id] ?? initForm();
         const isBusy = busy[m.id] ?? false;
         const err = errors[m.id] ?? "";
@@ -209,6 +246,9 @@ export default function LinesPage() {
                   }`}
                 >
                   {m.line.status}
+                </span>
+                <span className="ml-2 text-xs text-gray-400">
+                  v{m.line.version}
                 </span>
               </div>
             ) : (

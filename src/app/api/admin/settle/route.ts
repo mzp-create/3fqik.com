@@ -39,7 +39,8 @@ export async function POST(req: Request) {
       const { ticketNo, reason } = body;
       if (typeof ticketNo !== "string" || !ticketNo)
         return fail("bad_request", "ticketNo (string) required");
-      voidTicket(getDb(), admin.id, ticketNo, reason ?? "", nowIso());
+      if (!reason?.trim()) return fail("bad_request", "void reason required");
+      voidTicket(getDb(), admin.id, ticketNo, reason, nowIso());
       return ok({});
     }
 

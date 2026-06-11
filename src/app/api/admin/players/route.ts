@@ -21,9 +21,9 @@ export async function POST(req: Request) {
       return fail('bad_request', 'action must be a string and playerId must be a number')
     const db = getDb()
     if (action === 'reset_pin') {
-      if (typeof tempPin !== 'string')
-        return fail('bad_request', 'tempPin must be a string')
-      resetPin(db, admin.id, playerId, tempPin, nowIso())
+      if (!/^\d{6}$/.test(String(tempPin ?? '')))
+        return fail('bad_request', 'tempPin must be exactly 6 digits')
+      resetPin(db, admin.id, playerId, tempPin as string, nowIso())
     } else if (action === 'unlock') {
       unlockPlayer(db, admin.id, playerId, nowIso())
     } else if (action === 'grant_admin') {

@@ -37,3 +37,18 @@ it('unlockPlayer clears lock; grantAdmin flips role; both audit-log', () => {
   expect(db.select().from(schema.players).all()[1].role).toBe('admin')
   expect(db.select().from(schema.auditLog).all().map(a => a.action)).toEqual(['unlock', 'grant_admin'])
 })
+
+it('resetPin on missing player throws /not found/ and writes no audit row', () => {
+  expect(() => resetPin(db, 1, 999, '123456', NOW)).toThrow(/not found/)
+  expect(db.select().from(schema.auditLog).all()).toHaveLength(0)
+})
+
+it('unlockPlayer on missing player throws /not found/ and writes no audit row', () => {
+  expect(() => unlockPlayer(db, 1, 999, NOW)).toThrow(/not found/)
+  expect(db.select().from(schema.auditLog).all()).toHaveLength(0)
+})
+
+it('grantAdmin on missing player throws /not found/ and writes no audit row', () => {
+  expect(() => grantAdmin(db, 1, 999, NOW)).toThrow(/not found/)
+  expect(db.select().from(schema.auditLog).all()).toHaveLength(0)
+})

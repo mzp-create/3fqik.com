@@ -6,6 +6,32 @@ function err(message: string, httpStatus = 400, code = "error") {
   return Object.assign(new Error(message), { httpStatus, code });
 }
 
+/**
+ * maybeSettleDay — module-private helper.
+ *
+ * If the day row exists, its status is 'closed', and every row on the
+ * dayBoard has settled truthy, flip the day to 'settled'.
+ *
+ * Policy: an empty board on a closed day settles vacuously — there is
+ * nothing to pay, so the day is considered fully settled.
+ */
+function maybeSettleDay(tx: Db, date: string): void {
+  const day = tx
+    .select()
+    .from(schema.matchDays)
+    .where(eq(schema.matchDays.date, date))
+    .get();
+  if (!day || day.status !== "closed") return;
+  const { rows } = dayBoard(tx, date);
+  const allSettled = rows.every((r) => r.settled);
+  if (allSettled) {
+    tx.update(schema.matchDays)
+      .set({ status: "settled" })
+      .where(eq(schema.matchDays.id, day.id))
+      .run();
+  }
+}
+
 export function markPlayerPaid(
   db: Db,
   adminId: number,
@@ -28,6 +54,7 @@ export function markPlayerPaid(
     if (items.some((i) => i.settlementId != null))
       throw err("already settled", 409, "already_settled");
 
+    // single-process assumption: refs computed inside the synchronous txn; UNIQUE constraints are the multi-process backstop
     const count = tx
       .select()
       .from(schema.settlements)
@@ -55,15 +82,7 @@ export function markPlayerPaid(
         .where(eq(schema.bets.id, i.id))
         .run();
 
-    // all players covered? → day settled
-    const remaining = dayBoard(txd, date).rows.filter(
-      (r) => !r.settled && r.playerId !== playerId,
-    );
-    if (remaining.length === 0)
-      tx.update(schema.matchDays)
-        .set({ status: "settled" })
-        .where(eq(schema.matchDays.id, day.id))
-        .run();
+    maybeSettleDay(txd, date);
     return settlement;
   });
 }
@@ -75,30 +94,42 @@ export function voidTicket(
   reason: string,
   at: string,
 ) {
-  const bet = db
-    .select()
-    .from(schema.bets)
-    .where(eq(schema.bets.ticketNo, ticketNo))
-    .get();
-  if (!bet) throw err("ticket not found", 404, "not_found");
-  if (bet.settlementId != null)
-    throw err("ticket already settled — cannot void", 409, "ticket_settled");
-  db.update(schema.bets)
-    .set({
-      status: "void",
-      netMmk: null,
-      voidedBy: adminId,
-      voidReason: reason,
-    })
-    .where(eq(schema.bets.id, bet.id))
-    .run();
-  db.insert(schema.auditLog)
-    .values({
-      actorId: adminId,
-      action: "void",
-      subject: `ticket:${ticketNo}`,
-      detail: reason,
-      at,
-    })
-    .run();
+  db.transaction((tx) => {
+    const txd = tx as unknown as Db;
+    const bet = tx
+      .select()
+      .from(schema.bets)
+      .where(eq(schema.bets.ticketNo, ticketNo))
+      .get();
+    if (!bet) throw err("ticket not found", 404, "not_found");
+    if (bet.settlementId != null)
+      throw err("ticket already settled — cannot void", 409, "ticket_settled");
+    tx.update(schema.bets)
+      .set({
+        status: "void",
+        netMmk: null,
+        voidedBy: adminId,
+        voidReason: reason,
+      })
+      .where(eq(schema.bets.id, bet.id))
+      .run();
+    tx.insert(schema.auditLog)
+      .values({
+        actorId: adminId,
+        action: "void",
+        subject: `ticket:${ticketNo}`,
+        detail: reason,
+        at,
+      })
+      .run();
+    // Resolve the match day for this ticket and check if the day should settle
+    const match = tx
+      .select()
+      .from(schema.matches)
+      .where(eq(schema.matches.id, bet.matchId))
+      .get();
+    if (match) {
+      maybeSettleDay(txd, match.matchDay);
+    }
+  });
 }

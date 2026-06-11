@@ -49,7 +49,7 @@ export function dayBoard(db: Db, date: string) {
       displayName: schema.players.displayName,
       netMmk: sql<number>`coalesce(sum(${schema.bets.netMmk}), 0)`,
       ticketCount: sql<number>`count(*)`,
-      settled: sql<number>`max(${schema.bets.settlementId} is not null)`,
+      settled: sql<number>`min(${schema.bets.settlementId} is not null)`,
     })
     .from(schema.bets)
     .innerJoin(schema.matches, eq(schema.bets.matchId, schema.matches.id))

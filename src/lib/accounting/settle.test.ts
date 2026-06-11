@@ -113,3 +113,83 @@ it("cannot mark paid while day open; void excludes ticket from accounting", () =
       .some((a) => a.action === "void"),
   ).toBe(true);
 });
+
+// --- stuck-day regression: pay A then void B's only ticket → day settled ---
+it("stuck-day regression: pay A then void B's only ticket settles the day", () => {
+  // Pay Zaw (player 2)
+  markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+  // Day should still be closed (Thiri not paid yet)
+  expect(db.select().from(schema.matchDays).all()[0].status).toBe("closed");
+
+  // Void Thiri's (player 3) only ticket
+  const thiriTicket = db
+    .select()
+    .from(schema.bets)
+    .where(eq(schema.bets.playerId, 3))
+    .get()!;
+  voidTicket(db, 1, thiriTicket.ticketNo, "admin error", NOW);
+
+  // After void, the board has only Zaw who is settled → day should auto-settle
+  expect(db.select().from(schema.matchDays).all()[0].status).toBe("settled");
+});
+
+// --- order symmetry: void B first, then pay A → day settled ---
+it("order symmetry: void B's only ticket first then pay A settles the day", () => {
+  // Void Thiri's (player 3) only ticket first
+  const thiriTicket = db
+    .select()
+    .from(schema.bets)
+    .where(eq(schema.bets.playerId, 3))
+    .get()!;
+  voidTicket(db, 1, thiriTicket.ticketNo, "admin error", NOW);
+
+  // Day should still be closed
+  expect(db.select().from(schema.matchDays).all()[0].status).toBe("closed");
+
+  // Now pay Zaw (player 2) — the only remaining player on board
+  markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+
+  // Day should now be settled
+  expect(db.select().from(schema.matchDays).all()[0].status).toBe("settled");
+});
+
+// --- void-after-paid: pay A then voidTicket on A's stamped ticket → throws /settled/ ---
+it("void-after-paid: voiding an already-stamped ticket throws", () => {
+  markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+  const zawTicket = db
+    .select()
+    .from(schema.bets)
+    .where(eq(schema.bets.playerId, 2))
+    .get()!;
+  expect(() =>
+    voidTicket(db, 1, zawTicket.ticketNo, "should fail", NOW),
+  ).toThrow(/settled/);
+});
+
+// --- DB backstop: after paying A, raw insert same (matchDayId, playerId) → throws /UNIQUE/ ---
+it("DB backstop: duplicate settlement insert throws UNIQUE constraint", () => {
+  const s1 = markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+  const day = db.select().from(schema.matchDays).all()[0];
+  expect(() =>
+    db
+      .insert(schema.settlements)
+      .values({
+        ref: "S-0612-99",
+        matchDayId: day.id,
+        playerId: 2,
+        netMmk: 0,
+        markedBy: 1,
+        markedAt: NOW,
+      })
+      .run(),
+  ).toThrow(/UNIQUE/);
+  expect(s1).toBeDefined();
+});
+
+// --- no-tickets 404: markPlayerPaid for player with no tickets that day → throws /no tickets/ ---
+it("no-tickets 404: markPlayerPaid for player with no tickets throws", () => {
+  // Player 1 is admin and has no bets
+  expect(() => markPlayerPaid(db, 1, "2026-06-12", 1, NOW)).toThrow(
+    /no tickets/,
+  );
+});

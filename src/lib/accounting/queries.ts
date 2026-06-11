@@ -15,6 +15,7 @@ export function playerDayItems(db: Db, playerId: number, date: string) {
       favSide: schema.lines.favSide,
       ballQ: schema.lines.ballQ,
       priceC: schema.lines.priceC,
+      market: schema.lines.market,
       homeTeam: schema.matches.homeTeam,
       awayTeam: schema.matches.awayTeam,
     })

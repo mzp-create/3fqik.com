@@ -22,6 +22,7 @@ type Line = {
   ballQ: number;
   priceC: number;
   status: "active" | "suspended" | "closed";
+  market: "ah" | "ou";
 };
 
 type MatchRow = {
@@ -32,16 +33,23 @@ type MatchRow = {
   matchDay: string;
   betLimitMmk: number | null;
   line: Line | null;
+  ouLine: Line | null;
 };
 
-type FormState = {
+type AhFormState = {
   favSide: "home" | "away";
   ballQ: number; // stored as quarter units (×4)
   priceC: number; // stored ×100
   priceCInput: string; // raw string for the price input
 };
 
-function initForm(line?: Line | null): FormState {
+type OuFormState = {
+  ballQ: number; // stored as quarter units (×4), min 1 (=0.25)
+  priceC: number;
+  priceCInput: string;
+};
+
+function initAhForm(line?: Line | null): AhFormState {
   if (line) {
     return {
       favSide: line.favSide,
@@ -53,10 +61,23 @@ function initForm(line?: Line | null): FormState {
   return { favSide: "home", ballQ: 4, priceC: 92, priceCInput: "0.92" };
 }
 
+function initOuForm(line?: Line | null): OuFormState {
+  if (line) {
+    return {
+      ballQ: line.ballQ,
+      priceC: line.priceC,
+      priceCInput: (line.priceC / 100).toFixed(2),
+    };
+  }
+  // default 2.5 goals = ballQ 10
+  return { ballQ: 10, priceC: 90, priceCInput: "0.90" };
+}
+
 export default function LinesPage() {
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [showAll, setShowAll] = useState(false);
-  const [forms, setForms] = useState<Record<number, FormState>>({});
+  const [ahForms, setAhForms] = useState<Record<number, AhFormState>>({});
+  const [ouForms, setOuForms] = useState<Record<number, OuFormState>>({});
   const [limits, setLimits] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<Record<number, boolean>>({});
   const [errors, setErrors] = useState<Record<number, string>>({});
@@ -67,11 +88,17 @@ export default function LinesPage() {
       .then((ms) => {
         const active = ms.filter((m) => m.status !== "finished");
         setMatches(active);
-        setForms((prev) => {
+        setAhForms((prev) => {
           const next = { ...prev };
           for (const m of active) {
-            // Always re-seed from the line so form stays in sync after reload
-            next[m.id] = initForm(m.line);
+            next[m.id] = initAhForm(m.line);
+          }
+          return next;
+        });
+        setOuForms((prev) => {
+          const next = { ...prev };
+          for (const m of active) {
+            next[m.id] = initOuForm(m.ouLine);
           }
           return next;
         });
@@ -101,10 +128,9 @@ export default function LinesPage() {
     setBusy((prev) => ({ ...prev, [matchId]: val }));
   }
 
-  async function postLine(matchId: number) {
-    const f = forms[matchId];
+  async function postAhLine(matchId: number) {
+    const f = ahForms[matchId];
     if (!f) return;
-    // Validate price
     const parsedPrice = parseFloat(f.priceCInput);
     if (
       isNaN(parsedPrice) ||
@@ -112,12 +138,12 @@ export default function LinesPage() {
       parsedPrice < -1 ||
       parsedPrice > 1
     ) {
-      setError(matchId, "Price must be between -1.00 and 1.00 (not 0)");
+      setError(matchId, "AH price must be between -1.00 and 1.00 (not 0)");
       return;
     }
     const priceC = Math.round(parsedPrice * 100);
     if (priceC === 0) {
-      setError(matchId, "Price must be non-zero");
+      setError(matchId, "AH price must be non-zero");
       return;
     }
     setError(matchId, "");
@@ -126,7 +152,51 @@ export default function LinesPage() {
       await api("/api/admin/lines", {
         action: "post",
         matchId,
+        market: "ah",
         favSide: f.favSide,
+        ballQ: f.ballQ,
+        priceC,
+      });
+      reload();
+    } catch (e) {
+      setError(matchId, e instanceof Error ? e.message : "error");
+    } finally {
+      setBusyFor(matchId, false);
+    }
+  }
+
+  async function postOuLine(matchId: number) {
+    const f = ouForms[matchId];
+    if (!f) return;
+    const parsedPrice = parseFloat(f.priceCInput);
+    if (
+      isNaN(parsedPrice) ||
+      parsedPrice === 0 ||
+      parsedPrice < -1 ||
+      parsedPrice > 1
+    ) {
+      setError(matchId, "O/U price must be between -1.00 and 1.00 (not 0)");
+      return;
+    }
+    const priceC = Math.round(parsedPrice * 100);
+    if (priceC === 0) {
+      setError(matchId, "O/U price must be non-zero");
+      return;
+    }
+    if (f.ballQ < 1) {
+      setError(matchId, "O/U goals line must be at least 0.25 (ballQ ≥ 1)");
+      return;
+    }
+    setError(matchId, "");
+    setBusyFor(matchId, true);
+    try {
+      // For ou market, favSide is semantically meaningless (grading ignores it);
+      // we pass 'home' as a stored dummy per manage.ts convention.
+      await api("/api/admin/lines", {
+        action: "post",
+        matchId,
+        market: "ou",
+        favSide: "home",
         ballQ: f.ballQ,
         priceC,
       });
@@ -140,12 +210,13 @@ export default function LinesPage() {
 
   async function lineAction(
     matchId: number,
+    market: "ah" | "ou",
     action: "suspend" | "resume" | "close",
   ) {
     setError(matchId, "");
     setBusyFor(matchId, true);
     try {
-      await api("/api/admin/lines", { action, matchId });
+      await api("/api/admin/lines", { action, matchId, market });
       reload();
     } catch (e) {
       setError(matchId, e instanceof Error ? e.message : "error");
@@ -176,8 +247,15 @@ export default function LinesPage() {
     }
   }
 
-  function updateForm(matchId: number, patch: Partial<FormState>) {
-    setForms((prev) => ({
+  function updateAhForm(matchId: number, patch: Partial<AhFormState>) {
+    setAhForms((prev) => ({
+      ...prev,
+      [matchId]: { ...prev[matchId], ...patch },
+    }));
+  }
+
+  function updateOuForm(matchId: number, patch: Partial<OuFormState>) {
+    setOuForms((prev) => ({
       ...prev,
       [matchId]: { ...prev[matchId], ...patch },
     }));
@@ -213,7 +291,8 @@ export default function LinesPage() {
         </button>
       </div>
       {visible.map((m) => {
-        const f = forms[m.id] ?? initForm();
+        const ahF = ahForms[m.id] ?? initAhForm();
+        const ouF = ouForms[m.id] ?? initOuForm();
         const isBusy = busy[m.id] ?? false;
         const err = errors[m.id] ?? "";
         return (
@@ -233,123 +312,246 @@ export default function LinesPage() {
               </span>
             </div>
 
-            {/* Current line summary */}
-            {m.line ? (
-              <div className="text-sm mb-2 text-gray-700">
-                Line: {m.line.favSide === "home" ? m.homeTeam : m.awayTeam}
-                {" −"}
-                {ball(m.line.ballQ)} @ {price(m.line.priceC)}
-                <span
-                  className={`ml-2 px-1 rounded text-xs ${
-                    m.line.status === "active"
-                      ? "bg-green-100 text-green-700"
-                      : m.line.status === "suspended"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-gray-200 text-gray-600"
-                  }`}
-                >
-                  {m.line.status}
-                </span>
-                <span className="ml-2 text-xs text-gray-400">
-                  v{m.line.version}
-                </span>
-              </div>
-            ) : (
-              <div className="text-sm mb-2 text-gray-400">No line posted</div>
-            )}
+            {/* ── HANDICAP (AH) MARKET ── */}
+            <div className="mb-4 rounded border border-gray-100 bg-gray-50 p-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">
+                Handicap (AH)
+              </p>
 
-            {/* Post / move form */}
-            <div className="space-y-2 mb-3">
-              <div className="flex gap-2 items-center text-sm">
-                <label className="w-16 text-gray-600">Fav side</label>
-                <select
-                  className="border rounded px-1 py-0.5 text-sm"
-                  value={f.favSide}
-                  onChange={(e) =>
-                    updateForm(m.id, {
-                      favSide: e.target.value as "home" | "away",
-                    })
-                  }
-                >
-                  <option value="home">{m.homeTeam}</option>
-                  <option value="away">{m.awayTeam}</option>
-                </select>
-              </div>
-              <div className="flex gap-2 items-center text-sm">
-                <label className="w-16 text-gray-600">Ball</label>
+              {/* Current AH line summary */}
+              {m.line ? (
+                <div className="text-sm mb-2 text-gray-700">
+                  Line: {m.line.favSide === "home" ? m.homeTeam : m.awayTeam}
+                  {" −"}
+                  {ball(m.line.ballQ)} @ {price(m.line.priceC)}
+                  <span
+                    className={`ml-2 px-1 rounded text-xs ${
+                      m.line.status === "active"
+                        ? "bg-green-100 text-green-700"
+                        : m.line.status === "suspended"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    {m.line.status}
+                  </span>
+                  <span className="ml-2 text-xs text-gray-400">
+                    v{m.line.version}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-sm mb-2 text-gray-400">No line posted</div>
+              )}
+
+              {/* AH Post / move form */}
+              <div className="space-y-2 mb-3">
+                <div className="flex gap-2 items-center text-sm">
+                  <label className="w-16 text-gray-600">Fav side</label>
+                  <select
+                    className="border rounded px-1 py-0.5 text-sm"
+                    value={ahF.favSide}
+                    onChange={(e) =>
+                      updateAhForm(m.id, {
+                        favSide: e.target.value as "home" | "away",
+                      })
+                    }
+                  >
+                    <option value="home">{m.homeTeam}</option>
+                    <option value="away">{m.awayTeam}</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 items-center text-sm">
+                  <label className="w-16 text-gray-600">Ball</label>
+                  <button
+                    className="border rounded px-2 py-0.5"
+                    onClick={() =>
+                      updateAhForm(m.id, {
+                        ballQ: Math.max(0, ahF.ballQ - 1),
+                      })
+                    }
+                  >
+                    −
+                  </button>
+                  <span className="w-10 text-center">{ball(ahF.ballQ)}</span>
+                  <button
+                    className="border rounded px-2 py-0.5"
+                    onClick={() =>
+                      updateAhForm(m.id, {
+                        ballQ: Math.min(40, ahF.ballQ + 1),
+                      })
+                    }
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="flex gap-2 items-center text-sm">
+                  <label className="w-16 text-gray-600">Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="-1.00"
+                    max="1.00"
+                    className="border rounded px-2 py-0.5 w-24 text-sm"
+                    value={ahF.priceCInput}
+                    onChange={(e) =>
+                      updateAhForm(m.id, { priceCInput: e.target.value })
+                    }
+                  />
+                </div>
                 <button
-                  className="border rounded px-2 py-0.5"
-                  onClick={() =>
-                    updateForm(m.id, { ballQ: Math.max(0, f.ballQ - 1) })
-                  }
+                  disabled={isBusy}
+                  onClick={() => postAhLine(m.id)}
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
                 >
-                  −
-                </button>
-                <span className="w-10 text-center">{ball(f.ballQ)}</span>
-                <button
-                  className="border rounded px-2 py-0.5"
-                  onClick={() =>
-                    updateForm(m.id, { ballQ: Math.min(40, f.ballQ + 1) })
-                  }
-                >
-                  +
+                  Post / Move
                 </button>
               </div>
-              <div className="flex gap-2 items-center text-sm">
-                <label className="w-16 text-gray-600">Price</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="-1.00"
-                  max="1.00"
-                  className="border rounded px-2 py-0.5 w-24 text-sm"
-                  value={f.priceCInput}
-                  onChange={(e) =>
-                    updateForm(m.id, { priceCInput: e.target.value })
-                  }
-                />
-              </div>
-              <button
-                disabled={isBusy}
-                onClick={() => postLine(m.id)}
-                className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
-              >
-                Post / Move
-              </button>
+
+              {/* AH Line action buttons */}
+              {m.line && (
+                <div className="flex gap-2">
+                  {m.line.status === "active" && (
+                    <button
+                      disabled={isBusy}
+                      onClick={() => lineAction(m.id, "ah", "suspend")}
+                      className="border text-sm px-2 py-1 rounded text-yellow-700 border-yellow-300 disabled:opacity-50"
+                    >
+                      Suspend
+                    </button>
+                  )}
+                  {m.line.status === "suspended" && (
+                    <button
+                      disabled={isBusy}
+                      onClick={() => lineAction(m.id, "ah", "resume")}
+                      className="border text-sm px-2 py-1 rounded text-green-700 border-green-300 disabled:opacity-50"
+                    >
+                      Resume
+                    </button>
+                  )}
+                  {m.line.status !== "closed" && (
+                    <button
+                      disabled={isBusy}
+                      onClick={() => lineAction(m.id, "ah", "close")}
+                      className="border text-sm px-2 py-1 rounded text-gray-600 disabled:opacity-50"
+                    >
+                      Close
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Line action buttons */}
-            {m.line && (
-              <div className="flex gap-2 mb-3">
-                {m.line.status === "active" && (
-                  <button
-                    disabled={isBusy}
-                    onClick={() => lineAction(m.id, "suspend")}
-                    className="border text-sm px-2 py-1 rounded text-yellow-700 border-yellow-300 disabled:opacity-50"
+            {/* ── TOTALS (O/U) MARKET ── */}
+            <div className="mb-3 rounded border border-gray-100 bg-gray-50 p-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">
+                Totals (O/U)
+              </p>
+
+              {/* Current O/U line summary */}
+              {m.ouLine ? (
+                <div className="text-sm mb-2 text-gray-700">
+                  Line: O/U {ball(m.ouLine.ballQ)} @ {price(m.ouLine.priceC)}
+                  <span
+                    className={`ml-2 px-1 rounded text-xs ${
+                      m.ouLine.status === "active"
+                        ? "bg-green-100 text-green-700"
+                        : m.ouLine.status === "suspended"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-gray-200 text-gray-600"
+                    }`}
                   >
-                    Suspend
-                  </button>
-                )}
-                {m.line.status === "suspended" && (
+                    {m.ouLine.status}
+                  </span>
+                  <span className="ml-2 text-xs text-gray-400">
+                    v{m.ouLine.version}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-sm mb-2 text-gray-400">No line posted</div>
+              )}
+
+              {/* O/U Post / move form */}
+              <div className="space-y-2 mb-3">
+                <div className="flex gap-2 items-center text-sm">
+                  <label className="w-16 text-gray-600">Goals</label>
                   <button
-                    disabled={isBusy}
-                    onClick={() => lineAction(m.id, "resume")}
-                    className="border text-sm px-2 py-1 rounded text-green-700 border-green-300 disabled:opacity-50"
+                    className="border rounded px-2 py-0.5"
+                    onClick={() =>
+                      updateOuForm(m.id, {
+                        ballQ: Math.max(1, ouF.ballQ - 1),
+                      })
+                    }
                   >
-                    Resume
+                    −
                   </button>
-                )}
-                {m.line.status !== "closed" && (
+                  <span className="w-10 text-center">{ball(ouF.ballQ)}</span>
                   <button
-                    disabled={isBusy}
-                    onClick={() => lineAction(m.id, "close")}
-                    className="border text-sm px-2 py-1 rounded text-gray-600 disabled:opacity-50"
+                    className="border rounded px-2 py-0.5"
+                    onClick={() =>
+                      updateOuForm(m.id, {
+                        ballQ: Math.min(40, ouF.ballQ + 1),
+                      })
+                    }
                   >
-                    Close
+                    +
                   </button>
-                )}
+                </div>
+                <div className="flex gap-2 items-center text-sm">
+                  <label className="w-16 text-gray-600">Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="-1.00"
+                    max="1.00"
+                    className="border rounded px-2 py-0.5 w-24 text-sm"
+                    value={ouF.priceCInput}
+                    onChange={(e) =>
+                      updateOuForm(m.id, { priceCInput: e.target.value })
+                    }
+                  />
+                </div>
+                <button
+                  disabled={isBusy}
+                  onClick={() => postOuLine(m.id)}
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                >
+                  Post / Move
+                </button>
               </div>
-            )}
+
+              {/* O/U Line action buttons */}
+              {m.ouLine && (
+                <div className="flex gap-2">
+                  {m.ouLine.status === "active" && (
+                    <button
+                      disabled={isBusy}
+                      onClick={() => lineAction(m.id, "ou", "suspend")}
+                      className="border text-sm px-2 py-1 rounded text-yellow-700 border-yellow-300 disabled:opacity-50"
+                    >
+                      Suspend
+                    </button>
+                  )}
+                  {m.ouLine.status === "suspended" && (
+                    <button
+                      disabled={isBusy}
+                      onClick={() => lineAction(m.id, "ou", "resume")}
+                      className="border text-sm px-2 py-1 rounded text-green-700 border-green-300 disabled:opacity-50"
+                    >
+                      Resume
+                    </button>
+                  )}
+                  {m.ouLine.status !== "closed" && (
+                    <button
+                      disabled={isBusy}
+                      onClick={() => lineAction(m.id, "ou", "close")}
+                      className="border text-sm px-2 py-1 rounded text-gray-600 disabled:opacity-50"
+                    >
+                      Close
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Per-match limit */}
             <div className="flex gap-2 items-center text-sm border-t pt-2">

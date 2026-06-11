@@ -21,11 +21,29 @@ export async function POST(req: Request) {
       return fail("bad_request", "market must be 'ah' or 'ou'");
 
     if (body.action === "post") {
-      // Additional validation for 'post' action
-      if (body.favSide !== "home" && body.favSide !== "away")
+      // For 'ou' market, favSide is semantically meaningless (grading ignores it);
+      // we default to 'home' as a stored dummy. For 'ah', favSide is required.
+      const favSide: "home" | "away" =
+        body.market === "ou"
+          ? "home"
+          : body.favSide === "home" || body.favSide === "away"
+            ? body.favSide
+            : null!;
+      if (body.market === "ah" && favSide === null)
         return fail("bad_request", "favSide must be 'home' or 'away'");
-      if (!Number.isInteger(body.ballQ) || body.ballQ < 0 || body.ballQ > 40)
-        return fail("bad_request", "ballQ must be an integer 0–40");
+      // ou ballQ ≥ 1 (no O 0.0 lines); ah ballQ ≥ 0
+      const minBallQ = body.market === "ou" ? 1 : 0;
+      if (
+        !Number.isInteger(body.ballQ) ||
+        body.ballQ < minBallQ ||
+        body.ballQ > 40
+      )
+        return fail(
+          "bad_request",
+          body.market === "ou"
+            ? "ballQ must be an integer 1–40 for ou market (minimum O/U 0.25)"
+            : "ballQ must be an integer 0–40",
+        );
       if (
         !Number.isInteger(body.priceC) ||
         body.priceC === 0 ||
@@ -43,7 +61,7 @@ export async function POST(req: Request) {
           {
             matchId: body.matchId,
             market: body.market,
-            favSide: body.favSide,
+            favSide,
             ballQ: body.ballQ,
             priceC: body.priceC,
           },

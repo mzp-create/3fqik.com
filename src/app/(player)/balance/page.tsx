@@ -9,7 +9,7 @@ import { signedMmk, mmk, ball, price } from "@/lib/client/format";
 type BalanceItem = {
   id: number;
   ticketNo: string;
-  side: "fav" | "dog";
+  side: "fav" | "dog" | "over" | "under";
   stakeMmk: number;
   status: string;
   netMmk: number | null;
@@ -17,6 +17,7 @@ type BalanceItem = {
   favSide: "home" | "away";
   ballQ: number;
   priceC: number;
+  market: "ah" | "ou";
   homeTeam: string;
   awayTeam: string;
 };
@@ -105,14 +106,20 @@ export default function BalancePage() {
 
             <ul className="mt-2 divide-y divide-ink/5 text-sm">
               {day.items.map((item) => {
-                const fav =
-                  item.favSide === "home" ? item.homeTeam : item.awayTeam;
-                const dog =
-                  item.favSide === "home" ? item.awayTeam : item.homeTeam;
-                const pickStr =
-                  item.side === "fav"
-                    ? `${fav} −${ball(item.ballQ)} @ ${price(item.priceC)}`
-                    : `${dog} +${ball(item.ballQ)} @ ${price(item.priceC)}`;
+                let pickStr: string;
+                if (item.market === "ou") {
+                  const word = item.side === "over" ? t.over : t.under;
+                  pickStr = `${word} ${ball(item.ballQ)} @ ${price(item.priceC)}`;
+                } else {
+                  const fav =
+                    item.favSide === "home" ? item.homeTeam : item.awayTeam;
+                  const dog =
+                    item.favSide === "home" ? item.awayTeam : item.homeTeam;
+                  pickStr =
+                    item.side === "fav"
+                      ? `${fav} −${ball(item.ballQ)} @ ${price(item.priceC)}`
+                      : `${dog} +${ball(item.ballQ)} @ ${price(item.priceC)}`;
+                }
                 return (
                   <li key={item.id} className="py-2">
                     <div className="flex justify-between">

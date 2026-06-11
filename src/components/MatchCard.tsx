@@ -9,6 +9,7 @@ export type LineRow = {
   ballQ: number;
   priceC: number;
   status: string;
+  market?: "ah" | "ou";
 };
 export type MatchRow = {
   id: number;
@@ -20,6 +21,7 @@ export type MatchRow = {
   homeScore: number | null;
   awayScore: number | null;
   line: LineRow | null;
+  ouLine?: LineRow | null;
 };
 
 export function MatchCard({
@@ -27,10 +29,11 @@ export function MatchCard({
   onPick,
 }: {
   match: MatchRow;
-  onPick: (side: "fav" | "dog") => void;
+  onPick: (market: "ah" | "ou", side: "fav" | "dog" | "over" | "under") => void;
 }) {
   const { t } = useT();
   const l = m.line;
+  const ou = m.ouLine ?? null;
   const fav = l?.favSide === "home" ? m.homeTeam : m.awayTeam;
   const dog = l?.favSide === "home" ? m.awayTeam : m.homeTeam;
   const kickoff = new Intl.DateTimeFormat("en-GB", {
@@ -42,10 +45,11 @@ export function MatchCard({
     hour12: false,
   }).format(new Date(m.kickoffUtc));
 
+  // Determine whether any market exists and if at least one is not suspended/closed
+  const hasAnyLine = !!(l || ou);
+
   return (
-    <div
-      className={`mb-3 rounded-xl border border-ink/10 bg-white p-3 shadow-sm ${l?.status === "suspended" ? "opacity-50" : ""}`}
-    >
+    <div className="mb-3 rounded-xl border border-ink/10 bg-white p-3 shadow-sm">
       {/* Eyebrow: stage + kickoff/live */}
       <div className="mb-1 flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-ink/40">
@@ -71,48 +75,96 @@ export function MatchCard({
         )}
       </p>
 
-      {!l && <p className="mt-2 text-center text-sm text-ink/30">—</p>}
-      {l && l.status === "closed" && (
+      {!hasAnyLine && <p className="mt-2 text-center text-sm text-ink/30">—</p>}
+
+      {/* AH market row */}
+      {l && l.status !== "closed" && (
+        <div className="mt-2">
+          {l.status === "suspended" ? (
+            <p className="text-center text-sm text-ink/50">⏸ {t.suspended}</p>
+          ) : (
+            <div className="flex gap-2">
+              {/* Favorite tile — green left rail */}
+              <button
+                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                onClick={() => onPick("ah", "fav")}
+              >
+                <span className="absolute inset-y-0 left-0 w-1.5 bg-mx" />
+                <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+                  {fav}
+                </span>
+                <span className="block pl-2 text-xs text-ink/50">
+                  −{ball(l.ballQ)}
+                </span>
+                <span className="font-display block pl-2 text-xl text-mx">
+                  {price(l.priceC)}
+                </span>
+              </button>
+
+              {/* Underdog tile — blue left rail */}
+              <button
+                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                onClick={() => onPick("ah", "dog")}
+              >
+                <span className="absolute inset-y-0 left-0 w-1.5 bg-us" />
+                <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+                  {dog}
+                </span>
+                <span className="block pl-2 text-xs text-ink/50">
+                  +{ball(l.ballQ)}
+                </span>
+                <span className="font-display block pl-2 text-xl text-us">
+                  {price(l.priceC)}
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {l && l.status === "closed" && !ou && (
         <p className="mt-2 text-center text-sm text-ink/30">—</p>
       )}
-      {l && l.status === "suspended" && (
-        <p className="mt-2 text-center text-sm">⏸ {t.suspended}</p>
-      )}
-      {l && l.status === "active" && (
-        <div className="mt-2 flex gap-2">
-          {/* Favorite tile — green left rail */}
-          <button
-            className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-            onClick={() => onPick("fav")}
-          >
-            <span className="absolute inset-y-0 left-0 w-1.5 bg-mx" />
-            <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
-              {fav}
-            </span>
-            <span className="block pl-2 text-xs text-ink/50">
-              −{ball(l.ballQ)}
-            </span>
-            <span className="font-display block pl-2 text-xl text-mx">
-              {price(l.priceC)}
-            </span>
-          </button>
 
-          {/* Underdog tile — blue left rail */}
-          <button
-            className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-            onClick={() => onPick("dog")}
-          >
-            <span className="absolute inset-y-0 left-0 w-1.5 bg-us" />
-            <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
-              {dog}
-            </span>
-            <span className="block pl-2 text-xs text-ink/50">
-              +{ball(l.ballQ)}
-            </span>
-            <span className="font-display block pl-2 text-xl text-us">
-              {price(l.priceC)}
-            </span>
-          </button>
+      {/* O/U market row */}
+      {ou && ou.status !== "closed" && (
+        <div className="mt-2">
+          {ou.status === "suspended" ? (
+            <p className="text-center text-sm text-ink/50">⏸ {t.suspended}</p>
+          ) : (
+            <div className="flex gap-2">
+              {/* Over tile — green left rail */}
+              <button
+                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                onClick={() => onPick("ou", "over")}
+              >
+                <span className="absolute inset-y-0 left-0 w-1.5 bg-mx" />
+                <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+                  O {ball(ou.ballQ)}
+                </span>
+                <span className="block pl-2 text-xs text-ink/50">{t.over}</span>
+                <span className="font-display block pl-2 text-xl text-mx">
+                  {price(ou.priceC)}
+                </span>
+              </button>
+
+              {/* Under tile — blue left rail */}
+              <button
+                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                onClick={() => onPick("ou", "under")}
+              >
+                <span className="absolute inset-y-0 left-0 w-1.5 bg-us" />
+                <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+                  U {ball(ou.ballQ)}
+                </span>
+                <span className="block pl-2 text-xs text-ink/50">
+                  {t.under}
+                </span>
+                <span className="font-display block pl-2 text-xl text-us">
+                  {price(ou.priceC)}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

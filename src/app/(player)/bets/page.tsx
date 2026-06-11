@@ -54,7 +54,13 @@ export default function BetsPage() {
           </div>
           <div className="mt-1 text-sm text-ink/60">
             {b.match.homeTeam} vs {b.match.awayTeam} ·{" "}
-            {b.side === "fav" ? t.sideFav : t.sideDog}
+            {b.side === "fav"
+              ? t.sideFav
+              : b.side === "dog"
+                ? t.sideDog
+                : b.side === "over"
+                  ? t.over
+                  : t.under}
           </div>
           <div className="text-sm text-ink/50">
             {t.stake}: {b.stakeMmk.toLocaleString("en-US")} MMK

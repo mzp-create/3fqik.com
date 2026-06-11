@@ -6,7 +6,12 @@ import { mmk, signedMmk, pickLabel } from "@/lib/client/format";
 import { errMsg } from "@/lib/client/errMsg";
 import type { MatchRow, LineRow } from "./MatchCard";
 
-export type SlipState = { match: MatchRow; line: LineRow; side: "fav" | "dog" };
+export type SlipState = {
+  match: MatchRow;
+  line: LineRow;
+  side: "fav" | "dog" | "over" | "under";
+  market: "ah" | "ou";
+};
 const CHIPS = [10_000, 50_000, 100_000, 500_000, 1_000_000];
 
 function preview(stake: number, priceC: number) {
@@ -39,6 +44,7 @@ export function BetSlip({
     try {
       const ticket = await api("/api/bets", {
         matchId: slip.match.id,
+        market: slip.market,
         lineVersion: line.version,
         side: slip.side,
         stakeMmk: stake,
@@ -55,6 +61,8 @@ export function BetSlip({
     }
   }
 
+  const ouLabels = { over: t.over, under: t.under };
+
   return (
     <div className="fixed inset-0 z-10 bg-ink/40" onClick={onClose}>
       <div
@@ -69,7 +77,12 @@ export function BetSlip({
         <div className="p-4 pb-8">
           {/* Pick title */}
           <h2 className="font-display text-lg text-ink">
-            {pickLabel(line, slip.match, slip.side)}
+            {pickLabel(
+              { ...line, market: slip.market },
+              slip.match,
+              slip.side,
+              ouLabels,
+            )}
           </h2>
           {slip.match.status === "live" && (
             <p className="text-sm text-ca">

@@ -412,3 +412,23 @@ it("SSE line_update payload includes market field", () => {
     unsub();
   }
 });
+
+it("setLineStatus SSE payload includes market field", () => {
+  postLine(
+    db,
+    1,
+    { matchId: 1, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    NOW,
+  );
+  const events: string[] = [];
+  const unsub = sseHub.subscribe((c) => events.push(c as string));
+  try {
+    setLineStatus(db, 1, "ou", "suspended");
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain('"market"');
+    expect(events[0]).toContain('"ou"');
+    expect(events[0]).toContain('"suspended"');
+  } finally {
+    unsub();
+  }
+});

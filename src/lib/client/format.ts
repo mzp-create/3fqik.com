@@ -14,10 +14,21 @@ export function todayMmt(): string {
   }).format(new Date());
 }
 export function pickLabel(
-  l: { favSide: "home" | "away"; ballQ: number; priceC: number },
+  l: {
+    favSide: "home" | "away";
+    ballQ: number;
+    priceC: number;
+    market?: "ah" | "ou";
+  },
   m: { homeTeam: string; awayTeam: string },
-  side: "fav" | "dog",
+  side: "fav" | "dog" | "over" | "under",
+  ouLabels?: { over: string; under: string },
 ) {
+  if (l.market === "ou" || side === "over" || side === "under") {
+    const labels = ouLabels ?? { over: "Over", under: "Under" };
+    const word = side === "over" ? labels.over : labels.under;
+    return `${word} ${ball(l.ballQ)} @ ${price(l.priceC)}`;
+  }
   const fav = l.favSide === "home" ? m.homeTeam : m.awayTeam;
   const dog = l.favSide === "home" ? m.awayTeam : m.homeTeam;
   return side === "fav"

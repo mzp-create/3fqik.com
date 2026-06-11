@@ -609,3 +609,35 @@ it("limits count ah+ou stakes together against one match cap", () => {
     ),
   ).toThrow(/20,000/);
 });
+
+it("suspended ou line rejects placement with line_suspended code", () => {
+  const m = seedMatch(db);
+  const ouLine = postLine(
+    db,
+    1,
+    { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    NOW,
+  );
+  setLineStatus(db, m.id, "ou", "suspended");
+
+  let caught: (Error & { code?: string }) | null = null;
+  try {
+    placeBet(
+      db,
+      2,
+      {
+        matchId: m.id,
+        market: "ou",
+        lineVersion: ouLine.version,
+        side: "over",
+        stakeMmk: 50_000,
+      },
+      NOW,
+    );
+  } catch (e) {
+    caught = e as Error & { code?: string };
+  }
+  expect(caught).not.toBeNull();
+  expect(caught!.code).toBe("line_suspended");
+  expect(caught!.message).toMatch(/suspended/);
+});

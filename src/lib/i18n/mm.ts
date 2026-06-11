@@ -71,6 +71,8 @@ export const mm: Dict = {
   noBets: "လောင်းကြေးမရှိသေးပါ",
   noDays: "ရှင်းလင်းရန်မရှိသေးပါ",
   pinFormat: "PIN သည် ဂဏန်း ၆ လုံးတိတိ ဖြစ်ရမည်",
+  over: "ဂိုးပေါ်",
+  under: "ဂိုးအောက်",
 } as const;
 
 /*

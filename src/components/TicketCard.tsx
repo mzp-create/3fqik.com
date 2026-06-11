@@ -7,7 +7,7 @@ import { statusKey } from "@/lib/client/status";
 
 export type TicketRow = {
   ticketNo: string;
-  side: "fav" | "dog";
+  side: "fav" | "dog" | "over" | "under";
   stakeMmk: number;
   status: string;
   scoreHomeAtBet: number;
@@ -16,7 +16,12 @@ export type TicketRow = {
   netMmk: number | null;
   qrUrl: string;
   match: { homeTeam: string; awayTeam: string; stage: string };
-  line: { favSide: "home" | "away"; ballQ: number; priceC: number };
+  line: {
+    favSide: "home" | "away";
+    ballQ: number;
+    priceC: number;
+    market?: "ah" | "ou";
+  };
   playerName: string;
 };
 
@@ -59,6 +64,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
   const [qr, setQr] = useState("");
   const [qrError, setQrError] = useState(false);
   const stamp = stampLabel(b.status);
+  const ouLabels = { over: t.over, under: t.under };
 
   useEffect(() => {
     QRCode.toDataURL(b.qrUrl, { width: 160 })
@@ -87,7 +93,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
       const rows: [string, string][] = [
         [t.player, b.playerName],
         [t.match, `${b.match.homeTeam} vs ${b.match.awayTeam}`],
-        [t.pick, pickLabel(b.line, b.match, b.side)],
+        [t.pick, pickLabel(b.line, b.match, b.side, ouLabels)],
         [t.stake, `${mmk(b.stakeMmk)} MMK`],
         [t.scoreAtBet, `${b.scoreHomeAtBet}–${b.scoreAwayAtBet}`],
         [t.placed, formatMmt(b.placedAt)],
@@ -149,7 +155,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
               k={t.match}
               v={`${b.match.homeTeam} vs ${b.match.awayTeam} (${b.match.stage})`}
             />
-            <Row k={t.pick} v={pickLabel(b.line, b.match, b.side)} />
+            <Row k={t.pick} v={pickLabel(b.line, b.match, b.side, ouLabels)} />
             <Row k={t.stake} v={`${mmk(b.stakeMmk)} MMK`} />
             <Row
               k={t.scoreAtBet}

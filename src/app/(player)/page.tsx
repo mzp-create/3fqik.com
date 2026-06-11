@@ -40,7 +40,10 @@ export default function MatchesPage() {
         <MatchCard
           key={m.id}
           match={m}
-          onPick={(side) => m.line && setSlip({ match: m, line: m.line, side })}
+          onPick={(market, side) => {
+            const line = market === "ou" ? m.ouLine : m.line;
+            if (line) setSlip({ match: m, line, side, market });
+          }}
         />
       ))}
       {slip && (

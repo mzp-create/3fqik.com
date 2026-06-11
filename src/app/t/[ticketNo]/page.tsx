@@ -72,10 +72,16 @@ export default async function VerifyTicket({
       : undefined;
   const fav = line.favSide === "home" ? match.homeTeam : match.awayTeam;
   const dog = line.favSide === "home" ? match.awayTeam : match.homeTeam;
-  const pick =
-    bet.side === "fav"
-      ? `${fav} −${ballLabel(line.ballQ)}`
-      : `${dog} +${ballLabel(line.ballQ)}`;
+  let pick: string;
+  if (line.market === "ou") {
+    const word = bet.side === "over" ? "Over" : "Under";
+    pick = `${word} ${ballLabel(line.ballQ)}`;
+  } else {
+    pick =
+      bet.side === "fav"
+        ? `${fav} −${ballLabel(line.ballQ)}`
+        : `${dog} +${ballLabel(line.ballQ)}`;
+  }
 
   return (
     <main className="mx-auto w-full max-w-sm p-6">

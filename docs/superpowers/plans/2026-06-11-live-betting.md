@@ -619,16 +619,17 @@ describe('normalizePhone', () => {
 - [ ] **Step 2: Run → FAIL. Implement `src/lib/auth/phone.ts`**
 
 ```ts
-/** Normalize Myanmar mobile numbers to canonical 09xxxxxxxxx form. */
+/**
+ * Normalize Myanmar mobile numbers to canonical 09xxxxxxxxx form.
+ * Accepted forms: 09…, +959…, 959… (spaces/dashes anywhere; '+' only as first char).
+ * Note: bare '959…' is treated as country-code form; this is the common typed form
+ * here. Bare '9…' (without 0 or 95) is rejected as ambiguous.
+ */
 export function normalizePhone(raw: string): string {
-  const digits = raw.replace(/[\s\-+]/g, '')
-  let rest: string
-  if (digits.startsWith('959')) rest = digits.slice(3)
-  else if (digits.startsWith('09')) rest = digits.slice(2)
-  else if (digits.startsWith('9')) rest = digits.slice(1)
-  else throw new Error('invalid phone')
-  if (!/^\d{7,10}$/.test(rest)) throw new Error('invalid phone')
-  return '09' + rest
+  const s = raw.replace(/[\s\-]/g, '')
+  const m = /^(?:\+?959|09)(\d{7,10})$/.exec(s)
+  if (!m) throw new Error('invalid phone')
+  return '09' + m[1]
 }
 ```
 
@@ -674,16 +675,29 @@ export function verifyPin(pin: string, hash: string): boolean {
   return bcrypt.compareSync(pin, hash)
 }
 
-type LockFields = { failedPinAttempts: number; lockedUntil: string | null }
+// NOTE: a 6-digit PIN (10^6 keyspace) is trivially brute-forced offline at any
+// bcrypt cost if pin_hash leaks. The real defense is the online lockout below;
+// cost 10 just keeps casual inspection out.
+//
+// Caller contract: check lockState() BEFORE verifyPin(); do not call
+// registerFailure() while locked (it would extend the lock); call
+// registerSuccess() fields on successful login.
+
+export type LockFields = { failedPinAttempts: number; lockedUntil: string | null }
 
 export function registerFailure(p: LockFields, nowIso: string): LockFields {
-  const failed = p.failedPinAttempts + 1
+  const lockExpired = !!p.lockedUntil && Date.parse(p.lockedUntil) <= Date.parse(nowIso)
+  const failed = (lockExpired ? 0 : p.failedPinAttempts) + 1
   return {
     failedPinAttempts: failed,
     lockedUntil: failed >= MAX_ATTEMPTS
       ? new Date(Date.parse(nowIso) + LOCK_MINUTES * 60_000).toISOString()
-      : p.lockedUntil,
+      : lockExpired ? null : p.lockedUntil,
   }
+}
+
+export function registerSuccess(): LockFields {
+  return { failedPinAttempts: 0, lockedUntil: null }
 }
 
 export function lockState(p: LockFields, nowIso: string): { locked: boolean } {

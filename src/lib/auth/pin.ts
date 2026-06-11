@@ -12,16 +12,29 @@ export function verifyPin(pin: string, hash: string): boolean {
   return bcrypt.compareSync(pin, hash)
 }
 
-type LockFields = { failedPinAttempts: number; lockedUntil: string | null }
+// NOTE: a 6-digit PIN (10^6 keyspace) is trivially brute-forced offline at any
+// bcrypt cost if pin_hash leaks. The real defense is the online lockout below;
+// cost 10 just keeps casual inspection out.
+//
+// Caller contract: check lockState() BEFORE verifyPin(); do not call
+// registerFailure() while locked (it would extend the lock); call
+// registerSuccess() fields on successful login.
+
+export type LockFields = { failedPinAttempts: number; lockedUntil: string | null }
 
 export function registerFailure(p: LockFields, nowIso: string): LockFields {
-  const failed = p.failedPinAttempts + 1
+  const lockExpired = !!p.lockedUntil && Date.parse(p.lockedUntil) <= Date.parse(nowIso)
+  const failed = (lockExpired ? 0 : p.failedPinAttempts) + 1
   return {
     failedPinAttempts: failed,
     lockedUntil: failed >= MAX_ATTEMPTS
       ? new Date(Date.parse(nowIso) + LOCK_MINUTES * 60_000).toISOString()
-      : p.lockedUntil,
+      : lockExpired ? null : p.lockedUntil,
   }
+}
+
+export function registerSuccess(): LockFields {
+  return { failedPinAttempts: 0, lockedUntil: null }
 }
 
 export function lockState(p: LockFields, nowIso: string): { locked: boolean } {

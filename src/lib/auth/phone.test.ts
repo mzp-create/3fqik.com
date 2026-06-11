@@ -14,4 +14,19 @@ describe('normalizePhone', () => {
       expect(() => normalizePhone(bad)).toThrow()
     }
   })
+  it('rejects internal or repeated plus signs and bare-9 forms', () => {
+    expect(() => normalizePhone('09790+001111')).toThrow()
+    expect(() => normalizePhone('+++09790001111')).toThrow()
+    expect(() => normalizePhone('9+59790001111')).toThrow()
+    expect(() => normalizePhone('9790001111')).toThrow() // bare 9, ambiguous
+  })
+  it('rejects non-ASCII digits', () => {
+    expect(() => normalizePhone('09၇၉၀001111')).toThrow()
+  })
+  it('accepts spec length bounds 09+7 and 09+10, rejects outside', () => {
+    expect(normalizePhone('091234567')).toBe('091234567')
+    expect(normalizePhone('091234567890')).toBe('091234567890')
+    expect(() => normalizePhone('09123456')).toThrow()
+    expect(() => normalizePhone('0912345678901')).toThrow()
+  })
 })

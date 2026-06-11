@@ -1,11 +1,12 @@
-/** Normalize Myanmar mobile numbers to canonical 09xxxxxxxxx form. */
+/**
+ * Normalize Myanmar mobile numbers to canonical 09xxxxxxxxx form.
+ * Accepted forms: 09…, +959…, 959… (spaces/dashes anywhere; '+' only as first char).
+ * Note: bare '959…' is treated as country-code form; this is the common typed form
+ * here. Bare '9…' (without 0 or 95) is rejected as ambiguous.
+ */
 export function normalizePhone(raw: string): string {
-  const digits = raw.replace(/[\s\-+]/g, '')
-  let rest: string
-  if (digits.startsWith('959')) rest = digits.slice(3)
-  else if (digits.startsWith('09')) rest = digits.slice(2)
-  else if (digits.startsWith('9')) rest = digits.slice(1)
-  else throw new Error('invalid phone')
-  if (!/^\d{7,10}$/.test(rest)) throw new Error('invalid phone')
-  return '09' + rest
+  const s = raw.replace(/[\s\-]/g, '')
+  const m = /^(?:\+?959|09)(\d{7,10})$/.exec(s)
+  if (!m) throw new Error('invalid phone')
+  return '09' + m[1]
 }

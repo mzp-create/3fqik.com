@@ -51,7 +51,7 @@ export default async function AdminLayout({
         {/* Triband bottom border */}
         <div className="triband absolute bottom-0 left-0 right-0" />
       </header>
-      <div className="mx-auto max-w-md p-3">{children}</div>
+      <div className="mx-auto w-full max-w-md p-3">{children}</div>
     </I18nProvider>
   );
 }

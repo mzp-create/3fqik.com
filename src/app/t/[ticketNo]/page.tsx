@@ -34,7 +34,7 @@ export default async function VerifyTicket({
 
   if (!valid || !bet) {
     return (
-      <main className="mx-auto max-w-sm p-6 text-center">
+      <main className="mx-auto w-full max-w-sm p-6 text-center">
         <div className="mb-4 rounded-lg bg-ca px-4 py-3">
           <h1 className="font-display text-2xl text-white">
             ✕ NOT A VALID TICKET
@@ -78,7 +78,7 @@ export default async function VerifyTicket({
       : `${dog} +${ballLabel(line.ballQ)}`;
 
   return (
-    <main className="mx-auto max-w-sm p-6">
+    <main className="mx-auto w-full max-w-sm p-6">
       <div className="mb-4 rounded-lg bg-mx px-4 py-3 text-center">
         <h1 className="font-display text-2xl text-white">✓ VERIFIED TICKET</h1>
       </div>

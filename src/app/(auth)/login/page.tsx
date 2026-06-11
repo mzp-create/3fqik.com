@@ -30,7 +30,7 @@ function LoginForm() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 bg-canvas p-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-4 bg-canvas p-6">
       {/* App name hero */}
       <div className="text-center">
         <p className="text-sm font-semibold uppercase tracking-widest text-ink/50">

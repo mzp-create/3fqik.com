@@ -12,7 +12,7 @@ export default async function PlayerLayout({
   if (!me) redirect("/login");
   return (
     <I18nProvider initial={me.language}>
-      <div className="mx-auto max-w-md pb-20">{children}</div>
+      <div className="mx-auto w-full max-w-md pb-20">{children}</div>
       <Tabs isAdmin={me.role === "admin"} />
     </I18nProvider>
   );

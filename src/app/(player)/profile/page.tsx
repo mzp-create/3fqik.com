@@ -60,7 +60,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="mx-auto max-w-sm p-6">
+    <main className="mx-auto w-full max-w-sm p-6">
       {/* Section header */}
       <div className="mb-6 flex items-center gap-2">
         <div

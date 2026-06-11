@@ -80,6 +80,26 @@ it("setMatchLive throws match_finished if match is already finished", () => {
   }
 });
 
+it("setMatchLive is idempotent on live matches (preserves running score, no extra broadcast)", () => {
+  const received: string[] = [];
+  const unsub = sseHub.subscribe((chunk) => received.push(chunk));
+
+  setMatchLive(db, 1);
+  updateLiveScore(db, 1, 2, 1);
+
+  const broadcastCountBefore = received.length;
+  setMatchLive(db, 1); // re-tap on already-live match
+  const broadcastCountAfter = received.length;
+
+  unsub();
+
+  const m = db.select().from(schema.matches).all()[0];
+  expect(m.status).toBe("live");
+  expect(m.homeScore).toBe(2);
+  expect(m.awayScore).toBe(1);
+  expect(broadcastCountAfter).toBe(broadcastCountBefore); // no extra broadcast
+});
+
 // --- updateLiveScore input validation (bad_score) ---
 
 it("updateLiveScore throws bad_score for negative scores", () => {

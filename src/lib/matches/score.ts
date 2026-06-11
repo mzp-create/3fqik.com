@@ -20,6 +20,7 @@ export function setMatchLive(db: Db, matchId: number) {
     .where(eq(schema.matches.id, matchId))
     .get();
   if (!m) throw err("match not found", 404, "not_found");
+  if (m.status === "live") return; // idempotent: re-tap must not wipe the running score
   if (m.status === "finished")
     throw err(
       "match is finished — cannot set live again",

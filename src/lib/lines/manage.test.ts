@@ -1,0 +1,101 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { createTestDb, schema, type Db } from '@/lib/db'
+import { postLine, setLineStatus, activeLine, latestLine } from './manage'
+import { hashPin } from '@/lib/auth/pin'
+
+let db: Db
+const NOW = '2026-06-12T10:00:00Z'
+
+beforeEach(() => {
+  db = createTestDb()
+  db.insert(schema.players).values({ phone: '09700000001', pinHash: hashPin('111111'), displayName: 'A', role: 'admin', createdAt: NOW }).run()
+  db.insert(schema.matches).values({ stage: 'Group C', homeTeam: 'BRA', awayTeam: 'MEX', kickoffUtc: '2026-06-12T02:00:00Z', venue: 'X', matchDay: '2026-06-12' }).run()
+})
+
+it('posting closes the previous line and increments version', () => {
+  const l1 = postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 3, priceC: 92 }, NOW)
+  expect(l1.version).toBe(1)
+  const l2 = postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 4, priceC: -95 }, NOW)
+  expect(l2.version).toBe(2)
+  const rows = db.select().from(schema.lines).all()
+  expect(rows.find(r => r.id === l1.id)!.status).toBe('closed')
+  expect(activeLine(db, 1)!.id).toBe(l2.id)
+})
+
+it('suspend/resume toggles; closed lines cannot resume; bad prices rejected', () => {
+  const l = postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 85 }, NOW)
+  // matchId=1, l.id=1 in this test (same value, but semantically matchId)
+  setLineStatus(db, 1, 'suspended')
+  expect(activeLine(db, 1)).toBeNull()
+  setLineStatus(db, 1, 'active')
+  expect(activeLine(db, 1)!.id).toBe(l.id)
+  setLineStatus(db, 1, 'closed')
+  expect(() => setLineStatus(db, 1, 'active')).toThrow(/closed/)
+  expect(() => postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 0 }, NOW)).toThrow()
+  expect(() => postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: -1, priceC: 90 }, NOW)).toThrow()
+})
+
+it('err codes: not_found for missing match, match_finished for done match, bad_line for invalid params', () => {
+  // missing match → not_found
+  const e1 = (() => {
+    try { postLine(db, 1, { matchId: 999, favSide: 'home', ballQ: 2, priceC: 85 }, NOW); return null }
+    catch (e) { return e as { code?: string; httpStatus?: number } }
+  })()
+  expect(e1?.code).toBe('not_found')
+  expect(e1?.httpStatus).toBe(404)
+
+  // match finished → match_finished
+  db.insert(schema.matches).values({ stage: 'Group C', homeTeam: 'ARG', awayTeam: 'ENG', kickoffUtc: '2026-06-12T02:00:00Z', venue: 'Y', matchDay: '2026-06-12', status: 'finished' }).run()
+  const allMatches = db.select().from(schema.matches).all()
+  const finishedId = allMatches.find(m => m.status === 'finished')!.id
+  const e2 = (() => {
+    try { postLine(db, 1, { matchId: finishedId, favSide: 'home', ballQ: 2, priceC: 85 }, NOW); return null }
+    catch (e) { return e as { code?: string } }
+  })()
+  expect(e2?.code).toBe('match_finished')
+
+  // invalid ball → bad_line
+  const e3 = (() => {
+    try { postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: -1, priceC: 85 }, NOW); return null }
+    catch (e) { return e as { code?: string } }
+  })()
+  expect(e3?.code).toBe('bad_line')
+
+  // invalid price → bad_line
+  const e4 = (() => {
+    try { postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 0 }, NOW); return null }
+    catch (e) { return e as { code?: string } }
+  })()
+  expect(e4?.code).toBe('bad_line')
+})
+
+it('setLineStatus errors: no_line for missing matchId, line_closed for closed line', () => {
+  // no line for matchId → no_line
+  const e1 = (() => {
+    try { setLineStatus(db, 999, 'active'); return null }
+    catch (e) { return e as { code?: string; httpStatus?: number } }
+  })()
+  expect(e1?.code).toBe('no_line')
+  expect(e1?.httpStatus).toBe(404)
+
+  // already closed → line_closed
+  postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 85 }, NOW)
+  setLineStatus(db, 1, 'closed')
+  const e2 = (() => {
+    try { setLineStatus(db, 1, 'active'); return null }
+    catch (e) { return e as { code?: string } }
+  })()
+  expect(e2?.code).toBe('line_closed')
+})
+
+it('latestLine returns null when no lines exist', () => {
+  expect(latestLine(db, 1)).toBeNull()
+})
+
+it('postLine transaction: version increments are atomic (UNIQUE constraint)', () => {
+  // Post two lines sequentially — versions must be distinct; UNIQUE(matchId, version) enforces correctness
+  const l1 = postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 85 }, NOW)
+  const l2 = postLine(db, 1, { matchId: 1, favSide: 'away', ballQ: 4, priceC: -95 }, NOW)
+  expect(l1.version).not.toBe(l2.version)
+  expect(l2.version).toBe(l1.version + 1)
+})

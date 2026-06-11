@@ -10,7 +10,9 @@ class SseHub {
 
   broadcast(event: string, data: unknown) {
     const chunk = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-    for (const fn of this.listeners) fn(chunk)
+    for (const fn of this.listeners) {
+      try { fn(chunk) } catch { /* isolate: one bad listener must not abort delivery to others */ }
+    }
   }
 }
 

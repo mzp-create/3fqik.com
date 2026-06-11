@@ -11,4 +11,15 @@ describe('sseHub', () => {
     expect(got).toHaveLength(1)
     expect(got[0]).toBe('event: line_update\ndata: {"matchId":3,"version":7}\n\n')
   })
+
+  it('broadcast reaches second listener even when first throws', () => {
+    const got: string[] = []
+    const unsub1 = sseHub.subscribe(() => { throw new Error('boom') })
+    const unsub2 = sseHub.subscribe(chunk => got.push(chunk))
+    expect(() => sseHub.broadcast('test_event', { x: 1 })).not.toThrow()
+    unsub1()
+    unsub2()
+    expect(got).toHaveLength(1)
+    expect(got[0]).toBe('event: test_event\ndata: {"x":1}\n\n')
+  })
 })

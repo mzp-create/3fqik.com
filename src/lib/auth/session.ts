@@ -54,9 +54,11 @@ export async function currentPlayer() {
   return p
 }
 
-export async function requirePlayer() {
+export async function requirePlayer(opts?: { allowMustChangePin?: boolean }) {
   const p = await currentPlayer()
-  if (!p) throw Object.assign(new Error('unauthorized'), { httpStatus: 401 })
+  if (!p) throw Object.assign(new Error('unauthorized'), { httpStatus: 401, code: 'unauthorized' })
+  if (p.mustChangePin && !opts?.allowMustChangePin)
+    throw Object.assign(new Error('PIN change required'), { httpStatus: 403, code: 'must_change_pin' })
   return p
 }
 

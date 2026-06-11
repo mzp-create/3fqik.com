@@ -5,10 +5,10 @@ import { ok, handle } from '@/lib/api'
 
 export async function POST(req: Request) {
   return handle(async () => {
-    const me = await requirePlayer()
+    const me = await requirePlayer({ allowMustChangePin: true })
     const { currentPin, newPin } = await req.json()
-    changePin(getDb(), me.id, currentPin, newPin)
-    await setSessionCookie({ playerId: me.id, role: me.role, epoch: me.sessionEpoch + 1 })
+    const updated = changePin(getDb(), me.id, currentPin, newPin)
+    await setSessionCookie({ playerId: updated.id, role: updated.role, epoch: updated.sessionEpoch })
     return ok({})
   })
 }

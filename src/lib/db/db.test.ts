@@ -17,4 +17,16 @@ describe('db schema', () => {
       }).run(),
     ).toThrow(/UNIQUE/)
   })
+
+  it('enforces foreign keys (PRAGMA foreign_keys = ON)', () => {
+    const db = createTestDb()
+    expect(() =>
+      db.insert(schema.inviteCodes).values({
+        code: 'TESTCODE',
+        maxUses: 5,
+        expiresAt: new Date().toISOString(),
+        createdBy: 999, // no such player
+      }).run(),
+    ).toThrow(/FOREIGN KEY/)
+  })
 })

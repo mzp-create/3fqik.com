@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "baf24e64-8054-4ba7-b256-84a088f676ee",
+  "id": "34745778-3672-4146-b62c-55adce36ff5f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "audit_log": {
@@ -221,6 +221,32 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "bets_settlement_id_settlements_id_fk": {
+          "name": "bets_settlement_id_settlements_id_fk",
+          "tableFrom": "bets",
+          "tableTo": "settlements",
+          "columnsFrom": [
+            "settlement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bets_voided_by_players_id_fk": {
+          "name": "bets_voided_by_players_id_fk",
+          "tableFrom": "bets",
+          "tableTo": "players",
+          "columnsFrom": [
+            "voided_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -369,7 +395,16 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "lines_match_id_version_unique": {
+          "name": "lines_match_id_version_unique",
+          "columns": [
+            "match_id",
+            "version"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "lines_match_id_matches_id_fk": {
           "name": "lines_match_id_matches_id_fk",
@@ -734,6 +769,14 @@
           "name": "settlements_ref_unique",
           "columns": [
             "ref"
+          ],
+          "isUnique": true
+        },
+        "settlements_match_day_id_player_id_unique": {
+          "name": "settlements_match_day_id_player_id_unique",
+          "columns": [
+            "match_day_id",
+            "player_id"
           ],
           "isUnique": true
         }

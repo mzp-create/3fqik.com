@@ -26,7 +26,9 @@ CREATE TABLE `bets` (
 	`void_reason` text,
 	FOREIGN KEY (`player_id`) REFERENCES `players`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`match_id`) REFERENCES `matches`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`line_id`) REFERENCES `lines`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`line_id`) REFERENCES `lines`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`settlement_id`) REFERENCES `settlements`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`voided_by`) REFERENCES `players`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `bets_ticket_no_unique` ON `bets` (`ticket_no`);--> statement-breakpoint
@@ -55,6 +57,7 @@ CREATE TABLE `lines` (
 	FOREIGN KEY (`posted_by`) REFERENCES `players`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `lines_match_id_version_unique` ON `lines` (`match_id`,`version`);--> statement-breakpoint
 CREATE TABLE `match_days` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`date` text NOT NULL,
@@ -112,4 +115,5 @@ CREATE TABLE `settlements` (
 	FOREIGN KEY (`marked_by`) REFERENCES `players`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `settlements_ref_unique` ON `settlements` (`ref`);
+CREATE UNIQUE INDEX `settlements_ref_unique` ON `settlements` (`ref`);--> statement-breakpoint
+CREATE UNIQUE INDEX `settlements_match_day_id_player_id_unique` ON `settlements` (`match_day_id`,`player_id`);

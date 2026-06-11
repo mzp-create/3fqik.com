@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, unique } from 'drizzle-orm/sqlite-core'
 
 export const players = sqliteTable('players', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -49,7 +49,24 @@ export const lines = sqliteTable('lines', {
   status: text('status', { enum: ['active', 'suspended', 'closed'] }).notNull(),
   postedBy: integer('posted_by').notNull().references(() => players.id),
   postedAt: text('posted_at').notNull(),
+}, (t) => [unique().on(t.matchId, t.version)])
+
+export const matchDays = sqliteTable('match_days', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  date: text('date').notNull().unique(),     // YYYY-MM-DD MMT
+  status: text('status', { enum: ['open', 'closed', 'settled'] }).notNull().default('open'),
+  closedAt: text('closed_at'),
 })
+
+export const settlements = sqliteTable('settlements', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  ref: text('ref').notNull().unique(),       // S-MMDD-NN
+  matchDayId: integer('match_day_id').notNull().references(() => matchDays.id),
+  playerId: integer('player_id').notNull().references(() => players.id),
+  netMmk: integer('net_mmk').notNull(),
+  markedBy: integer('marked_by').notNull().references(() => players.id),
+  markedAt: text('marked_at').notNull(),
+}, (t) => [unique().on(t.matchDayId, t.playerId)])
 
 export const bets = sqliteTable('bets', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -67,26 +84,9 @@ export const bets = sqliteTable('bets', {
   }).notNull().default('pending'),
   netMmk: integer('net_mmk'),
   settledAt: text('settled_at'),
-  settlementId: integer('settlement_id'),
-  voidedBy: integer('voided_by'),
+  settlementId: integer('settlement_id').references(() => settlements.id),
+  voidedBy: integer('voided_by').references(() => players.id),
   voidReason: text('void_reason'),
-})
-
-export const matchDays = sqliteTable('match_days', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  date: text('date').notNull().unique(),     // YYYY-MM-DD MMT
-  status: text('status', { enum: ['open', 'closed', 'settled'] }).notNull().default('open'),
-  closedAt: text('closed_at'),
-})
-
-export const settlements = sqliteTable('settlements', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  ref: text('ref').notNull().unique(),       // S-MMDD-NN
-  matchDayId: integer('match_day_id').notNull().references(() => matchDays.id),
-  playerId: integer('player_id').notNull().references(() => players.id),
-  netMmk: integer('net_mmk').notNull(),
-  markedBy: integer('marked_by').notNull().references(() => players.id),
-  markedAt: text('marked_at').notNull(),
 })
 
 export const settings = sqliteTable('settings', {

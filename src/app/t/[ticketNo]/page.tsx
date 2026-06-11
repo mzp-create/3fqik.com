@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { verifyTicketSig } from "@/lib/ticket/sign";
@@ -53,10 +56,18 @@ export default async function VerifyTicket({
     .where(eq(schema.lines.id, bet.lineId))
     .get()!;
   const player = db
-    .select()
+    .select({ displayName: schema.players.displayName })
     .from(schema.players)
     .where(eq(schema.players.id, bet.playerId))
     .get()!;
+  const settlement =
+    bet.settlementId != null
+      ? db
+          .select({ ref: schema.settlements.ref })
+          .from(schema.settlements)
+          .where(eq(schema.settlements.id, bet.settlementId))
+          .get()
+      : undefined;
   const fav = line.favSide === "home" ? match.homeTeam : match.awayTeam;
   const dog = line.favSide === "home" ? match.awayTeam : match.homeTeam;
   const pick =
@@ -87,9 +98,7 @@ export default async function VerifyTicket({
         {bet.netMmk != null && (
           <Row k="Net" v={`${bet.netMmk.toLocaleString()} MMK`} />
         )}
-        {bet.settlementId != null && (
-          <Row k="Settled" v={`ref #${bet.settlementId}`} />
-        )}
+        {settlement != null && <Row k="Settled" v={settlement.ref} />}
       </dl>
     </main>
   );

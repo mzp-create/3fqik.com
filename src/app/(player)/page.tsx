@@ -2,17 +2,23 @@
 import { useEffect, useState } from "react";
 import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
+import { useT } from "@/lib/i18n";
+import { errMsg } from "@/lib/client/errMsg";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
 import { BetSlip, type SlipState } from "@/components/BetSlip";
 
 export default function MatchesPage() {
+  const { t } = useT();
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [slip, setSlip] = useState<SlipState | null>(null);
+  const [error, setError] = useState("");
 
   const reload = () =>
     api<MatchRow[]>("/api/matches")
       .then(setMatches)
-      .catch((e) => redirectIfPinChange(e));
+      .catch((e) => {
+        if (!redirectIfPinChange(e)) setError(errMsg(t, e));
+      });
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -29,6 +35,7 @@ export default function MatchesPage() {
   const today = matches.filter((m) => m.status !== "finished");
   return (
     <main className="p-3">
+      {error && <p className="mt-8 text-center text-red-600">{error}</p>}
       {today.map((m) => (
         <MatchCard
           key={m.id}

@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
+import { errMsg } from "@/lib/client/errMsg";
+import { statusKey } from "@/lib/client/status";
 import { TicketCard, type TicketRow } from "@/components/TicketCard";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -14,30 +16,24 @@ const STATUS_COLORS: Record<string, string> = {
   void: "bg-gray-200 text-gray-500",
 };
 
-const STATUS_LABEL: Record<string, keyof ReturnType<typeof useT>["t"]> = {
-  pending: "stPending",
-  won: "stWon",
-  half_won: "stHalfWon",
-  push: "stPush",
-  half_lost: "stHalfLost",
-  lost: "stLost",
-  void: "stVoid",
-};
-
 export default function BetsPage() {
   const { t } = useT();
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [selected, setSelected] = useState<TicketRow | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     api<TicketRow[]>("/api/bets")
       .then(setTickets)
-      .catch((e) => redirectIfPinChange(e));
+      .catch((e) => {
+        if (!redirectIfPinChange(e)) setError(errMsg(t, e));
+      });
   }, []);
 
   return (
     <main className="p-3">
-      {tickets.length === 0 && (
+      {error && <p className="mt-8 text-center text-red-600">{error}</p>}
+      {tickets.length === 0 && !error && (
         <p className="mt-8 text-center text-gray-400">{t.noBets}</p>
       )}
       {tickets.map((b) => (
@@ -51,7 +47,7 @@ export default function BetsPage() {
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-600"}`}
             >
-              {t[STATUS_LABEL[b.status] ?? "stPending"]}
+              {t[statusKey(b.status)]}
             </span>
           </div>
           <div className="mt-1 text-sm text-gray-600">

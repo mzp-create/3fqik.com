@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { api } from "@/lib/client/api";
+import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 import { mmk, signedMmk, pickLabel } from "@/lib/client/format";
 import { errMsg } from "@/lib/client/errMsg";
@@ -46,6 +46,7 @@ export function BetSlip({
       onPlaced(ticket);
       window.location.href = "/bets";
     } catch (e) {
+      if (redirectIfPinChange(e)) return;
       const ex = e as Error & { extra?: { currentLine?: LineRow } };
       if (ex.extra?.currentLine) {
         setLine(ex.extra.currentLine);

@@ -23,7 +23,7 @@ export default function ProfilePage() {
     setPinError("");
     setPinSuccess(false);
     if (!/^\d{6}$/.test(newPin)) {
-      setPinError(t.pin);
+      setPinError(t.pinFormat);
       return;
     }
     if (newPin !== newPin2) {

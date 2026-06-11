@@ -61,6 +61,7 @@ export const en = {
   close: "Close",
   noBets: "No bets yet",
   noDays: "Nothing to settle yet",
+  pinFormat: "PIN must be exactly 6 digits",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

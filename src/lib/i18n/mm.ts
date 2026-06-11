@@ -67,6 +67,7 @@ export const mm: Dict = {
   close: "ပိတ်မည်",
   noBets: "လောင်းကြေးမရှိသေးပါ",
   noDays: "ရှင်းလင်းရန်မရှိသေးပါ",
+  pinFormat: "PIN သည် ဂဏန်း ၆ လုံးတိတိ ဖြစ်ရမည်",
 } as const;
 
 /*

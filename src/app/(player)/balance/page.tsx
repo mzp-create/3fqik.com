@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
+import { errMsg } from "@/lib/client/errMsg";
+import { statusKey } from "@/lib/client/status";
 import { signedMmk, mmk, ball, price } from "@/lib/client/format";
 
 type BalanceItem = {
@@ -32,29 +34,23 @@ const DAY_STATUS_COLORS = {
   settled: "bg-gray-100 text-gray-600",
 };
 
-const STATUS_LABEL: Record<string, keyof ReturnType<typeof useT>["t"]> = {
-  pending: "stPending",
-  won: "stWon",
-  half_won: "stHalfWon",
-  push: "stPush",
-  half_lost: "stHalfLost",
-  lost: "stLost",
-  void: "stVoid",
-};
-
 export default function BalancePage() {
   const { t } = useT();
   const [days, setDays] = useState<BalanceDay[]>([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     api<BalanceDay[]>("/api/balance")
       .then(setDays)
-      .catch((e) => redirectIfPinChange(e));
+      .catch((e) => {
+        if (!redirectIfPinChange(e)) setError(errMsg(t, e));
+      });
   }, []);
 
   return (
     <main className="p-3">
-      {days.length === 0 && (
+      {error && <p className="mt-8 text-center text-red-600">{error}</p>}
+      {days.length === 0 && !error && (
         <p className="mt-8 text-center text-gray-400">{t.noDays}</p>
       )}
       {days.map((day) => {
@@ -110,7 +106,7 @@ export default function BalancePage() {
                         {item.ticketNo}
                       </span>
                       <span className="text-xs font-semibold uppercase">
-                        {t[STATUS_LABEL[item.status] ?? "stPending"]}
+                        {t[statusKey(item.status)]}
                       </span>
                     </div>
                     <div className="text-gray-700">{pickStr}</div>

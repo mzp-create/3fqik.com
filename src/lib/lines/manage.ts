@@ -64,6 +64,7 @@ export function postLine(
 }
 
 export function setLineStatus(db: Db, matchId: number, status: 'active' | 'suspended' | 'closed') {
+  // single-process assumption: synchronous better-sqlite3 means no interleaving between read and update; revisit if ever multi-process
   const latest = latestLine(db, matchId)
   if (!latest) throw err('no line for this match', 404, 'no_line')
   if (latest.status === 'closed' && status !== 'closed')

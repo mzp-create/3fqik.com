@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { eq } from 'drizzle-orm'
 import { createTestDb, schema, type Db } from '@/lib/db'
 import { postLine, setLineStatus, activeLine, latestLine } from './manage'
 import { hashPin } from '@/lib/auth/pin'
+import { sseHub } from '@/lib/sse'
 
 let db: Db
 const NOW = '2026-06-12T10:00:00Z'
@@ -92,10 +94,51 @@ it('latestLine returns null when no lines exist', () => {
   expect(latestLine(db, 1)).toBeNull()
 })
 
-it('postLine transaction: version increments are atomic (UNIQUE constraint)', () => {
+it('sequential posts increment versions', () => {
   // Post two lines sequentially — versions must be distinct; UNIQUE(matchId, version) enforces correctness
   const l1 = postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 85 }, NOW)
   const l2 = postLine(db, 1, { matchId: 1, favSide: 'away', ballQ: 4, priceC: -95 }, NOW)
   expect(l1.version).not.toBe(l2.version)
   expect(l2.version).toBe(l1.version + 1)
+})
+
+it('raw duplicate insert throws UNIQUE constraint error', () => {
+  postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 85 }, NOW)
+  // version 1 for matchId 1 now exists — a raw insert with the same (matchId, version) must fail
+  expect(() =>
+    db.insert(schema.lines).values({ matchId: 1, version: 1, favSide: 'away', ballQ: 3, priceC: -90, status: 'active', postedBy: 1, postedAt: NOW }).run()
+  ).toThrow(/UNIQUE/)
+})
+
+it('postLine against a finished match throws /finished/ and leaves row count unchanged', () => {
+  // seed a line so the table is non-empty
+  postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 85 }, NOW)
+  const countBefore = db.select().from(schema.lines).all().length
+
+  // mark the match as finished
+  db.update(schema.matches).set({ status: 'finished' }).where(eq(schema.matches.id, 1)).run()
+
+  expect(() => postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 85 }, NOW)).toThrow(/finished/)
+
+  const countAfter = db.select().from(schema.lines).all().length
+  expect(countAfter).toBe(countBefore)
+})
+
+it('broadcast: successful postLine pushes exactly one line_update chunk; failed postLine pushes none', () => {
+  const events: unknown[] = []
+  const unsub = sseHub.subscribe(c => events.push(c))
+
+  try {
+    postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 85 }, NOW)
+    expect(events).toHaveLength(1)
+    expect(events[0]).toContain('line_update')
+
+    // finished match → no broadcast
+    db.update(schema.matches).set({ status: 'finished' }).where(eq(schema.matches.id, 1)).run()
+    const countBefore = events.length
+    expect(() => postLine(db, 1, { matchId: 1, favSide: 'home', ballQ: 2, priceC: 85 }, NOW)).toThrow()
+    expect(events).toHaveLength(countBefore)
+  } finally {
+    unsub()
+  }
 })

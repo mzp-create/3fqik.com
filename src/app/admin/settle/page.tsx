@@ -45,8 +45,7 @@ export default function SettlePage() {
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
 
-  const reload = (d: string) => {
-    setLoading(true);
+  const reload = (d: string) =>
     api<DayBoard>(`/api/admin/settle?date=${d}`)
       .then((b) => {
         setBoard(b);
@@ -56,11 +55,9 @@ export default function SettlePage() {
         setError(e instanceof Error ? e.message : "Failed to load");
         setLoading(false);
       });
-  };
 
   useEffect(() => {
-    reload(date);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void reload(date);
   }, [date]);
 
   function setBusyFor(key: string, val: boolean) {

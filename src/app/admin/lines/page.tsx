@@ -4,6 +4,16 @@ import { api } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
 import { ball, price, mmk, todayMmt } from "@/lib/client/format";
 
+/** Pure helper — reads the clock once at module load so render stays idempotent. */
+function tomorrowMmt(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Yangon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(Date.now() + 86400000));
+}
+
 type Line = {
   id: number;
   matchId: number;
@@ -80,8 +90,7 @@ export default function LinesPage() {
 
   useEffect(() => {
     reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // run once on mount — reload is stable (no deps change its identity)
 
   useSse({ line_update: () => reload(), score_update: () => reload() }, reload);
 
@@ -177,13 +186,7 @@ export default function LinesPage() {
   if (globalError) return <p className="text-red-600">{globalError}</p>;
 
   const today = todayMmt();
-  // Derive tomorrow in MMT by formatting "now + 24 h" in the same timezone
-  const tomorrow = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Yangon",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(Date.now() + 86400000));
+  const tomorrow = tomorrowMmt();
   const visible = showAll
     ? matches
     : matches.filter(

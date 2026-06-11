@@ -25,8 +25,7 @@ export default function ScoresPage() {
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [globalError, setGlobalError] = useState("");
 
-  const reload = () => {
-    setLoading(true);
+  const reload = () =>
     api<MatchRow[]>("/api/matches")
       .then((ms) => {
         const today = todayMmt();
@@ -55,12 +54,10 @@ export default function ScoresPage() {
         setGlobalError(e instanceof Error ? e.message : "Failed to load");
         setLoading(false);
       });
-  };
 
   useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void reload();
+  }, []); // run once on mount
 
   useSse({ score_update: () => reload(), match_final: () => reload() }, reload);
 

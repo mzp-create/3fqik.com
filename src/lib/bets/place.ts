@@ -106,6 +106,7 @@ export function placeBet(
           `house can accept only ${fmt(Math.max(head, 0))} MMK more on this match`,
           409,
           "limit_reached",
+          { headroomMmk: Math.max(head, 0) },
         );
     } else {
       // non-carve-out match: counts against the daily pool
@@ -130,6 +131,7 @@ export function placeBet(
             `house can accept only ${fmt(Math.max(head, 0))} MMK more on this match day`,
             409,
             "limit_reached",
+            { headroomMmk: Math.max(head, 0) },
           );
       }
     }

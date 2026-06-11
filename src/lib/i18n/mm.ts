@@ -61,6 +61,9 @@ export const mm: Dict = {
   errLocked:
     "အကောင့်သော့ခတ်ထားသည် — နောက်မှထပ်ကြိုးစားပါ သို့မဟုတ် အက်ဒမင်အား ဆက်သွယ်ပါ",
   errWrong: "ဖုန်းနံပါတ် သို့မဟုတ် PIN မှားသည်",
+  errLimit: "ကုမ္ပဏီ {n} ကျပ်သာ ထပ်လက်ခံနိုင်သည်",
+  errMatchFinished: "ပွဲစဉ်ပြီးဆုံးသွားပြီ",
+  errBettingClosed: "လောင်းကြေးပိတ်သည်",
   language: "ဘာသာစကား",
   sideFav: "ပေး",
   sideDog: "ယူ",

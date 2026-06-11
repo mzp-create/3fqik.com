@@ -118,6 +118,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
           )}
         </dl>
         {!qrError && qr && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={qr} alt="QR" className="mx-auto mt-2 h-40 w-40" />
         )}
         <p className="text-xs text-gray-400">{t.scanToVerify}</p>

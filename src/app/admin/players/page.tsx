@@ -28,6 +28,8 @@ export default function PlayersPage() {
   const [invites, setInvites] = useState<InviteCode[]>([]);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
+  // Captured once at mount so render stays idempotent (react-hooks/purity).
+  const [nowMs] = useState<number>(() => Date.now());
   // New invite form
   const [inviteMaxUses, setInviteMaxUses] = useState("10");
   const [inviteExpiry, setInviteExpiry] = useState("");
@@ -47,8 +49,7 @@ export default function PlayersPage() {
 
   useEffect(() => {
     reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // run once on mount
 
   function setBusyFor(key: string, val: boolean) {
     setBusy((prev) => ({ ...prev, [key]: val }));
@@ -123,8 +124,7 @@ export default function PlayersPage() {
       {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
       {players.map((p) => {
-        const isLocked =
-          !!p.lockedUntil && Date.parse(p.lockedUntil) > Date.now();
+        const isLocked = !!p.lockedUntil && Date.parse(p.lockedUntil) > nowMs;
         return (
           <div key={p.id} className="mb-4 rounded border p-3">
             <div className="flex items-start justify-between mb-1">
@@ -188,7 +188,7 @@ export default function PlayersPage() {
       )}
 
       {invites.map((inv) => {
-        const expired = Date.parse(inv.expiresAt) <= Date.now();
+        const expired = Date.parse(inv.expiresAt) <= nowMs;
         const exhausted = inv.usedCount >= inv.maxUses;
         return (
           <div

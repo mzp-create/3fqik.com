@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client/api";
 import { useT, I18nProvider } from "@/lib/i18n";
+import { errMsg } from "@/lib/client/errMsg";
 
 function LoginForm() {
   const { t } = useT();
@@ -24,7 +25,7 @@ function LoginForm() {
         me.mustChangePin ? "/profile" : me.role === "admin" ? "/admin" : "/",
       );
     } catch (e) {
-      setError((e as Error).message);
+      setError(errMsg(t, e));
     }
   }
 

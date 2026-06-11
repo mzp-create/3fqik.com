@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/client/api";
+import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 import { TicketCard, type TicketRow } from "@/components/TicketCard";
 
@@ -30,13 +30,15 @@ export default function BetsPage() {
   const [selected, setSelected] = useState<TicketRow | null>(null);
 
   useEffect(() => {
-    api<TicketRow[]>("/api/bets").then(setTickets);
+    api<TicketRow[]>("/api/bets")
+      .then(setTickets)
+      .catch((e) => redirectIfPinChange(e));
   }, []);
 
   return (
     <main className="p-3">
       {tickets.length === 0 && (
-        <p className="mt-8 text-center text-gray-400">{t.tabBets}</p>
+        <p className="mt-8 text-center text-gray-400">{t.noBets}</p>
       )}
       {tickets.map((b) => (
         <button
@@ -54,7 +56,7 @@ export default function BetsPage() {
           </div>
           <div className="mt-1 text-sm text-gray-600">
             {b.match.homeTeam} vs {b.match.awayTeam} ·{" "}
-            {b.side === "fav" ? "Fav" : "Dog"}
+            {b.side === "fav" ? t.sideFav : t.sideDog}
           </div>
           <div className="text-sm text-gray-500">
             {t.stake}: {b.stakeMmk.toLocaleString("en-US")} MMK
@@ -76,7 +78,7 @@ export default function BetsPage() {
               className="mb-3 text-sm text-gray-400"
               onClick={() => setSelected(null)}
             >
-              ✕ close
+              ✕ {t.close}
             </button>
             <TicketCard ticket={selected} />
           </div>

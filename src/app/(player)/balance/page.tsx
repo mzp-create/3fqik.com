@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/client/api";
+import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 import { signedMmk, mmk, ball, price } from "@/lib/client/format";
 
@@ -32,18 +32,30 @@ const DAY_STATUS_COLORS = {
   settled: "bg-gray-100 text-gray-600",
 };
 
+const STATUS_LABEL: Record<string, keyof ReturnType<typeof useT>["t"]> = {
+  pending: "stPending",
+  won: "stWon",
+  half_won: "stHalfWon",
+  push: "stPush",
+  half_lost: "stHalfLost",
+  lost: "stLost",
+  void: "stVoid",
+};
+
 export default function BalancePage() {
   const { t } = useT();
   const [days, setDays] = useState<BalanceDay[]>([]);
 
   useEffect(() => {
-    api<BalanceDay[]>("/api/balance").then(setDays);
+    api<BalanceDay[]>("/api/balance")
+      .then(setDays)
+      .catch((e) => redirectIfPinChange(e));
   }, []);
 
   return (
     <main className="p-3">
       {days.length === 0 && (
-        <p className="mt-8 text-center text-gray-400">{t.tabBalance}</p>
+        <p className="mt-8 text-center text-gray-400">{t.noDays}</p>
       )}
       {days.map((day) => {
         const net = day.items.reduce((s, i) => s + (i.netMmk ?? 0), 0);
@@ -98,7 +110,7 @@ export default function BalancePage() {
                         {item.ticketNo}
                       </span>
                       <span className="text-xs font-semibold uppercase">
-                        {item.status}
+                        {t[STATUS_LABEL[item.status] ?? "stPending"]}
                       </span>
                     </div>
                     <div className="text-gray-700">{pickStr}</div>

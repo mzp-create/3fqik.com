@@ -56,6 +56,11 @@ export const en = {
   errLocked: "Account locked — try later or ask admin",
   errWrong: "Wrong phone or PIN",
   language: "Language",
+  sideFav: "Fav",
+  sideDog: "Dog",
+  close: "Close",
+  noBets: "No bets yet",
+  noDays: "Nothing to settle yet",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

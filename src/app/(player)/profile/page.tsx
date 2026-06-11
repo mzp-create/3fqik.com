@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
+import { errMsg } from "@/lib/client/errMsg";
 
 export default function ProfilePage() {
   const { t, lang, setLang } = useT();
@@ -21,6 +22,10 @@ export default function ProfilePage() {
   async function handleChangePin() {
     setPinError("");
     setPinSuccess(false);
+    if (!/^\d{6}$/.test(newPin)) {
+      setPinError(t.pin);
+      return;
+    }
     if (newPin !== newPin2) {
       setPinError(`${t.newPin} ≠ ${t.pinConfirm}`);
       return;
@@ -32,7 +37,7 @@ export default function ProfilePage() {
       setNewPin("");
       setNewPin2("");
     } catch (e) {
-      setPinError((e as Error).message);
+      setPinError(errMsg(t, e));
     }
   }
 

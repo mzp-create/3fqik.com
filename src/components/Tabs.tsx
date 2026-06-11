@@ -10,6 +10,7 @@ export function Tabs({ isAdmin }: { isAdmin: boolean }) {
     { href: "/", label: t.tabMatches },
     { href: "/bets", label: t.tabBets },
     { href: "/balance", label: t.tabBalance },
+    { href: "/profile", label: "⚙︎" },
     ...(isAdmin ? [{ href: "/admin", label: "🛠️" }] : []),
   ];
   return (

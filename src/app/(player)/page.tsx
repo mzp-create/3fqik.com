@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/client/api";
+import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
 import { BetSlip, type SlipState } from "@/components/BetSlip";
@@ -9,7 +9,10 @@ export default function MatchesPage() {
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [slip, setSlip] = useState<SlipState | null>(null);
 
-  const reload = () => api<MatchRow[]>("/api/matches").then(setMatches);
+  const reload = () =>
+    api<MatchRow[]>("/api/matches")
+      .then(setMatches)
+      .catch((e) => redirectIfPinChange(e));
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,3 +1,11 @@
+export function redirectIfPinChange(e: unknown): boolean {
+  if ((e as { code?: string }).code === "must_change_pin") {
+    window.location.href = "/profile";
+    return true;
+  }
+  return false;
+}
+
 export async function api<T = unknown>(
   path: string,
   body?: unknown,

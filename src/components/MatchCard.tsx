@@ -60,6 +60,9 @@ export function MatchCard({
         )}
       </div>
       {!l && <p className="mt-2 text-center text-sm text-gray-400">—</p>}
+      {l && l.status === "closed" && (
+        <p className="mt-2 text-center text-sm text-gray-400">—</p>
+      )}
       {l && l.status === "suspended" && (
         <p className="mt-2 text-center text-sm">⏸ {t.suspended}</p>
       )}

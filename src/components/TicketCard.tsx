@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { useT } from "@/lib/i18n";
-import { mmk, pickLabel } from "@/lib/client/format";
+import { mmk, signedMmk, pickLabel } from "@/lib/client/format";
 
 export type TicketRow = {
   ticketNo: string;
@@ -19,55 +19,80 @@ export type TicketRow = {
   playerName: string;
 };
 
+const STATUS_LABEL: Record<string, keyof ReturnType<typeof useT>["t"]> = {
+  pending: "stPending",
+  won: "stWon",
+  half_won: "stHalfWon",
+  push: "stPush",
+  half_lost: "stHalfLost",
+  lost: "stLost",
+  void: "stVoid",
+};
+
+function formatMmt(isoStr: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Yangon",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(isoStr));
+}
+
 export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
   const { t } = useT();
   const [qr, setQr] = useState("");
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [qrError, setQrError] = useState(false);
+
   useEffect(() => {
-    QRCode.toDataURL(b.qrUrl, { width: 160 }).then(setQr);
+    QRCode.toDataURL(b.qrUrl, { width: 160 })
+      .then(setQr)
+      .catch(() => setQrError(true));
   }, [b.qrUrl]);
 
   async function save() {
+    const qrData = qr || (await QRCode.toDataURL(b.qrUrl, { width: 160 }));
+    const hasNet = b.netMmk != null;
+    const canvasHeight = hasNet ? 590 : 560;
     const canvas = document.createElement("canvas");
     canvas.width = 360;
-    canvas.height = 560;
+    canvas.height = canvasHeight;
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, 360, 560);
+    ctx.fillRect(0, 0, 360, canvasHeight);
     ctx.fillStyle = "#000";
     ctx.font = "bold 22px monospace";
     ctx.textAlign = "center";
     ctx.fillText(b.ticketNo, 180, 40);
     ctx.font = "15px sans-serif";
     ctx.textAlign = "left";
-    const rows = [
+    const rows: [string, string][] = [
       [t.player, b.playerName],
       [t.match, `${b.match.homeTeam} vs ${b.match.awayTeam}`],
       [t.pick, pickLabel(b.line, b.match, b.side)],
       [t.stake, `${mmk(b.stakeMmk)} MMK`],
       [t.scoreAtBet, `${b.scoreHomeAtBet}–${b.scoreAwayAtBet}`],
-      [
-        t.placed,
-        new Date(b.placedAt).toLocaleString("en-GB", {
-          timeZone: "Asia/Yangon",
-        }),
-      ],
-      [t.statusLbl, b.status.toUpperCase()],
+      [t.placed, formatMmt(b.placedAt)],
+      [t.statusLbl, t[STATUS_LABEL[b.status] ?? "stPending"]],
     ];
+    if (hasNet) {
+      rows.push([t.net, `${signedMmk(b.netMmk!)} MMK`]);
+    }
     rows.forEach(([k, v], idx) => {
       ctx.fillStyle = "#777";
       ctx.fillText(k, 24, 90 + idx * 30);
       ctx.fillStyle = "#000";
       ctx.fillText(v, 140, 90 + idx * 30);
     });
-    if (qr) {
-      const img = new Image();
-      await new Promise((res) => {
-        img.onload = res;
-        img.src = qr;
-      });
-      ctx.drawImage(img, 100, 330, 160, 160);
-    }
+    const qrTop = 90 + rows.length * 30 + 10;
+    const img = new Image();
+    await new Promise((res) => {
+      img.onload = res;
+      img.src = qrData;
+    });
+    ctx.drawImage(img, 100, qrTop, 160, 160);
     const a = document.createElement("a");
     a.download = `${b.ticketNo}.png`;
     a.href = canvas.toDataURL("image/png");
@@ -76,10 +101,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
 
   return (
     <div>
-      <div
-        ref={cardRef}
-        className="rounded-xl border-2 border-dashed border-gray-500 p-4 text-center"
-      >
+      <div className="rounded-xl border-2 border-dashed border-gray-500 p-4 text-center">
         <p className="text-xs text-gray-400">
           WORLDBET2026 · {t.ticket.toUpperCase()}
         </p>
@@ -94,10 +116,15 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
           <Row k={t.pick} v={pickLabel(b.line, b.match, b.side)} />
           <Row k={t.stake} v={`${mmk(b.stakeMmk)} MMK`} />
           <Row k={t.scoreAtBet} v={`${b.scoreHomeAtBet}–${b.scoreAwayAtBet}`} />
-          <Row k={t.statusLbl} v={b.status.toUpperCase()} />
-          {b.netMmk != null && <Row k={t.net} v={`${mmk(b.netMmk)} MMK`} />}
+          <Row k={t.placed} v={formatMmt(b.placedAt)} />
+          <Row k={t.statusLbl} v={t[STATUS_LABEL[b.status] ?? "stPending"]} />
+          {b.netMmk != null && (
+            <Row k={t.net} v={`${signedMmk(b.netMmk)} MMK`} />
+          )}
         </dl>
-        {qr && <img src={qr} alt="QR" className="mx-auto mt-2 h-40 w-40" />}
+        {!qrError && qr && (
+          <img src={qr} alt="QR" className="mx-auto mt-2 h-40 w-40" />
+        )}
         <p className="text-xs text-gray-400">{t.scanToVerify}</p>
       </div>
       <button

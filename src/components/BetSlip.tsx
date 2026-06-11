@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 import { mmk, signedMmk, pickLabel } from "@/lib/client/format";
+import { errMsg } from "@/lib/client/errMsg";
 import type { MatchRow, LineRow } from "./MatchCard";
 
 export type SlipState = { match: MatchRow; line: LineRow; side: "fav" | "dog" };
@@ -49,7 +50,7 @@ export function BetSlip({
       if (ex.extra?.currentLine) {
         setLine(ex.extra.currentLine);
         setError(t.lineMoved);
-      } else setError(ex.message);
+      } else setError(errMsg(t, e));
     }
   }
 

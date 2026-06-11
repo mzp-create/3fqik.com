@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gradeBet } from "./grade";
+import { gradeBet, type GradeInput } from "./grade";
 
 type AhCase = {
   name: string;
@@ -616,11 +616,111 @@ const T: Case[] = [
     status: "half_lost",
     net: -16_667,
   },
+
+  // ---- O/U: half_won + cross price-sign gap coverage
+  {
+    name: "ou: O 2.75 @0.92 total 3 → half_won +46,000",
+    market: "ou",
+    side: "over",
+    ballQ: 11,
+    priceC: 92,
+    stake: 100_000,
+    effFav: 2,
+    effDog: 1,
+    status: "half_won",
+    net: 46_000,
+  },
+  {
+    name: "ou: U 2.25 @-0.95 total 2 → half_won +50,000",
+    market: "ou",
+    side: "under",
+    ballQ: 9,
+    priceC: -95,
+    stake: 100_000,
+    effFav: 1,
+    effDog: 1,
+    status: "half_won",
+    net: 50_000,
+  },
+  {
+    name: "ou: O 2.5 @-0.90 total 3 → won +100,000",
+    market: "ou",
+    side: "over",
+    ballQ: 10,
+    priceC: -90,
+    stake: 100_000,
+    effFav: 2,
+    effDog: 1,
+    status: "won",
+    net: 100_000,
+  },
+  {
+    name: "ou: O 2.5 @-0.90 total 2 → lost −90,000",
+    market: "ou",
+    side: "over",
+    ballQ: 10,
+    priceC: -90,
+    stake: 100_000,
+    effFav: 1,
+    effDog: 1,
+    status: "lost",
+    net: -90_000,
+  },
+  {
+    name: "ou: U 3.0 @0.88 total 2 → won +88,000",
+    market: "ou",
+    side: "under",
+    ballQ: 12,
+    priceC: 88,
+    stake: 100_000,
+    effFav: 1,
+    effDog: 1,
+    status: "won",
+    net: 88_000,
+  },
+  {
+    name: "ou: U 3.0 @0.88 total 4 → lost −100,000",
+    market: "ou",
+    side: "under",
+    ballQ: 12,
+    priceC: 88,
+    stake: 100_000,
+    effFav: 2,
+    effDog: 2,
+    status: "lost",
+    net: -100_000,
+  },
+  {
+    name: "ou: U 2.0 @0.85 total 2 → push 0",
+    market: "ou",
+    side: "under",
+    ballQ: 8,
+    priceC: 85,
+    stake: 100_000,
+    effFav: 2,
+    effDog: 0,
+    status: "push",
+    net: 0,
+  },
+  {
+    name: "ou: O 2.75 @100 stake 33,333 total 3 → half_won +16,667 (pin away-from-zero)",
+    market: "ou",
+    side: "over",
+    ballQ: 11,
+    priceC: 100,
+    stake: 33_333,
+    effFav: 3,
+    effDog: 0,
+    status: "half_won",
+    net: 16_667,
+  },
 ];
 
 describe("gradeBet", () => {
   for (const c of T) {
     it(c.name, () => {
+      // c is AhCase | OuCase; spreading into gradeBet widens the union —
+      // runtime pairing is guaranteed by table construction, cast is safe.
       const r = gradeBet({
         market: c.market,
         side: c.side,
@@ -629,7 +729,7 @@ describe("gradeBet", () => {
         stake: c.stake,
         effFav: c.effFav,
         effDog: c.effDog,
-      });
+      } as GradeInput);
       expect(r.status).toBe(c.status);
       expect(r.netMmk).toBe(c.net);
     });
@@ -757,11 +857,12 @@ describe("gradeBet", () => {
         effDog: 0,
       }),
     ).toThrow(); // stake cap
-    // runtime side validation — cast to any to bypass TS enum check
+    // runtime side validation — garbage value bypasses TS union
     expect(() =>
       gradeBet({
         market: "ah",
-        side: "x" as any,
+        // @ts-expect-error — intentionally invalid side to test runtime guard
+        side: "x",
         ballQ: 4,
         priceC: 92,
         stake: 1000,
@@ -811,12 +912,29 @@ describe("gradeBet", () => {
     ).toBe(false);
   });
 
-  // ---- invalid market/side combos (runtime validation; cast to any to bypass TS enum)
-  it("rejects ah market with over/under sides", () => {
+  // ---- invalid market — distinct runtime guard
+  it("rejects garbage market", () => {
     expect(() =>
       gradeBet({
+        // @ts-expect-error — intentionally invalid market to test runtime guard
+        market: "x",
+        side: "fav",
+        ballQ: 4,
+        priceC: 92,
+        stake: 1000,
+        effFav: 0,
+        effDog: 0,
+      }),
+    ).toThrow(/invalid market/);
+  });
+
+  // ---- invalid market/side combos (runtime validation; discriminated union enforced at TS level)
+  it("rejects ah market with over/under sides", () => {
+    expect(() =>
+      // @ts-expect-error — intentionally mismatched side for ah market
+      gradeBet({
         market: "ah",
-        side: "over" as any,
+        side: "over",
         ballQ: 4,
         priceC: 92,
         stake: 1000,
@@ -825,9 +943,10 @@ describe("gradeBet", () => {
       }),
     ).toThrow("invalid side for market");
     expect(() =>
+      // @ts-expect-error — intentionally mismatched side for ah market
       gradeBet({
         market: "ah",
-        side: "under" as any,
+        side: "under",
         ballQ: 4,
         priceC: 92,
         stake: 1000,
@@ -839,9 +958,10 @@ describe("gradeBet", () => {
 
   it("rejects ou market with fav/dog sides", () => {
     expect(() =>
+      // @ts-expect-error — intentionally mismatched side for ou market
       gradeBet({
         market: "ou",
-        side: "fav" as any,
+        side: "fav",
         ballQ: 10,
         priceC: 90,
         stake: 1000,
@@ -850,9 +970,10 @@ describe("gradeBet", () => {
       }),
     ).toThrow("invalid side for market");
     expect(() =>
+      // @ts-expect-error — intentionally mismatched side for ou market
       gradeBet({
         market: "ou",
-        side: "dog" as any,
+        side: "dog",
         ballQ: 10,
         priceC: 90,
         stake: 1000,

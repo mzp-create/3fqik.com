@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
-import { gradeBet } from "@/lib/engine/grade";
+import { gradeBet, type GradeInput } from "@/lib/engine/grade";
 import { sseHub } from "@/lib/sse";
 
 function err(message: string, httpStatus = 400, code = "error") {
@@ -55,6 +55,8 @@ function gradeMatchTickets(
     // Clamping is symmetric within a (line, at-bet-score) cohort — fav and dog bettors
     // of the same cohort always get mirrored outcomes; only cross-cohort asymmetry
     // exists, which the house absorbs.
+    // DB rows are untyped strings at runtime; market+side pairing is validated
+    // inside gradeBet itself, so this cast is safe — any mismatch throws before use.
     const r = gradeBet({
       market: line.market,
       side: t.side,
@@ -63,7 +65,7 @@ function gradeMatchTickets(
       stake: t.stakeMmk,
       effFav: Math.max(effFav, 0),
       effDog: Math.max(effDog, 0),
-    });
+    } as GradeInput);
     tx.update(schema.bets)
       .set({ status: r.status, netMmk: r.netMmk, settledAt: at })
       .where(eq(schema.bets.id, t.id))

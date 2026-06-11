@@ -1,12 +1,13 @@
 export type GradeInput = {
-  market: "ah" | "ou";
-  side: "fav" | "dog" | "over" | "under";
   ballQ: number; // handicap or goals line ×4, integer ≥ 0
   priceC: number; // Malay price ×100, integer, −100 ≤ p ≤ 100, p ≠ 0
   stake: number; // MMK, integer > 0
   effFav: number; // favorite's (or home's) effective goals for this bet
   effDog: number; // dog's (or away's) effective goals for this bet
-};
+} & (
+  | { market: "ah"; side: "fav" | "dog" }
+  | { market: "ou"; side: "over" | "under" }
+);
 
 export type GradeResult = {
   status: "won" | "half_won" | "push" | "half_lost" | "lost";
@@ -46,15 +47,14 @@ function roundHalfAwayFromZero(x: number): number {
 }
 
 export function gradeBet(i: GradeInput): GradeResult {
-  // Validate market/side pairing
+  // Validate market first, then side pairing
+  if (i.market !== "ah" && i.market !== "ou") throw new Error("invalid market");
   if (i.market === "ah") {
     if (i.side !== "fav" && i.side !== "dog")
       throw new Error("invalid side for market");
-  } else if (i.market === "ou") {
+  } else {
     if (i.side !== "over" && i.side !== "under")
       throw new Error("invalid side for market");
-  } else {
-    throw new Error("invalid side for market");
   }
 
   if (!Number.isInteger(i.ballQ) || i.ballQ < 0 || i.ballQ > 40)

@@ -716,16 +716,52 @@ export function lockState(p: LockFields, nowIso: string): { locked: boolean } {
 - [ ] **Step 1: Failing test `src/lib/auth/session.test.ts`**
 
 ```ts
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { SignJWT } from 'jose'
 import { createSessionToken, verifySessionToken } from './session'
 
 describe('session tokens', () => {
-  it('round-trips and respects sessionEpoch', async () => {
+  let originalSecret: string | undefined
+
+  beforeEach(() => {
+    originalSecret = process.env.SESSION_SECRET
     process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret!'
+  })
+
+  afterEach(() => {
+    if (originalSecret === undefined) {
+      delete process.env.SESSION_SECRET
+    } else {
+      process.env.SESSION_SECRET = originalSecret
+    }
+  })
+
+  it('round-trips and respects sessionEpoch', async () => {
     const tok = await createSessionToken({ playerId: 7, role: 'admin', epoch: 2 })
     const s = await verifySessionToken(tok)
     expect(s).toEqual({ playerId: 7, role: 'admin', epoch: 2 })
     expect(await verifySessionToken(tok + 'x')).toBeNull()
+  })
+
+  it('rejects expired tokens', async () => {
+    const tok = await new SignJWT({ playerId: 7, role: 'player', epoch: 0 })
+      .setProtectedHeader({ alg: 'HS256' }).setExpirationTime('-10s')
+      .sign(new TextEncoder().encode(process.env.SESSION_SECRET!))
+    expect(await verifySessionToken(tok)).toBeNull()
+  })
+
+  it('rejects tokens signed with a different secret', async () => {
+    process.env.SESSION_SECRET = 'wrong-secret-wrong-secret-wrong-secret'
+    const tok = await createSessionToken({ playerId: 7, role: 'player', epoch: 0 })
+    process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret!'
+    expect(await verifySessionToken(tok)).toBeNull()
+  })
+
+  it('rejects wrong-typed claims', async () => {
+    const tok = await new SignJWT({ playerId: '7', role: 'player', epoch: 0 })
+      .setProtectedHeader({ alg: 'HS256' }).setExpirationTime('30d')
+      .sign(new TextEncoder().encode(process.env.SESSION_SECRET!))
+    expect(await verifySessionToken(tok)).toBeNull()
   })
 })
 ```
@@ -743,20 +779,25 @@ const COOKIE = 'wb_session'
 const THIRTY_DAYS = 60 * 60 * 24 * 30
 
 function secret() {
-  return new TextEncoder().encode(process.env.SESSION_SECRET!)
+  const s = process.env.SESSION_SECRET
+  if (!s || s.length < 32) throw new Error('SESSION_SECRET must be set (>= 32 chars)')
+  return new TextEncoder().encode(s)
 }
 
 export async function createSessionToken(s: Session): Promise<string> {
   return new SignJWT(s as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
     .setExpirationTime(`${THIRTY_DAYS}s`)
     .sign(secret())
 }
 
 export async function verifySessionToken(tok: string): Promise<Session | null> {
   try {
-    const { payload } = await jwtVerify(tok, secret())
-    return { playerId: payload.playerId as number, role: payload.role as Session['role'], epoch: payload.epoch as number }
+    const { payload } = await jwtVerify(tok, secret(), { algorithms: ['HS256'] })
+    if (typeof payload.playerId !== 'number' || typeof payload.epoch !== 'number'
+      || (payload.role !== 'player' && payload.role !== 'admin')) return null
+    return { playerId: payload.playerId, role: payload.role, epoch: payload.epoch }
   } catch {
     return null
   }
@@ -764,7 +805,7 @@ export async function verifySessionToken(tok: string): Promise<Session | null> {
 
 export async function setSessionCookie(s: Session) {
   ;(await cookies()).set(COOKIE, await createSessionToken(s), {
-    httpOnly: true, secure: true, sameSite: 'lax', maxAge: THIRTY_DAYS, path: '/',
+    httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: THIRTY_DAYS, path: '/',
   })
 }
 
@@ -799,7 +840,7 @@ export async function requireAdmin() {
 
 - [ ] **Step 3: Run → PASS** (the test exercises only the token functions; cookie helpers run inside route handlers).
 
-- [ ] **Step 4: Commit** — `git add src/lib/auth/session*; git commit -m "feat: jose session tokens with epoch invalidation"`
+- [ ] **Step 4: Commit** — `git add src/lib/auth/session*; git commit -m "fix: session secret validation, claim shape checks, dev-safe secure cookie"`
 
 ### Task 8: Auth API routes (register, login, logout, change-pin)
 

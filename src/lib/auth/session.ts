@@ -8,20 +8,25 @@ const COOKIE = 'wb_session'
 const THIRTY_DAYS = 60 * 60 * 24 * 30
 
 function secret() {
-  return new TextEncoder().encode(process.env.SESSION_SECRET!)
+  const s = process.env.SESSION_SECRET
+  if (!s || s.length < 32) throw new Error('SESSION_SECRET must be set (>= 32 chars)')
+  return new TextEncoder().encode(s)
 }
 
 export async function createSessionToken(s: Session): Promise<string> {
   return new SignJWT(s as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
     .setExpirationTime(`${THIRTY_DAYS}s`)
     .sign(secret())
 }
 
 export async function verifySessionToken(tok: string): Promise<Session | null> {
   try {
-    const { payload } = await jwtVerify(tok, secret())
-    return { playerId: payload.playerId as number, role: payload.role as Session['role'], epoch: payload.epoch as number }
+    const { payload } = await jwtVerify(tok, secret(), { algorithms: ['HS256'] })
+    if (typeof payload.playerId !== 'number' || typeof payload.epoch !== 'number'
+      || (payload.role !== 'player' && payload.role !== 'admin')) return null
+    return { playerId: payload.playerId, role: payload.role, epoch: payload.epoch }
   } catch {
     return null
   }
@@ -29,7 +34,7 @@ export async function verifySessionToken(tok: string): Promise<Session | null> {
 
 export async function setSessionCookie(s: Session) {
   ;(await cookies()).set(COOKIE, await createSessionToken(s), {
-    httpOnly: true, secure: true, sameSite: 'lax', maxAge: THIRTY_DAYS, path: '/',
+    httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: THIRTY_DAYS, path: '/',
   })
 }
 

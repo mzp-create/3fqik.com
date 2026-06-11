@@ -56,6 +56,7 @@ function gradeMatchTickets(
     // of the same cohort always get mirrored outcomes; only cross-cohort asymmetry
     // exists, which the house absorbs.
     const r = gradeBet({
+      market: line.market,
       side: t.side,
       ballQ: line.ballQ,
       priceC: line.priceC,

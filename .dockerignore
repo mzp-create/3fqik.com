@@ -1,0 +1,41 @@
+# Dependencies and build output — rebuilt inside the image
+node_modules
+.next
+
+# Version control
+.git
+.gitignore
+
+# Local database files — data lives on the Fly volume at /data
+worldbet.db
+worldbet.db-shm
+worldbet.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+# Local secrets — injected via Fly secrets / env at runtime
+.env.local
+.env.*.local
+.env.production.local
+
+# Dev tooling artifacts
+.superpowers
+docs/superpowers
+
+# Temporary / OS artifacts
+/tmp
+.DS_Store
+*.log
+npm-debug.log*
+
+# Test output / coverage
+coverage
+playwright-report
+test-results
+
+# Editor dirs
+.vscode
+.idea
+
+# Keep: drizzle/, data/, scripts/, src/, public/, config files (next.config.ts, tsconfig.json, etc.)

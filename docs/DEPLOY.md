@@ -1,5 +1,7 @@
 # WorldBet2026 — Production Deployment Guide
 
+> **Fly.io (recommended hosted option):** see [DEPLOY-FLY.md](./DEPLOY-FLY.md). The steps below are for self-hosting behind Caddy/nginx.
+
 ## Prerequisites
 
 - Node.js 20+ (`node --version`)

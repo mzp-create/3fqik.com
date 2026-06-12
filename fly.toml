@@ -1,0 +1,36 @@
+# fly.toml — WorldBet2026 Fly.io configuration
+# App: worldbet2026  Region: sin (Singapore)
+# Single always-on machine; SQLite on a Fly Volume at /data.
+
+app = "worldbet2026"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV       = "production"
+  DATABASE_PATH  = "/data/worldbet.db"
+  APP_ORIGIN     = "https://3fqik.com"
+
+[http_service]
+  internal_port       = 3000
+  force_https         = true
+  auto_stop_machines  = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[mounts]]
+  source      = "data"
+  destination = "/data"
+
+# NOTE: No release_command here.
+# scripts/start.sh runs migrate + seed on EVERY boot (both are idempotent),
+# ensuring they execute on the machine that has the /data volume mounted.
+# This is safer than release_command, which runs in a temporary VM that may
+# not have the volume attached.

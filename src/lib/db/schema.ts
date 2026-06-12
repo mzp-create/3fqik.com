@@ -84,7 +84,7 @@ export const lines = sqliteTable(
     version: integer("version").notNull(),
     favSide: text("fav_side", { enum: ["home", "away"] }).notNull(),
     ballQ: integer("ball_q").notNull(), // ball ×4, ≥ 0
-    priceC: integer("price_c").notNull(), // Malay ×100, −100..100, ≠0
+    priceC: integer("price_c").notNull(), // on-the-line payout fraction ×100, 1..100
     status: text("status", {
       enum: ["active", "suspended", "closed"],
     }).notNull(),

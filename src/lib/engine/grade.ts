@@ -82,8 +82,6 @@ function compute(i: GradeInput): GradeDetail {
     }
   }
 
-  const p = i.priceC / 100;
-
   // Compute raw net
   let rawNet: number;
   if (d > 0) {
@@ -99,18 +97,24 @@ function compute(i: GradeInput): GradeDetail {
     // ah level (L==0) → -pS
     // ou over → -pS
     // ou under → +pS
+    //
+    // Compute magnitude as integer product then divide by 100 so that
+    // X.5 results are represented exactly (up to 2^53) and
+    // roundHalfAwayFromZero rounds them correctly.
+    // e.g. priceC=69, stake=150 → 69*150=10350 → /100=103.5 → rounds to 104.
+    const magnitude = (i.priceC * i.stake) / 100;
     if (i.market === "ah") {
       if (L > 0) {
-        rawNet = p * i.stake; // win for both fav and dog when on a non-level line
+        rawNet = magnitude; // win for both fav and dog when on a non-level line
       } else {
-        rawNet = -p * i.stake; // loss on level (draw) line
+        rawNet = -magnitude; // loss on level (draw) line
       }
     } else {
       // ou
       if (i.side === "over") {
-        rawNet = -p * i.stake; // over loses on the line
+        rawNet = -magnitude; // over loses on the line
       } else {
-        rawNet = p * i.stake; // under wins on the line
+        rawNet = magnitude; // under wins on the line
       }
     }
   }

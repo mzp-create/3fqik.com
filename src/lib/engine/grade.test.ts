@@ -283,6 +283,31 @@ const T: Row[] = [
     status: "lost",
     net: -25_000,
   },
+  // FIX 1: on-line rounding — .5 must round away from zero
+  {
+    name: "on-line round .5 up: ah fav @0.69 stake 150 -> +104",
+    market: "ah",
+    side: "fav",
+    ballQ: 4,
+    priceC: 69,
+    stake: 150,
+    effFav: 1,
+    effDog: 0,
+    status: "won",
+    net: 104,
+  },
+  {
+    name: "on-line round .5 lose: ou over @0.69 stake 150 -> -104",
+    market: "ou",
+    side: "over",
+    ballQ: 8,
+    priceC: 69,
+    stake: 150,
+    effFav: 2,
+    effDog: 0,
+    status: "lost",
+    net: -104,
+  },
 ];
 
 describe("gradeBet (A3 even-money model)", () => {

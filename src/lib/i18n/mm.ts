@@ -80,6 +80,9 @@ export const mm: Dict = {
   copied: "ကူးယူပြီး!",
   invitesUsed: "ဖိတ်ကြားမှု {max} ခုမှ {used} ခု သုံးပြီး",
   friendsInvited: "သင် {n} ယောက်ကို ဖိတ်ကြားပြီး",
+  outNarrowMiss: "နည်းနည်းလွဲ",
+  outNarrowMissRange: "−¼ မှ −¾ လောင်းငွေ",
+  outClearMiss: "လုံးဝလွဲ",
 } as const;
 
 /*

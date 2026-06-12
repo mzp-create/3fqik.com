@@ -74,6 +74,9 @@ export const en = {
   copied: "Copied!",
   invitesUsed: "{used} of {max} invites used",
   friendsInvited: "You invited {n} friends",
+  outNarrowMiss: "Narrow miss",
+  outNarrowMissRange: "−¼ to −¾ stake",
+  outClearMiss: "Clear miss",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, ne, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 
 /** Graded, non-void tickets for a player on a match day, with line/match context. */
@@ -66,4 +66,44 @@ export function dayBoard(db: Db, date: string) {
     .all();
   const houseNet = -rows.reduce((s, r) => s + r.netMmk, 0);
   return { day, rows, houseNet };
+}
+
+/** All-time outstanding settlement units: (playerId, matchDay) with unsettled graded non-void bets. */
+export function outstandingSettlements(db: Db) {
+  // Group bets by (playerId, matchDay) → compute net per unit
+  const units = db
+    .select({
+      playerId: schema.bets.playerId,
+      matchDay: schema.matches.matchDay,
+      unitNet: sql<number>`sum(${schema.bets.netMmk})`,
+    })
+    .from(schema.bets)
+    .innerJoin(schema.matches, eq(schema.bets.matchId, schema.matches.id))
+    .where(
+      and(
+        ne(schema.bets.status, "void"),
+        isNotNull(schema.bets.netMmk),
+        isNull(schema.bets.settlementId),
+      ),
+    )
+    .groupBy(schema.bets.playerId, schema.matches.matchDay)
+    .all();
+
+  let toPayMmk = 0;
+  let toCollectMmk = 0;
+  let payCount = 0;
+  let collectCount = 0;
+
+  for (const u of units) {
+    if (u.unitNet > 0) {
+      toPayMmk += u.unitNet;
+      payCount++;
+    } else if (u.unitNet < 0) {
+      toCollectMmk += Math.abs(u.unitNet);
+      collectCount++;
+    }
+    // net == 0 (push): contributes to neither
+  }
+
+  return { toPayMmk, toCollectMmk, payCount, collectCount };
 }

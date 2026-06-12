@@ -16,6 +16,12 @@ type DashData = {
   todayBetCount: number;
   activePlayers: number;
   matches: MatchVolume[];
+  outstanding: {
+    toPayMmk: number;
+    toCollectMmk: number;
+    payCount: number;
+    collectCount: number;
+  };
 };
 
 type MatchRow = {
@@ -75,6 +81,52 @@ export default function AdminDashboard() {
           <div className="text-xs text-gray-500 mb-1">Bets / Players</div>
           <div className="font-semibold">
             {data.todayBetCount} / {data.activePlayers}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded border p-3 mb-6">
+        <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">
+          Outstanding Settlements
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div>
+            <div className="text-xs text-gray-500 mb-0.5">To pay out</div>
+            <div className="text-green-700 font-bold">
+              {mmk(data.outstanding.toPayMmk)} MMK
+            </div>
+            <div className="text-xs text-gray-400">
+              ({data.outstanding.payCount} settlement
+              {data.outstanding.payCount !== 1 ? "s" : ""})
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 mb-0.5">To collect</div>
+            <div className="text-red-600 font-bold">
+              {mmk(data.outstanding.toCollectMmk)} MMK
+            </div>
+            <div className="text-xs text-gray-400">
+              ({data.outstanding.collectCount} settlement
+              {data.outstanding.collectCount !== 1 ? "s" : ""})
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 mb-0.5">Net position</div>
+            <div
+              className={
+                data.outstanding.toCollectMmk - data.outstanding.toPayMmk >= 0
+                  ? "text-green-700 font-bold"
+                  : "text-red-600 font-bold"
+              }
+            >
+              {signedMmk(
+                data.outstanding.toCollectMmk - data.outstanding.toPayMmk,
+              )}{" "}
+              MMK
+            </div>
+            <div className="text-xs text-gray-400">
+              (positive = house ahead)
+            </div>
           </div>
         </div>
       </div>

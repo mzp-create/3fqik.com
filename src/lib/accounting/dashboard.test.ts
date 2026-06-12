@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { it, expect, beforeEach } from "vitest";
 import { createTestDb, schema, type Db } from "@/lib/db";
 import { hashPin } from "@/lib/auth/pin";
 import { postLine } from "@/lib/lines/manage";

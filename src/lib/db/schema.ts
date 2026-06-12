@@ -3,8 +3,10 @@ import {
   text,
   integer,
   unique,
+  uniqueIndex,
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 export const players = sqliteTable("players", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -29,19 +31,27 @@ export const players = sqliteTable("players", {
   ),
 });
 
-export const inviteCodes = sqliteTable("invite_codes", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  code: text("code").notNull().unique(),
-  maxUses: integer("max_uses").notNull(),
-  usedCount: integer("used_count").notNull().default(0),
-  expiresAt: text("expires_at").notNull(),
-  createdBy: integer("created_by")
-    .notNull()
-    .references(() => players.id),
-  kind: text("kind", { enum: ["admin", "personal"] })
-    .notNull()
-    .default("admin"),
-});
+export const inviteCodes = sqliteTable(
+  "invite_codes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    code: text("code").notNull().unique(),
+    maxUses: integer("max_uses").notNull(),
+    usedCount: integer("used_count").notNull().default(0),
+    expiresAt: text("expires_at").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => players.id),
+    kind: text("kind", { enum: ["admin", "personal"] })
+      .notNull()
+      .default("admin"),
+  },
+  (t) => [
+    uniqueIndex("invite_personal_uq")
+      .on(t.createdBy)
+      .where(sql`kind = 'personal'`),
+  ],
+);
 
 export const matches = sqliteTable("matches", {
   id: integer("id").primaryKey({ autoIncrement: true }),

@@ -67,6 +67,12 @@ export const en = {
   pinFormat: "PIN must be exactly 6 digits",
   over: "Over",
   under: "Under",
+  inviteFriends: "Invite friends",
+  inviteLink: "Your invite link",
+  copy: "Copy",
+  copied: "Copied!",
+  invitesUsed: "{used} of {max} invites used",
+  friendsInvited: "You invited {n} friends",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

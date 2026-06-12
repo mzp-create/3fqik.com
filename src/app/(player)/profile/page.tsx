@@ -1,9 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 import { errMsg } from "@/lib/client/errMsg";
+
+type InviteInfo = {
+  code: string;
+  link: string;
+  maxUses: number;
+  usedCount: number;
+  referredCount: number;
+};
 
 export default function ProfilePage() {
   const { t, lang, setLang } = useT();
@@ -18,6 +26,18 @@ export default function ProfilePage() {
 
   // Logout
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // Invite info
+  const [invite, setInvite] = useState<InviteInfo | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    api<InviteInfo>("/api/me/invite")
+      .then(setInvite)
+      .catch(() => {
+        // best-effort; section hidden on error
+      });
+  }, []);
 
   async function handleChangePin() {
     setPinError("");
@@ -57,6 +77,14 @@ export default function ProfilePage() {
     } finally {
       router.push("/login");
     }
+  }
+
+  function handleCopy() {
+    if (!invite) return;
+    navigator.clipboard.writeText(invite.link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   }
 
   return (
@@ -137,6 +165,44 @@ export default function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {/* Invite friends section */}
+      {invite && (
+        <>
+          <hr className="my-6 border-ink/10" />
+          <div className="mb-6">
+            <div className="mb-3 flex items-center gap-2">
+              <div
+                className="triband-skew"
+                style={{ height: "14px", width: "4px" }}
+              />
+              <p className="font-semibold text-ink">{t.inviteFriends}</p>
+            </div>
+            <p className="mb-2 text-sm text-ink/60">{t.inviteLink}</p>
+            <div className="flex gap-2">
+              <input
+                className="min-w-0 flex-1 rounded-lg border border-ink/20 bg-white p-4 text-base text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                readOnly
+                value={invite.link}
+              />
+              <button
+                className="rounded-lg bg-us p-4 text-base font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mx"
+                onClick={handleCopy}
+              >
+                {copied ? t.copied : t.copy}
+              </button>
+            </div>
+            <p className="mt-3 text-base text-ink">
+              {t.invitesUsed
+                .replace("{used}", String(invite.usedCount))
+                .replace("{max}", String(invite.maxUses))}
+            </p>
+            <p className="mt-1 text-base text-ink">
+              {t.friendsInvited.replace("{n}", String(invite.referredCount))}
+            </p>
+          </div>
+        </>
+      )}
 
       <hr className="my-6 border-ink/10" />
 

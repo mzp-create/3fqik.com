@@ -73,6 +73,12 @@ export const mm: Dict = {
   pinFormat: "PIN သည် ဂဏန်း ၆ လုံးတိတိ ဖြစ်ရမည်",
   over: "ဂိုးပေါ်",
   under: "ဂိုးအောက်",
+  inviteFriends: "သူငယ်ချင်းများကို ဖိတ်ကြားပါ",
+  inviteLink: "သင့်ဖိတ်ကြားလင့်ခ်",
+  copy: "ကူးယူပါ",
+  copied: "ကူးယူပြီး!",
+  invitesUsed: "ဖိတ်ကြားမှု {max} ခုမှ {used} ခု သုံးပြီး",
+  friendsInvited: "သင် {n} ယောက်ကို ဖိတ်ကြားပြီး",
 } as const;
 
 /*

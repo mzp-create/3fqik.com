@@ -12,6 +12,7 @@ type Player = {
   lockedUntil: string | null;
   mustChangePin: boolean;
   createdAt: string;
+  referredByName: string | null;
 };
 
 type InviteCode = {
@@ -148,7 +149,12 @@ export default function PlayersPage() {
               </div>
               <span className="text-xs text-gray-400">#{p.id}</span>
             </div>
-            <div className="text-xs text-gray-500 mb-2">{p.phone}</div>
+            <div className="text-xs text-gray-500 mb-1">{p.phone}</div>
+            {p.referredByName && (
+              <div className="text-xs text-gray-400 mb-2">
+                invited by {p.referredByName}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               <button
                 disabled={busy[`reset_pin-${p.id}`]}

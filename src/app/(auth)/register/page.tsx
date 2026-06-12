@@ -1,14 +1,15 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/client/api";
 import { useT, I18nProvider } from "@/lib/i18n";
 
 function RegisterForm() {
   const { t } = useT();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({
-    code: "",
+    code: searchParams.get("code") ?? "",
     phone: "",
     name: "",
     pin: "",
@@ -107,7 +108,9 @@ function RegisterForm() {
 export default function RegisterPage() {
   return (
     <I18nProvider initial="en">
-      <RegisterForm />
+      <Suspense>
+        <RegisterForm />
+      </Suspense>
     </I18nProvider>
   );
 }

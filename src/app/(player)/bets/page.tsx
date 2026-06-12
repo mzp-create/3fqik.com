@@ -39,20 +39,20 @@ export default function BetsPage() {
       {tickets.map((b) => (
         <button
           key={b.ticketNo}
-          className="mb-2 w-full rounded-xl border border-ink/10 bg-white p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+          className="mb-2 w-full rounded-xl border border-ink/10 bg-white p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           onClick={() => setSelected(b)}
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono text-sm font-bold text-ink">
+            <span className="font-display text-xl font-bold text-ink">
               {b.ticketNo}
             </span>
             <span
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-600"}`}
+              className={`rounded-full px-3 py-1 text-sm font-bold ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-600"}`}
             >
               {t[statusKey(b.status)]}
             </span>
           </div>
-          <div className="mt-1 text-sm text-ink/60">
+          <div className="mt-1 text-base text-ink/60">
             {b.match.homeTeam} vs {b.match.awayTeam} ·{" "}
             {b.side === "fav"
               ? t.sideFav
@@ -62,7 +62,7 @@ export default function BetsPage() {
                   ? t.over
                   : t.under}
           </div>
-          <div className="text-sm text-ink/50">
+          <div className="text-base text-ink/50">
             {t.stake}: {b.stakeMmk.toLocaleString("en-US")} MMK
           </div>
         </button>
@@ -79,7 +79,7 @@ export default function BetsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="mb-3 text-sm text-ink/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+              className="mb-3 py-2 text-base text-ink/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
               onClick={() => setSelected(null)}
             >
               ✕ {t.close}

@@ -21,11 +21,15 @@ export function Tabs({ isAdmin }: { isAdmin: boolean }) {
           <Link
             key={tab.href}
             href={tab.href}
-            className={`relative flex-1 whitespace-nowrap px-2 py-4 text-center text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us ${
+            className={`relative flex-1 whitespace-nowrap px-2 py-5 text-center text-base font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us ${
               active ? "text-ink" : "text-gray-400"
             }`}
           >
-            {tab.label}
+            {tab.href === "/profile" || tab.href === "/admin" ? (
+              <span className="text-xl">{tab.label}</span>
+            ) : (
+              tab.label
+            )}
             {active && (
               <span
                 className="triband absolute bottom-0 left-1/2 -translate-x-1/2"

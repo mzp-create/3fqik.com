@@ -36,11 +36,11 @@ export default async function VerifyTicket({
     return (
       <main className="mx-auto w-full max-w-sm p-6 text-center">
         <div className="mb-4 rounded-lg bg-ca px-4 py-3">
-          <h1 className="font-display text-2xl text-white">
+          <h1 className="font-display text-3xl text-white">
             ✕ NOT A VALID TICKET
           </h1>
         </div>
-        <p className="mt-2 text-ink/50">
+        <p className="mt-2 text-base text-ink/50">
           This QR code does not verify. The ticket may be forged.
         </p>
       </main>
@@ -86,9 +86,9 @@ export default async function VerifyTicket({
   return (
     <main className="mx-auto w-full max-w-sm p-6">
       <div className="mb-4 rounded-lg bg-mx px-4 py-3 text-center">
-        <h1 className="font-display text-2xl text-white">✓ VERIFIED TICKET</h1>
+        <h1 className="font-display text-3xl text-white">✓ VERIFIED TICKET</h1>
       </div>
-      <dl className="space-y-2 rounded-xl border border-dashed border-ink/30 bg-white p-4">
+      <dl className="space-y-2 rounded-xl border border-dashed border-ink/30 bg-white p-4 text-base leading-loose">
         <Row k="Ticket" v={bet.ticketNo} />
         <Row k="Player" v={player.displayName} />
         <Row

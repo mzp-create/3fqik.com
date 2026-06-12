@@ -56,71 +56,75 @@ export function MatchCard({
   const hasAnyLine = !!(l || ou);
 
   return (
-    <div className="mb-3 rounded-xl border border-ink/10 bg-white p-3 shadow-sm">
+    <div className="mb-3 rounded-xl border border-ink/10 bg-white p-4 shadow-sm">
       {/* Eyebrow: stage + kickoff/live */}
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink/40">
+        <span className="text-sm font-semibold uppercase tracking-wider text-ink/40">
           {m.stage}
         </span>
         {m.status === "live" ? (
-          <span className="flex items-center gap-1.5 rounded-sm bg-ca px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+          <span className="flex items-center gap-1.5 rounded-sm bg-ca px-2 py-0.5 text-sm font-semibold uppercase tracking-wide text-white">
             <span className="live-dot h-1.5 w-1.5 rounded-full bg-white" />
             {t.live}
           </span>
         ) : (
-          <span className="text-xs text-ink/40">{kickoff}</span>
+          <span className="text-sm text-ink/40">{kickoff}</span>
         )}
       </div>
 
       {/* Teams */}
-      <p className="font-semibold text-ink">
+      <p className="text-lg font-semibold text-ink">
         {teamLabel(m.homeTeam)} vs {teamLabel(m.awayTeam)}
         {m.status === "live" && m.homeScore != null && (
-          <span className="ml-2 font-display text-lg text-ca">
+          <span className="ml-2 font-display text-2xl text-ca">
             {m.homeScore}–{m.awayScore}
           </span>
         )}
       </p>
 
-      {!hasAnyLine && <p className="mt-2 text-center text-sm text-ink/30">—</p>}
+      {!hasAnyLine && (
+        <p className="mt-2 text-center text-base text-ink/30">—</p>
+      )}
 
       {/* AH market row */}
       {l && l.status !== "closed" && (
         <div className="mt-2">
           {l.status === "suspended" ? (
-            <p className="text-center text-sm text-ink/50">⏸ {t.suspended}</p>
+            <p className="text-center text-base text-ink/50">⏸ {t.suspended}</p>
           ) : (
             <div className="flex gap-2">
               {/* Favorite tile — green left rail */}
               <button
-                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-4 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                style={{ minHeight: "72px" }}
                 onClick={() => onPick("ah", "fav")}
               >
                 <span className="absolute inset-y-0 left-0 w-1.5 bg-mx" />
-                <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+                <span className="block pl-2 text-base font-bold uppercase tracking-wider text-ink">
                   {teamLabel(fav)}
                 </span>
-                <span className="block pl-2 text-xs text-ink/50">
+                <span className="block pl-2 text-base text-ink/50">
                   −{ball(l.ballQ)}
                 </span>
-                <span className="font-display block pl-2 text-xl text-mx">
+                <span className="font-display block pl-2 text-3xl text-mx">
                   {price(l.priceC)}
                 </span>
               </button>
 
               {/* Underdog tile — blue left rail */}
               <button
-                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-4 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                style={{ minHeight: "72px" }}
                 onClick={() => onPick("ah", "dog")}
               >
                 <span className="absolute inset-y-0 left-0 w-1.5 bg-us" />
-                <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+                <span className="block pl-2 text-base font-bold uppercase tracking-wider text-ink">
                   {teamLabel(dog)}
                 </span>
-                <span className="block pl-2 text-xs text-ink/50">
+                <span className="block pl-2 text-base text-ink/50">
                   +{ball(l.ballQ)}
                 </span>
-                <span className="font-display block pl-2 text-xl text-us">
+                <span className="font-display block pl-2 text-3xl text-us">
                   {price(l.priceC)}
                 </span>
               </button>
@@ -129,44 +133,48 @@ export function MatchCard({
         </div>
       )}
       {l && l.status === "closed" && !ou && (
-        <p className="mt-2 text-center text-sm text-ink/30">—</p>
+        <p className="mt-2 text-center text-base text-ink/30">—</p>
       )}
 
       {/* O/U market row */}
       {ou && ou.status !== "closed" && (
         <div className="mt-2">
           {ou.status === "suspended" ? (
-            <p className="text-center text-sm text-ink/50">⏸ {t.suspended}</p>
+            <p className="text-center text-base text-ink/50">⏸ {t.suspended}</p>
           ) : (
             <div className="flex gap-2">
               {/* Over tile — green left rail */}
               <button
-                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-4 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                style={{ minHeight: "72px" }}
                 onClick={() => onPick("ou", "over")}
               >
                 <span className="absolute inset-y-0 left-0 w-1.5 bg-mx" />
-                <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+                <span className="block pl-2 text-base font-bold uppercase tracking-wider text-ink">
                   O {ball(ou.ballQ)}
                 </span>
-                <span className="block pl-2 text-xs text-ink/50">{t.over}</span>
-                <span className="font-display block pl-2 text-xl text-mx">
+                <span className="block pl-2 text-base text-ink/50">
+                  {t.over}
+                </span>
+                <span className="font-display block pl-2 text-3xl text-mx">
                   {price(ou.priceC)}
                 </span>
               </button>
 
               {/* Under tile — blue left rail */}
               <button
-                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-3 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                className="relative flex-1 overflow-hidden rounded-lg border-2 border-ink bg-white p-4 text-left font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                style={{ minHeight: "72px" }}
                 onClick={() => onPick("ou", "under")}
               >
                 <span className="absolute inset-y-0 left-0 w-1.5 bg-us" />
-                <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
+                <span className="block pl-2 text-base font-bold uppercase tracking-wider text-ink">
                   U {ball(ou.ballQ)}
                 </span>
-                <span className="block pl-2 text-xs text-ink/50">
+                <span className="block pl-2 text-base text-ink/50">
                   {t.under}
                 </span>
-                <span className="font-display block pl-2 text-xl text-us">
+                <span className="font-display block pl-2 text-3xl text-us">
                   {price(ou.priceC)}
                 </span>
               </button>

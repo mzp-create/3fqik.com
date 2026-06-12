@@ -76,7 +76,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
     try {
       const qrData = qr || (await QRCode.toDataURL(b.qrUrl, { width: 160 }));
       const hasNet = b.netMmk != null;
-      const canvasHeight = hasNet ? 590 : 560;
+      const canvasHeight = hasNet ? 660 : 620;
       const canvas = document.createElement("canvas");
       canvas.width = 360;
       canvas.height = canvasHeight;
@@ -84,11 +84,11 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, 360, canvasHeight);
       ctx.fillStyle = "#000";
-      // Ticket number larger/bolder for PNG
-      ctx.font = "bold 28px monospace";
+      // Ticket number larger/bolder for PNG (~20% bump from 28px)
+      ctx.font = "bold 34px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(b.ticketNo, 180, 44);
-      ctx.font = "15px sans-serif";
+      ctx.fillText(b.ticketNo, 180, 50);
+      ctx.font = "18px sans-serif";
       ctx.textAlign = "left";
       const rows: [string, string][] = [
         [t.player, b.playerName],
@@ -104,11 +104,11 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
       }
       rows.forEach(([k, v], idx) => {
         ctx.fillStyle = "#777";
-        ctx.fillText(k, 24, 90 + idx * 30);
+        ctx.fillText(k, 24, 100 + idx * 36);
         ctx.fillStyle = "#000";
-        ctx.fillText(v, 140, 90 + idx * 30);
+        ctx.fillText(v, 140, 100 + idx * 36);
       });
-      const qrTop = 90 + rows.length * 30 + 10;
+      const qrTop = 100 + rows.length * 36 + 10;
       const img = new Image();
       await new Promise((res) => {
         img.onload = res;
@@ -134,22 +134,22 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
         {/* Stamp overlay for graded tickets */}
         {stamp && (
           <div
-            className={`absolute right-3 top-6 rotate-[-8deg] rounded border-2 px-3 py-1 font-display text-sm uppercase opacity-80 ${stampClasses(b.status)}`}
+            className={`absolute right-3 top-6 rotate-[-8deg] rounded border-2 px-3 py-1.5 font-display text-base uppercase opacity-80 ${stampClasses(b.status)}`}
           >
             {stamp}
           </div>
         )}
 
         <div className="p-4 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-ink/40">
+          <p className="text-sm font-semibold uppercase tracking-widest text-ink/40">
             WORLDBET<span className="font-display">26</span> ·{" "}
             {t.ticket.toUpperCase()}
           </p>
-          <p className="font-display mt-1 text-3xl tracking-wider text-ink">
+          <p className="font-display mt-1 text-4xl tracking-wider text-ink">
             {b.ticketNo}
           </p>
           <hr className="my-3 border-dashed border-ink/20" />
-          <dl className="text-left text-sm leading-7">
+          <dl className="text-left text-base leading-loose">
             <Row k={t.player} v={b.playerName} />
             <Row
               k={t.match}
@@ -169,14 +169,18 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
           </dl>
           {!qrError && qr && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={qr} alt="QR" className="mx-auto mt-3 h-40 w-40" />
+            <img
+              src={qr}
+              alt="QR"
+              className="mx-auto mt-3 h-[180px] w-[180px]"
+            />
           )}
-          <p className="mt-2 text-xs text-ink/40">{t.scanToVerify}</p>
+          <p className="mt-2 text-sm text-ink/40">{t.scanToVerify}</p>
         </div>
       </div>
 
       <button
-        className="mt-2 w-full rounded-lg bg-ink p-3 font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us disabled:opacity-40"
+        className="mt-2 w-full rounded-lg bg-ink p-4 text-base font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us disabled:opacity-40"
         onClick={save}
         disabled={qrError}
       >

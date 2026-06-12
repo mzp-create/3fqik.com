@@ -76,7 +76,7 @@ export function BetSlip({
 
         <div className="p-4 pb-8">
           {/* Pick title */}
-          <h2 className="font-display text-lg text-ink">
+          <h2 className="font-display text-xl text-ink">
             {pickLabel(
               { ...line, market: slip.market },
               slip.match,
@@ -85,7 +85,7 @@ export function BetSlip({
             )}
           </h2>
           {slip.match.status === "live" && (
-            <p className="text-sm text-ca">
+            <p className="text-base text-ca">
               {t.scoreNow}: {slip.match.homeScore}–{slip.match.awayScore} ·{" "}
               {t.liveNote}
             </p>
@@ -93,7 +93,7 @@ export function BetSlip({
 
           {/* Stake input */}
           <input
-            className="font-display my-3 w-full rounded-lg border border-ink/20 bg-white p-4 text-2xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+            className="font-display my-3 w-full rounded-lg border border-ink/20 bg-white p-5 text-3xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
             inputMode="numeric"
             value={mmk(stake)}
             onChange={(e) =>
@@ -106,7 +106,7 @@ export function BetSlip({
             {CHIPS.map((c) => (
               <button
                 key={c}
-                className="rounded-full border border-ink/20 px-3 py-1.5 text-sm font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                className="rounded-full border border-ink/20 px-4 py-3 text-base font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
                 onClick={() => setStake(c)}
               >
                 {c >= 1_000_000 ? `${c / 1_000_000}M` : `${c / 1_000}k`}
@@ -115,7 +115,7 @@ export function BetSlip({
           </div>
 
           {/* 5-outcome preview — 2-col grid */}
-          <div className="my-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-canvas p-3 text-sm leading-6">
+          <div className="my-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-canvas p-3 text-base leading-relaxed">
             <span className="text-ink/50">{t.outWin}</span>
             <span className="font-semibold text-mx">{signedMmk(p.win)}</span>
             <span className="text-ink/50">{t.outHalfWin}</span>
@@ -132,11 +132,13 @@ export function BetSlip({
             <span className="font-semibold text-ca">{signedMmk(-p.lose)}</span>
           </div>
 
-          {error && <p className="mb-2 text-center text-sm text-ca">{error}</p>}
+          {error && (
+            <p className="mb-2 text-center text-base text-ca">{error}</p>
+          )}
 
           {/* CONFIRM — bg-mx (placing money = green) */}
           <button
-            className="w-full rounded-lg bg-mx p-4 text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+            className="w-full rounded-lg bg-mx p-5 text-xl font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
             onClick={confirm}
           >
             {t.confirmBet}

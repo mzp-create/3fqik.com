@@ -15,6 +15,13 @@
       "when": 1781208189343,
       "tag": "0001_swift_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1781242385483,
+      "tag": "0002_cold_loners",
+      "breakpoints": true
     }
   ]
 }

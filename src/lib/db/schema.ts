@@ -1,4 +1,10 @@
-import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  unique,
+  type AnySQLiteColumn,
+} from "drizzle-orm/sqlite-core";
 
 export const players = sqliteTable("players", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -18,6 +24,9 @@ export const players = sqliteTable("players", {
     .default(false),
   sessionEpoch: integer("session_epoch").notNull().default(0), // bump to kill sessions
   createdAt: text("created_at").notNull(),
+  referredBy: integer("referred_by").references(
+    (): AnySQLiteColumn => players.id,
+  ),
 });
 
 export const inviteCodes = sqliteTable("invite_codes", {
@@ -29,6 +38,9 @@ export const inviteCodes = sqliteTable("invite_codes", {
   createdBy: integer("created_by")
     .notNull()
     .references(() => players.id),
+  kind: text("kind", { enum: ["admin", "personal"] })
+    .notNull()
+    .default("admin"),
 });
 
 export const matches = sqliteTable("matches", {
@@ -135,6 +147,10 @@ export const bets = sqliteTable("bets", {
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey(), // always 1
   dailyTotalLimitMmk: integer("daily_total_limit_mmk").notNull().default(0), // 0 = unlimited
+  defaultPersonalInviteUses: integer("default_personal_invite_uses")
+    .notNull()
+    .default(10),
+  referralBonusMmk: integer("referral_bonus_mmk").notNull().default(0),
 });
 
 export const auditLog = sqliteTable("audit_log", {

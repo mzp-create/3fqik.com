@@ -1,6 +1,13 @@
 "use client";
 import { useT } from "@/lib/i18n";
 import { ball, price } from "@/lib/client/format";
+import { flag } from "@/lib/client/flags";
+
+/** "🇲🇽 MEX" — or just the code when no flag is known (knockout placeholders). */
+function teamLabel(code: string): string {
+  const f = flag(code);
+  return f ? `${f} ${code}` : code;
+}
 
 export type LineRow = {
   id: number;
@@ -67,7 +74,7 @@ export function MatchCard({
 
       {/* Teams */}
       <p className="font-semibold text-ink">
-        {m.homeTeam} vs {m.awayTeam}
+        {teamLabel(m.homeTeam)} vs {teamLabel(m.awayTeam)}
         {m.status === "live" && m.homeScore != null && (
           <span className="ml-2 font-display text-lg text-ca">
             {m.homeScore}–{m.awayScore}
@@ -91,7 +98,7 @@ export function MatchCard({
               >
                 <span className="absolute inset-y-0 left-0 w-1.5 bg-mx" />
                 <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
-                  {fav}
+                  {teamLabel(fav)}
                 </span>
                 <span className="block pl-2 text-xs text-ink/50">
                   −{ball(l.ballQ)}
@@ -108,7 +115,7 @@ export function MatchCard({
               >
                 <span className="absolute inset-y-0 left-0 w-1.5 bg-us" />
                 <span className="block pl-2 text-xs font-bold uppercase tracking-wider text-ink">
-                  {dog}
+                  {teamLabel(dog)}
                 </span>
                 <span className="block pl-2 text-xs text-ink/50">
                   +{ball(l.ballQ)}

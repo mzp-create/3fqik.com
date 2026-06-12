@@ -93,3 +93,12 @@ it("aggregates volume, exposure, and house P&L", () => {
     }),
   );
 });
+
+it("includes outstanding settlements: toPayMmk=90000 toCollectMmk=200000 payCount=1 collectCount=1", () => {
+  const d = dashboard(db, "2026-06-12");
+  expect(d.outstanding).toBeDefined();
+  expect(d.outstanding.toPayMmk).toBe(90_000);
+  expect(d.outstanding.toCollectMmk).toBe(200_000);
+  expect(d.outstanding.payCount).toBe(1);
+  expect(d.outstanding.collectCount).toBe(1);
+});

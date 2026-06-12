@@ -1,5 +1,6 @@
 import { and, eq, ne, isNotNull, sql } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
+import { outstandingSettlements } from "./queries";
 
 export function dashboard(db: Db, today: string) {
   const graded = and(
@@ -48,6 +49,8 @@ export function dashboard(db: Db, today: string) {
     .groupBy(schema.bets.matchId)
     .all();
 
+  const outstanding = outstandingSettlements(db);
+
   return {
     todayHouseNet: -todayNet,
     tournamentHouseNet: -tournament,
@@ -55,5 +58,6 @@ export function dashboard(db: Db, today: string) {
     todayBetCount: todayBets.count,
     activePlayers: todayBets.players,
     matches,
+    outstanding,
   };
 }

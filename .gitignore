@@ -40,3 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .superpowers/
+
+# db artifacts
+worldbet.db*
+*.db-journal
+*.db-wal
+*.db-shm

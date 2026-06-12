@@ -160,3 +160,28 @@ All 104 World Cup 2026 fixtures seeded at deploy from a static dataset: stage, t
 - Live score/schedule API feed (section 13).
 - Burmese translation pass by a native speaker before launch (machine-draft acceptable for MVP review).
 - Nightly SQLite backup cron + restore drill.
+
+---
+
+## Amendment A1 (2026-06-12): Over/Under total-goals market
+
+Approved addition. Both markets run simultaneously and independently per match; Malay pricing identical to handicap.
+
+- **Markets**: `lines.market` = `ah` (Asian handicap, existing) | `ou` (total goals). One active line per (match, market); versions increment per (match, market). All line lifecycle rules (§6) apply per market: post/move/suspend/resume/close, append-only audit, SSE broadcast.
+- **Encoding**: the O/U goals line reuses `ballQ` ×4 (2.5 goals → 10; quarter lines 2.25/2.75 valid and split stakes exactly like handicap quarters). `priceC` unchanged (Malay ×100; price quoted for the side being bet).
+- **Bet sides**: `bets.side` gains `over` | `under` (only valid with `ou` lines; `fav`/`dog` only with `ah`).
+- **Grading**: margin in quarter units — over: `m = 4·(effective total goals) − ballQ`; under: mirrored. Effective total = final total − total at bet time (live O/U counts only goals scored after the bet — consistent with §10's live handicap rule). Half-split, Malay payouts, single end-rounding, and statuses are identical to handicap. Same MMK integer rules.
+- **Limits/accounting**: O/U bets count toward the same per-match carve-out and daily-pool limits (a match's cap covers both its markets). Settlement, ticket, and QR mechanics unchanged.
+- **UI**: match card shows two button pairs — handicap (green fav / blue dog) and totals (Over green / Under blue, labeled `O 2.5` / `U 2.5`); admin Lines desk manages the two markets per match independently; bet slip, tickets, and verification render O/U picks (e.g. `Over 2.5 @ 0.90`).
+
+---
+
+## Amendment A2 (2026-06-12): Player referral links
+
+Approved. Every player gets a personal invite link (capped, works immediately); the system records who referred whom. Data is designed so a referral bonus can be added later without migration.
+
+- **Personal invite code**: each player owns one `invite_codes` row with `kind='personal'`, `created_by`=that player, `max_uses`=`settings.default_personal_invite_uses` (default 10), far-future expiry. Generated at registration; created lazily for pre-existing players (e.g. seeded admin) on first access. Admin-generated codes get `kind='admin'`. Link form: `<APP_ORIGIN>/register?code=<code>`.
+- **Invite power**: free with a cap. Any player may share their link; it works until its `max_uses` is reached. Admin retains lock/unlock and visibility. (Admin can also still mint `admin` codes with custom caps/expiry.)
+- **Referrer tracking**: `players.referred_by` (nullable FK → players.id) is set at registration to the inviting code's `created_by` (a player for personal codes, the admin for admin codes). Append-only fact; never changed after registration.
+- **Tracking use (now)**: admin Players list shows "invited by <name>"; player profile shows their link, remaining uses, and "you invited N friends". No money effect yet.
+- **Bonus-ready**: `settings.referral_bonus_mmk` (default 0) reserved as the config home for a future per-referral bonus. With `referred_by` stored, bonus logic can be added with no schema migration — it reads the existing edge and the setting.

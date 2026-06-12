@@ -12,5 +12,8 @@ npm run db:migrate
 echo "==> Running database seed..."
 npm run db:seed
 
+echo "==> Bootstrapping admin (if ADMIN_BOOTSTRAP set)..."
+node scripts/bootstrap-admin.cjs
+
 echo "==> Starting Next.js..."
 exec npx next start -H 0.0.0.0 -p 3000

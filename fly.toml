@@ -1,8 +1,9 @@
 # fly.toml — WorldBet2026 Fly.io configuration
-# App: 3fqik  Region: sin (Singapore)
+# Public domain: 3fqik.com (attached via `fly certs add`). The Fly-internal app
+# name below is fixed (app names are immutable) and never seen by users.
 # Single always-on machine; SQLite on a Fly Volume at /data.
 
-app = "3fqik"
+app = "projects-verdant-wind-1670"
 primary_region = "sin"
 
 [build]
@@ -11,7 +12,9 @@ primary_region = "sin"
 [env]
   NODE_ENV       = "production"
   DATABASE_PATH  = "/data/worldbet.db"
-  APP_ORIGIN     = "https://3fqik.com"
+  # APP_ORIGIN is managed as a Fly secret (single source) so it can point at the
+  # *.fly.dev URL during pre-DNS testing, then switch to the custom domain:
+  #   fly secrets set APP_ORIGIN=https://3fqik.com
 
 [http_service]
   internal_port       = 3000

@@ -32,6 +32,6 @@ Stack: Next.js 16 App Router, TypeScript, Tailwind v4, Drizzle ORM, better-sqlit
 ## Conventions
 
 - **Package manager**: npm only. Do not introduce pnpm, yarn, or bun lockfiles.
-- **Money encoding**: all amounts are integer MMK. Malay prices stored ×100 (`priceC`: e.g. 0.92 → 92, −0.98 → −98). Handicap balls stored ×4 (`ballQ`: e.g. 0.75 → 3). Grading logic lives in `src/lib/engine/grade.ts` — change only with its test table.
+- **Money encoding**: all amounts are integer MMK. Malay prices stored ×100 (`priceC`: e.g. 0.92 → 92, −0.98 → −98). Handicap balls stored ×4 (`ballQ`: e.g. 0.75 → 3). Lines carry a `market` field (`'ah'` Asian handicap | `'ou'` total goals); for O/U the same `ballQ` ×4 encoding represents the goals line (e.g. `ballQ=10` → O/U 2.5 goals). Grading logic lives in `src/lib/engine/grade.ts` — change only with its test table.
 - **Formatting**: Prettier (default config) runs automatically via a PostToolUse hook on every file Claude edits.
 - Tailwind is v4 — configured via CSS (`src/app/globals.css`), no `tailwind.config.js`.

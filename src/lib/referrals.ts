@@ -100,3 +100,17 @@ export function referrerName(db: Db, playerId: number): string | null {
     .get();
   return referrer?.displayName ?? null;
 }
+
+/**
+ * Returns the displayName of the player with the given id, or null if not found.
+ * Used in bulk-list contexts where the referredBy id is already known,
+ * avoiding the extra self-lookup that referrerName() performs.
+ */
+export function referrerNameById(db: Db, referrerId: number): string | null {
+  const referrer = db
+    .select({ displayName: schema.players.displayName })
+    .from(schema.players)
+    .where(eq(schema.players.id, referrerId))
+    .get();
+  return referrer?.displayName ?? null;
+}

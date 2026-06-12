@@ -81,10 +81,30 @@ export default function ProfilePage() {
 
   function handleCopy() {
     if (!invite) return;
-    navigator.clipboard.writeText(invite.link).then(() => {
+    const flash = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
+    };
+    const fallback = () => {
+      const el = document.createElement("textarea");
+      el.value = invite.link;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      try {
+        document.execCommand("copy");
+        flash();
+      } finally {
+        document.body.removeChild(el);
+      }
+    };
+    if (!navigator.clipboard) {
+      fallback();
+      return;
+    }
+    navigator.clipboard.writeText(invite.link).then(flash).catch(fallback);
   }
 
   return (

@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/auth/session";
 import { resetPin, unlockPlayer, grantAdmin } from "@/lib/auth/adminActions";
 import { ok, fail, handle } from "@/lib/api";
 import { nowIso } from "@/lib/time";
-import { referrerName } from "@/lib/referrals";
+import { referrerNameById } from "@/lib/referrals";
 
 export async function GET() {
   return handle(async () => {
@@ -13,7 +13,9 @@ export async function GET() {
     return ok(
       rows.map(({ pinHash: _ph, ...rest }) => ({
         ...rest,
-        referredByName: referrerName(db, rest.id),
+        referredByName: rest.referredBy
+          ? referrerNameById(db, rest.referredBy)
+          : null,
       })),
     );
   });

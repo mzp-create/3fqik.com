@@ -185,3 +185,21 @@ Approved. Every player gets a personal invite link (capped, works immediately); 
 - **Referrer tracking**: `players.referred_by` (nullable FK → players.id) is set at registration to the inviting code's `created_by` (a player for personal codes, the admin for admin codes). Append-only fact; never changed after registration.
 - **Tracking use (now)**: admin Players list shows "invited by <name>"; player profile shows their link, remaining uses, and "you invited N friends". No money effect yet.
 - **Bonus-ready**: `settings.referral_bonus_mmk` (default 0) reserved as the config home for a future per-referral bonus. With `referred_by` stored, bonus logic can be added with no schema migration — it reads the existing edge and the setting.
+
+---
+
+## Amendment A3 (2026-06-12): Even-money settlement model (REPLACES Malay odds)
+
+The group does NOT settle as Malay/decimal odds. The price `p` (0 < p ≤ 1, stored ×100) is the **on-the-line payout fraction only**. Per line-part (quarter balls split into two half-stakes exactly as today):
+
+- Result **beats** the part's line → **win full part-stake** (+S_part). Price ignored.
+- Result lands **exactly on** the part's line → **win part-stake × p** (+S_part·p).
+- Result **misses** the part's line → **lose full part-stake** (−S_part).
+
+Net = sum of parts, rounded half-away-from-zero once. Identical for body (handicap) and goals (over/under), both sides, including Under/underdog landing on the line (that is a win × p, not a loss). No negative prices. Half/whole-integer lines where no exact landing is possible simply never use `p`.
+
+**Status mapping:** net>0 all full-win → `won`; net>0 with an on-line part → `half_won`; net<0 all-lose → `lost`; net<0 with an on-line part → `half_lost`; net==0 → `push`.
+
+**Ground-truth checksum (the 7 reference bets):** #1 MEX −1@0.30 200k, total 2–0 → +200,000; #4 KOR −0@1.00 4M, 2–1 → +4,000,000; #5 CZE +0@1.00 200k, lost → −200,000; #6 Over 2.0@0.35 200k, total 3 → +200,000; #7 Under 2.0@0.35 2M, total 3 → −2,000,000; #2 Over 2.0@0.50 200k, total **2 (on line)** → +100,000; #3 Over 2.0@0.50 4M, total **2 (on line)** → +2,000,000. **Player total +4,300,000 (banker −4,300,000).**
+
+**Impact:** grade engine payout mapping (ball/total/quarter-split logic unchanged), bet-slip payout preview, per-bet breakdown, Lines price input (now 0.01–1.00, positive only), and the (pending) fees layer. Existing bets are re-graded; production is NOT redeployed until the re-graded numbers are confirmed against this checksum.

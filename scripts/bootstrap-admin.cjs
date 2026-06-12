@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Node CJS boot script; require() is correct here */
 // scripts/bootstrap-admin.cjs — one-time admin seeding for hosted deploys.
 // Plain CommonJS (no tsx) so it runs fast at boot. Idempotent: only acts when
 // ADMIN_BOOTSTRAP is set, and never overwrites an existing player's PIN.

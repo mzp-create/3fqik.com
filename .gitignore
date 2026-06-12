@@ -46,3 +46,4 @@ worldbet.db*
 *.db-journal
 *.db-wal
 *.db-shm
+worldbet.dev-backup-*.db

@@ -146,6 +146,34 @@ export default function SettlePage() {
             </span>
           </div>
 
+          {board.rows.length > 0 && (
+            <div className="text-sm text-gray-600 mb-3 flex flex-wrap gap-3">
+              <span>
+                Pay out:{" "}
+                <span className="text-green-700 font-semibold">
+                  {mmk(
+                    board.rows
+                      .filter((r) => r.netMmk > 0)
+                      .reduce((s, r) => s + r.netMmk, 0),
+                  )}{" "}
+                  MMK
+                </span>
+              </span>
+              <span className="text-gray-300">·</span>
+              <span>
+                Collect:{" "}
+                <span className="text-red-600 font-semibold">
+                  {mmk(
+                    board.rows
+                      .filter((r) => r.netMmk < 0)
+                      .reduce((s, r) => s + Math.abs(r.netMmk), 0),
+                  )}{" "}
+                  MMK
+                </span>
+              </span>
+            </div>
+          )}
+
           {board.rows.length === 0 && (
             <p className="text-gray-500 text-sm">
               No graded tickets for this date.
@@ -156,6 +184,15 @@ export default function SettlePage() {
             const isExpanded = expanded[row.playerId] ?? false;
             const isSettled = row.settled === 1;
             const payKey = `pay-${row.playerId}`;
+            // Direction by net sign: >0 house PAYS the player; <0 house COLLECTS.
+            const dir =
+              row.netMmk > 0 ? "pay" : row.netMmk < 0 ? "collect" : "even";
+            const actionLabel =
+              dir === "pay"
+                ? "Mark Paid"
+                : dir === "collect"
+                  ? "Mark Collected"
+                  : "Mark Settled";
 
             return (
               <div key={row.playerId} className="mb-4 rounded border">
@@ -169,9 +206,25 @@ export default function SettlePage() {
                     <span className="ml-2 text-xs text-gray-500">
                       {row.ticketCount} ticket{row.ticketCount !== 1 ? "s" : ""}
                     </span>
+                    <span
+                      className={
+                        "ml-2 text-xs font-bold uppercase " +
+                        (dir === "pay"
+                          ? "text-mx"
+                          : dir === "collect"
+                            ? "text-ca"
+                            : "text-gray-400")
+                      }
+                    >
+                      {dir === "pay"
+                        ? "Pay"
+                        : dir === "collect"
+                          ? "Receive"
+                          : "Even"}
+                    </span>
                     {isSettled && (
                       <span className="ml-2 text-xs bg-green-100 text-green-700 px-1 rounded">
-                        paid
+                        settled
                       </span>
                     )}
                   </div>
@@ -240,7 +293,7 @@ export default function SettlePage() {
                       onClick={() => markPaid(row.playerId)}
                       className="mt-3 bg-green-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50 w-full"
                     >
-                      {isSettled ? "Already Paid" : "Mark Paid"}
+                      {isSettled ? "Settled" : actionLabel}
                     </button>
                   </div>
                 )}

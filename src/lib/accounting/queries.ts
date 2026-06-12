@@ -18,6 +18,10 @@ export function playerDayItems(db: Db, playerId: number, date: string) {
       market: schema.lines.market,
       homeTeam: schema.matches.homeTeam,
       awayTeam: schema.matches.awayTeam,
+      scoreHomeAtBet: schema.bets.scoreHomeAtBet,
+      scoreAwayAtBet: schema.bets.scoreAwayAtBet,
+      finalHomeScore: schema.matches.homeScore,
+      finalAwayScore: schema.matches.awayScore,
     })
     .from(schema.bets)
     .innerJoin(schema.lines, eq(schema.bets.lineId, schema.lines.id))

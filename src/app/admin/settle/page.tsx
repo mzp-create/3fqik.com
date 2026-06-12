@@ -2,10 +2,12 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { mmk, signedMmk, ball, price, todayMmt } from "@/lib/client/format";
+import { gradeDetail } from "@/lib/engine/grade";
+import type { GradeInput } from "@/lib/engine/grade";
 
 type TicketItem = {
   ticketNo: string;
-  side: "fav" | "dog";
+  side: "fav" | "dog" | "over" | "under";
   stakeMmk: number;
   status: string;
   netMmk: number | null;
@@ -13,8 +15,13 @@ type TicketItem = {
   favSide: "home" | "away";
   ballQ: number;
   priceC: number;
+  market: "ah" | "ou";
   homeTeam: string;
   awayTeam: string;
+  scoreHomeAtBet: number;
+  scoreAwayAtBet: number;
+  finalHomeScore: number | null;
+  finalAwayScore: number | null;
 };
 
 type PlayerRow = {
@@ -254,16 +261,132 @@ export default function SettlePage() {
                         const dog =
                           t.favSide === "home" ? t.awayTeam : t.homeTeam;
                         const label =
-                          t.side === "fav"
-                            ? `${fav} −${ball(t.ballQ)} @ ${price(t.priceC)}`
-                            : `${dog} +${ball(t.ballQ)} @ ${price(t.priceC)}`;
+                          t.market === "ou"
+                            ? t.side === "over"
+                              ? `Over ${ball(t.ballQ)} @ ${price(t.priceC)}`
+                              : `Under ${ball(t.ballQ)} @ ${price(t.priceC)}`
+                            : t.side === "fav"
+                              ? `${fav} −${ball(t.ballQ)} @ ${price(t.priceC)}`
+                              : `${dog} +${ball(t.ballQ)} @ ${price(t.priceC)}`;
                         const voidKey = `void-${t.ticketNo}`;
+
+                        // Compute breakdown using gradeDetail (same engine as grading)
+                        let breakdown: React.ReactNode = null;
+                        if (t.netMmk != null && t.status !== "void") {
+                          const finalHome =
+                            t.finalHomeScore ?? t.scoreHomeAtBet;
+                          const finalAway =
+                            t.finalAwayScore ?? t.scoreAwayAtBet;
+                          const effHome = Math.max(
+                            finalHome - t.scoreHomeAtBet,
+                            0,
+                          );
+                          const effAway = Math.max(
+                            finalAway - t.scoreAwayAtBet,
+                            0,
+                          );
+                          const effFav =
+                            t.favSide === "home" ? effHome : effAway;
+                          const effDog =
+                            t.favSide === "home" ? effAway : effHome;
+
+                          try {
+                            const d = gradeDetail({
+                              market: t.market,
+                              side: t.side,
+                              ballQ: t.ballQ,
+                              priceC: t.priceC,
+                              stake: t.stakeMmk,
+                              effFav,
+                              effDog,
+                            } as GradeInput);
+
+                            const isLive =
+                              t.scoreHomeAtBet !== 0 || t.scoreAwayAtBet !== 0;
+                            const scoreLine = isLive
+                              ? `Bet at ${t.scoreHomeAtBet}–${t.scoreAwayAtBet} · final ${finalHome}–${finalAway} · counts after-bet goals: ${effHome}–${effAway}`
+                              : `Final ${finalHome}–${finalAway}`;
+
+                            let mathLine: string;
+                            if (t.market === "ah") {
+                              const sign = t.side === "fav" ? "−" : "+";
+                              const handicapGoals = ball(t.ballQ);
+                              const teamLabel = t.side === "fav" ? fav : dog;
+                              if (d.quarter) {
+                                const p0 = d.parts[0];
+                                const p1 = d.parts[1];
+                                mathLine = `${teamLabel} ${sign}${handicapGoals} (${effFav}–${effDog}): ½ at ${p0.lineGoals} (${p0.outcome}) · ½ at ${p1.lineGoals} (${p1.outcome})`;
+                              } else {
+                                mathLine = `${teamLabel} ${sign}${handicapGoals}: effective margin ${effFav}–${effDog} vs ${ball(t.ballQ)} — ${d.parts[0].outcome}`;
+                              }
+                            } else {
+                              const total = effFav + effDog;
+                              const line = ball(t.ballQ);
+                              if (d.quarter) {
+                                const p0 = d.parts[0];
+                                const p1 = d.parts[1];
+                                mathLine = `Total ${total} vs ${line}: ½ at ${p0.lineGoals} (${p0.outcome}) · ½ at ${p1.lineGoals} (${p1.outcome})`;
+                              } else {
+                                mathLine = `Total ${total} vs ${line} — ${d.parts[0].outcome}`;
+                              }
+                            }
+
+                            let resultLine: string;
+                            const s = t.status;
+                            if (s === "won") {
+                              resultLine = `WON +${mmk(t.netMmk)} = ${mmk(t.stakeMmk)}×${price(t.priceC)}`;
+                            } else if (s === "lost") {
+                              resultLine = `LOST −${mmk(t.stakeMmk)}`;
+                            } else if (s === "push") {
+                              resultLine = `PUSH 0 (stake returned)`;
+                            } else if (s === "half_won") {
+                              const halfStake = t.stakeMmk / 2;
+                              resultLine = `HALF WON ½×${mmk(halfStake)}×${price(t.priceC)} → ${signedMmk(t.netMmk)}`;
+                            } else if (s === "half_lost") {
+                              const halfStake = t.stakeMmk / 2;
+                              const lossAmt =
+                                t.priceC > 0
+                                  ? halfStake
+                                  : Math.round(
+                                      (halfStake * Math.abs(t.priceC)) / 100,
+                                    );
+                              resultLine = `HALF LOST −${mmk(lossAmt)} → ${signedMmk(t.netMmk)}`;
+                            } else {
+                              resultLine = signedMmk(t.netMmk);
+                            }
+
+                            breakdown = (
+                              <div className="text-xs text-gray-400 mt-1 space-y-0.5 font-mono">
+                                <div>{scoreLine}</div>
+                                <div>{mathLine}</div>
+                                <div
+                                  className={
+                                    t.netMmk >= 0
+                                      ? "text-green-600"
+                                      : "text-red-500"
+                                  }
+                                >
+                                  {resultLine}
+                                </div>
+                              </div>
+                            );
+                          } catch {
+                            // gradeDetail throws on bad data; show nothing
+                          }
+                        } else if (t.status === "void") {
+                          breakdown = (
+                            <div className="text-xs text-gray-400 mt-1 italic">
+                              Voided
+                            </div>
+                          );
+                        }
+
                         return (
                           <div
                             key={t.ticketNo}
-                            className="text-sm flex items-start justify-between gap-2 border-b last:border-0 pb-1"
+                            className="text-sm flex items-start justify-between gap-2 border-b last:border-0 pb-2"
                           >
-                            <div>
+                            <div className="flex-1 min-w-0">
                               <div className="font-mono text-xs text-gray-500">
                                 {t.ticketNo}
                               </div>
@@ -275,6 +398,7 @@ export default function SettlePage() {
                                   : "pending"}{" "}
                                 · {t.status}
                               </div>
+                              {breakdown}
                             </div>
                             <button
                               disabled={busy[voidKey] || t.settlementId != null}

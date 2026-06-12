@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gradeBet, type GradeInput } from "./grade";
+import { gradeBet, gradeDetail, type GradeInput } from "./grade";
 
 type AhCase = {
   name: string;
@@ -981,5 +981,119 @@ describe("gradeBet", () => {
         effDog: 2,
       }),
     ).toThrow("invalid side for market");
+  });
+});
+
+describe("gradeDetail", () => {
+  // CONSISTENCY: gradeDetail must always agree with gradeBet for every row in the table
+  for (const c of T) {
+    it(`consistency: gradeDetail matches gradeBet for "${c.name}"`, () => {
+      const d = gradeDetail({
+        market: c.market,
+        side: c.side,
+        ballQ: c.ballQ,
+        priceC: c.priceC,
+        stake: c.stake,
+        effFav: c.effFav,
+        effDog: c.effDog,
+      } as GradeInput);
+      expect(d.netMmk).toBe(c.net);
+      expect(d.status).toBe(c.status);
+    });
+  }
+
+  // --- 4 explicit assertions on parts/outcomes ---
+
+  // 1. Full-ball AH push: fav -1.0 wins by exactly 1 → 1 part, outcome 'push'
+  it("full-ball fav -1.0 push: 1 part, outcome push, quarter=false", () => {
+    // ballQ=4 (multiple of 4 → not quarter); effFav=1, effDog=0 → diffQ=4, margin=4-4=0 → push
+    const d = gradeDetail({
+      market: "ah",
+      side: "fav",
+      ballQ: 4,
+      priceC: 92,
+      stake: 100_000,
+      effFav: 1,
+      effDog: 0,
+    });
+    expect(d.quarter).toBe(false);
+    expect(d.parts).toHaveLength(1);
+    expect(d.parts[0].lineGoals).toBe(1.0); // ballQ/4 = 4/4 = 1.0
+    expect(d.parts[0].outcome).toBe("push");
+    expect(d.status).toBe("push");
+    expect(d.netMmk).toBe(0);
+    expect(d.market).toBe("ah");
+    expect(d.effFav).toBe(1);
+    expect(d.effDog).toBe(0);
+  });
+
+  // 2. Half-ball AH win: fav -0.5 wins by 1 → 1 part, outcome 'win'
+  it("half-ball fav -0.5 win: 1 part, outcome win, quarter=false", () => {
+    // ballQ=2 (≡2 mod 4 → not quarter); effFav=1, effDog=0 → diffQ=4, margin=4-2=2>0 → win
+    const d = gradeDetail({
+      market: "ah",
+      side: "fav",
+      ballQ: 2,
+      priceC: 85,
+      stake: 200_000,
+      effFav: 1,
+      effDog: 0,
+    });
+    expect(d.quarter).toBe(false);
+    expect(d.parts).toHaveLength(1);
+    expect(d.parts[0].lineGoals).toBe(0.5); // ballQ/4 = 2/4 = 0.5
+    expect(d.parts[0].outcome).toBe("win");
+    expect(d.status).toBe("won");
+    expect(d.netMmk).toBe(170_000);
+  });
+
+  // 3. AH quarter half_won: fav -0.75, wins by 1 → parts at 0.5 (win) and 1.0 (push)
+  it("AH quarter fav -0.75 half_won: 2 parts (win + push), quarter=true, correct lineGoals", () => {
+    // ballQ=3 (odd → quarter); halves at bq=2 and bq=4
+    // effFav=1, effDog=0 → diffQ=4
+    // part1 bq=2: margin=4-2=2>0 → win; lineGoals=2/4=0.5
+    // part2 bq=4: margin=4-4=0 → push; lineGoals=4/4=1.0
+    const d = gradeDetail({
+      market: "ah",
+      side: "fav",
+      ballQ: 3,
+      priceC: 92,
+      stake: 100_000,
+      effFav: 1,
+      effDog: 0,
+    });
+    expect(d.quarter).toBe(true);
+    expect(d.parts).toHaveLength(2);
+    expect(d.parts[0].lineGoals).toBe(0.5); // (ballQ-1)/4 = 2/4
+    expect(d.parts[0].outcome).toBe("win");
+    expect(d.parts[1].lineGoals).toBe(1.0); // (ballQ+1)/4 = 4/4
+    expect(d.parts[1].outcome).toBe("push");
+    expect(d.status).toBe("half_won");
+    expect(d.netMmk).toBe(46_000);
+  });
+
+  // 4. OU quarter half_lost: O 2.25, total 2 → parts at 2.0 (push) and 2.5 (lose)
+  it("OU quarter O 2.25 half_lost: 2 parts (push + lose), quarter=true, correct lineGoals and total net", () => {
+    // ballQ=9 (odd → quarter); halves at bq=8 and bq=10
+    // effFav=1, effDog=1 → totalQ=8
+    // part1 bq=8: over margin=8-8=0 → push; lineGoals=8/4=2.0
+    // part2 bq=10: over margin=8-10=-2<0 → lose; lineGoals=10/4=2.5
+    const d = gradeDetail({
+      market: "ou",
+      side: "over",
+      ballQ: 9,
+      priceC: 92,
+      stake: 100_000,
+      effFav: 1,
+      effDog: 1,
+    });
+    expect(d.quarter).toBe(true);
+    expect(d.parts).toHaveLength(2);
+    expect(d.parts[0].lineGoals).toBe(2.0); // (ballQ-1)/4 = 8/4
+    expect(d.parts[0].outcome).toBe("push");
+    expect(d.parts[1].lineGoals).toBe(2.5); // (ballQ+1)/4 = 10/4
+    expect(d.parts[1].outcome).toBe("lose");
+    expect(d.status).toBe("half_lost");
+    expect(d.netMmk).toBe(-50_000);
   });
 });

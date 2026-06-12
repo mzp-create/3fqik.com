@@ -14,6 +14,18 @@ export type GradeResult = {
   netMmk: number;
 };
 
+export type GradePart = { lineGoals: number; outcome: "win" | "push" | "lose" };
+
+export type GradeDetail = {
+  status: GradeResult["status"];
+  netMmk: number;
+  market: "ah" | "ou";
+  effFav: number;
+  effDog: number;
+  quarter: boolean;
+  parts: GradePart[];
+};
+
 type HalfOutcome = "win" | "push" | "lose";
 
 /**
@@ -46,7 +58,8 @@ function roundHalfAwayFromZero(x: number): number {
   return r === 0 ? 0 : r;
 }
 
-export function gradeBet(i: GradeInput): GradeResult {
+/** Shared computation kernel — validates input and computes full detail. */
+function compute(i: GradeInput): GradeDetail {
   // Validate market first, then side pairing
   if (i.market !== "ah" && i.market !== "ou") throw new Error("invalid market");
   if (i.market === "ah") {
@@ -89,15 +102,15 @@ export function gradeBet(i: GradeInput): GradeResult {
   }
 
   const quarter = i.ballQ % 2 === 1;
-  const parts: Array<{ ballQ: number; stake: number }> = quarter
+  const rawParts: Array<{ ballQ: number; stake: number }> = quarter
     ? [
         { ballQ: i.ballQ - 1, stake: i.stake / 2 },
         { ballQ: i.ballQ + 1, stake: i.stake / 2 },
       ]
     : [{ ballQ: i.ballQ, stake: i.stake }];
 
-  const outcomes = parts.map((p) => halfOutcome(marginFn, p.ballQ));
-  const exactNet = parts.reduce(
+  const outcomes = rawParts.map((p) => halfOutcome(marginFn, p.ballQ));
+  const exactNet = rawParts.reduce(
     (sum, p, k) => sum + halfNet(outcomes[k], p.stake, i.priceC),
     0,
   );
@@ -114,5 +127,27 @@ export function gradeBet(i: GradeInput): GradeResult {
   else if (loses > 0) status = "half_lost";
   else status = "push";
 
+  const parts: GradePart[] = rawParts.map((p, k) => ({
+    lineGoals: p.ballQ / 4,
+    outcome: outcomes[k],
+  }));
+
+  return {
+    status,
+    netMmk,
+    market: i.market,
+    effFav: i.effFav,
+    effDog: i.effDog,
+    quarter,
+    parts,
+  };
+}
+
+export function gradeBet(i: GradeInput): GradeResult {
+  const { status, netMmk } = compute(i);
   return { status, netMmk };
+}
+
+export function gradeDetail(i: GradeInput): GradeDetail {
+  return compute(i);
 }

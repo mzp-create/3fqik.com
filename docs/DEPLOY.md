@@ -81,12 +81,22 @@ The Next.js server listens on port 3000 by default. Point your reverse proxy at 
 
 ## HTTPS Requirement
 
-Session cookies are set with `Secure` in production. QR ticket URLs are generated from `APP_ORIGIN`. Both require HTTPS:
+Session cookies are set with `Secure` in production. QR ticket URLs are generated from `APP_ORIGIN`. Both require HTTPS. Without HTTPS, logins silently fail to persist the cookie.
 
-- Caddy (recommended): add a `Caddyfile` with your domain and it handles Let's Encrypt automatically.
-- nginx: configure `proxy_pass http://localhost:3000` with a valid TLS certificate.
+### Domain: 3fqik.com (one-time setup)
 
-Without HTTPS, logins will silently fail to persist the cookie.
+1. **DNS** — at your registrar, add an A record for `3fqik.com` (and optionally `www.3fqik.com`) pointing to this server's public IP. Verify: `dig +short 3fqik.com`.
+2. **Firewall** — open inbound TCP **80** and **443** in the AWS security group (80 is needed for the Let's Encrypt challenge).
+3. **Caddy** — a ready `Caddyfile` is in the repo root (proxies `3fqik.com` → `localhost:3000`, auto-provisions and renews TLS). Install and run:
+   ```bash
+   sudo apt install -y caddy        # or per https://caddyserver.com/docs/install
+   sudo cp Caddyfile /etc/caddy/Caddyfile
+   sudo systemctl restart caddy
+   sudo journalctl -u caddy -f      # watch cert issuance
+   ```
+4. **Env** — set `APP_ORIGIN=https://3fqik.com` and `NODE_ENV=production` (see `.env.production.example`), then restart the app service so QR links and cookies use the domain.
+
+nginx alternative: `proxy_pass http://localhost:3000` behind a valid TLS cert; same env requirements.
 
 ---
 

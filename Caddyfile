@@ -1,0 +1,11 @@
+# WorldBet2026 reverse proxy with automatic HTTPS (Let's Encrypt).
+# Prereqs: DNS A record 3fqik.com -> this server's public IP, and inbound
+# TCP 80 + 443 open in the security group. Then: `caddy run` (or run via
+# systemd). Caddy obtains and renews the TLS cert automatically.
+#
+# APP_ORIGIN in the app's env must be https://3fqik.com (matches this host).
+
+3fqik.com, www.3fqik.com {
+	encode gzip
+	reverse_proxy localhost:3000
+}

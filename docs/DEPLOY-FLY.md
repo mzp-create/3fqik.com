@@ -31,13 +31,13 @@ fly auth login
 ### 1. Create the app
 
 ```bash
-fly launch --no-deploy --name worldbet2026 --region sin
+fly launch --no-deploy --name 3fqik --region sin
 ```
 
 If the app already exists:
 
 ```bash
-fly apps create worldbet2026 --machines
+fly apps create 3fqik --machines
 ```
 
 ### 2. Create the persistent volume
@@ -129,7 +129,7 @@ Look for `Status: Ready` / `Issued`.
 Until the cert is live and DNS has propagated, QR ticket links will use `https://3fqik.com` (which won't resolve yet). Options:
 
 - Wait for the cert before sharing tickets (recommended).
-- Temporarily use the `*.fly.dev` URL: `fly secrets set APP_ORIGIN=https://worldbet2026.fly.dev`, then set it back once the cert is live.
+- Temporarily use the `*.fly.dev` URL: `fly secrets set APP_ORIGIN=https://3fqik.fly.dev`, then set it back once the cert is live.
 
 ---
 

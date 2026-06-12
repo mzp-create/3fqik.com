@@ -1,8 +1,8 @@
 # fly.toml — WorldBet2026 Fly.io configuration
-# App: worldbet2026  Region: sin (Singapore)
+# App: 3fqik  Region: sin (Singapore)
 # Single always-on machine; SQLite on a Fly Volume at /data.
 
-app = "worldbet2026"
+app = "3fqik"
 primary_region = "sin"
 
 [build]

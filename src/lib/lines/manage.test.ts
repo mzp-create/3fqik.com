@@ -42,7 +42,7 @@ it("posting closes the previous line and increments version", () => {
   const l2 = postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 4, priceC: -95 },
+    { matchId: 1, market: "ah", favSide: "home", ballQ: 4, priceC: 95 },
     NOW,
   );
   expect(l2.version).toBe(2);
@@ -216,7 +216,7 @@ it("sequential posts increment versions", () => {
   const l2 = postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "away", ballQ: 4, priceC: -95 },
+    { matchId: 1, market: "ah", favSide: "away", ballQ: 4, priceC: 95 },
     NOW,
   );
   expect(l1.version).not.toBe(l2.version);
@@ -240,7 +240,7 @@ it("raw duplicate insert throws UNIQUE constraint error", () => {
         version: 1,
         favSide: "away",
         ballQ: 3,
-        priceC: -90,
+        priceC: 90,
         status: "active",
         postedBy: 1,
         postedAt: NOW,
@@ -335,7 +335,7 @@ it("per-market version independence: ah v1, ou v1, ah v2 → ou still v1 active"
   const ahV2 = postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 4, priceC: -95 },
+    { matchId: 1, market: "ah", favSide: "home", ballQ: 4, priceC: 95 },
     NOW,
   );
   expect(ahV2.version).toBe(2);

@@ -16,7 +16,7 @@ function err(message: string, httpStatus = 400, code = "error") {
  * of the same cohort always get mirrored outcomes; only cross-cohort asymmetry
  * exists, which the house absorbs.
  *
- * INVARIANT: placeBet caps stakes at MAX_STAKE (1e9) and gradeBet accepts up to 1e12,
+ * INVARIANT: placeBet caps stakes at MAX_STAKE (1e9) and gradeBet also validates ≤ 1e9,
  * so grading can never throw on stake size. We do NOT add defensive wrapping here;
  * if gradeBet throws (e.g. corrupted data) the transaction rolls back cleanly.
  */

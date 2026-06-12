@@ -426,7 +426,7 @@ it("stale ou version returns 409 with currentLine.market = 'ou'", () => {
   postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 11, priceC: -92 },
+    { matchId: m.id, market: "ou", favSide: "home", ballQ: 11, priceC: 92 },
     NOW,
   );
   let caught:
@@ -474,7 +474,7 @@ it("ah line stale check is unaffected by ou posts: ah v1 still valid after posti
   postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 11, priceC: -92 },
+    { matchId: m.id, market: "ou", favSide: "home", ballQ: 11, priceC: 92 },
     NOW,
   );
   // placing an ah bet with v1 should still succeed

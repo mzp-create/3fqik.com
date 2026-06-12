@@ -56,13 +56,9 @@ export function postLine(
     input.ballQ > 40
   )
     throw err(`invalid ball: must be integer ${minBallQ}–40`, 400, "bad_line");
-  if (
-    !Number.isInteger(input.priceC) ||
-    input.priceC === 0 ||
-    Math.abs(input.priceC) > 100
-  )
+  if (!Number.isInteger(input.priceC) || input.priceC < 1 || input.priceC > 100)
     throw err(
-      "invalid price: must be non-zero integer in [-100, 100]",
+      "invalid price: must be positive integer in [1, 100]",
       400,
       "bad_line",
     );

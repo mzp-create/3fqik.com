@@ -77,17 +77,19 @@ beforeEach(() => {
     },
     NOW,
   ); // Thiri dog
-  confirmFinalScore(db, 1, 1, 2, 0, NOW); // BRA -0.5 covers → Zaw +90,000, Thiri −200,000
+  // A3: BRA -0.5 wins 2-0 → d=(2-0)-0.5=1.5>0 → full win. Zaw +100,000, Thiri −200,000
+  confirmFinalScore(db, 1, 1, 2, 0, NOW);
 });
 
 it("board shows nets and ticket items; marking paid stamps ref onto tickets", () => {
   const board = dayBoard(db, "2026-06-12");
   expect(board.day.status).toBe("closed");
+  // A3: Zaw fav wins full stake → +100,000; Thiri dog loses full stake → −200,000
   expect(board.rows).toEqual([
-    expect.objectContaining({ playerId: 2, netMmk: 90_000, ticketCount: 1 }),
+    expect.objectContaining({ playerId: 2, netMmk: 100_000, ticketCount: 1 }),
     expect.objectContaining({ playerId: 3, netMmk: -200_000, ticketCount: 1 }),
   ]);
-  expect(board.houseNet).toBe(110_000);
+  expect(board.houseNet).toBe(100_000);
 
   const s1 = markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
   expect(s1.ref).toBe("S-0612-01");
@@ -209,10 +211,10 @@ it("no-tickets 404: markPlayerPaid for player with no tickets throws", () => {
 // ─── outstandingSettlements ───────────────────────────────────────────────
 
 describe("outstandingSettlements", () => {
-  it("basic: payCount=1(+90k), collectCount=1(-200k), settled and void excluded", () => {
-    // beforeEach has: Zaw +90,000 unsettled, Thiri -200,000 unsettled
+  it("basic: payCount=1(+100k), collectCount=1(-200k), settled and void excluded", () => {
+    // A3: Zaw +100,000 unsettled, Thiri -200,000 unsettled
     const r = outstandingSettlements(db);
-    expect(r.toPayMmk).toBe(90_000);
+    expect(r.toPayMmk).toBe(100_000);
     expect(r.toCollectMmk).toBe(200_000);
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(1);
@@ -222,7 +224,7 @@ describe("outstandingSettlements", () => {
     // Mark Zaw paid → his day1 unit is now settled
     markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
     const r = outstandingSettlements(db);
-    // Zaw's +90k unit is settled → only Thiri remains
+    // Zaw's +100k unit is settled → only Thiri remains
     expect(r.toPayMmk).toBe(0);
     expect(r.toCollectMmk).toBe(200_000);
     expect(r.payCount).toBe(0);
@@ -238,7 +240,7 @@ describe("outstandingSettlements", () => {
       .get()!;
     voidTicket(db, 1, thiriTicket.ticketNo, "test", NOW);
     const r = outstandingSettlements(db);
-    expect(r.toPayMmk).toBe(90_000);
+    expect(r.toPayMmk).toBe(100_000);
     expect(r.toCollectMmk).toBe(0);
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(0);
@@ -293,13 +295,12 @@ describe("outstandingSettlements", () => {
       })
       .run();
     const r = outstandingSettlements(db);
-    // Zaw has two units: day1 +90k and day1 push(0). The push contributes nothing.
-    // But wait — both push bet and original bet are on day "2026-06-12" for player 2.
-    // They GROUP into ONE unit: net = 90000 + 0 = 90000 (still pay).
-    // That's fine — let's verify counts are still 1 pay, 1 collect.
+    // Zaw has two units: day1 +100k and day1 push(0). The push contributes nothing.
+    // Both push bet and original bet are on day "2026-06-12" for player 2.
+    // They GROUP into ONE unit: net = 100000 + 0 = 100000 (still pay).
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(1);
-    expect(r.toPayMmk).toBe(90_000);
+    expect(r.toPayMmk).toBe(100_000);
   });
 
   it("two match-days for player A: appears as separate (player,day) units", () => {
@@ -349,10 +350,10 @@ describe("outstandingSettlements", () => {
       })
       .run();
     const r = outstandingSettlements(db);
-    // Units: (Zaw, day1) = +90k → pay, (Zaw, day2) = -150k → collect, (Thiri, day1) = -200k → collect
+    // Units: (Zaw, day1) = +100k → pay, (Zaw, day2) = -150k → collect, (Thiri, day1) = -200k → collect
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(2);
-    expect(r.toPayMmk).toBe(90_000);
+    expect(r.toPayMmk).toBe(100_000);
     expect(r.toCollectMmk).toBe(350_000); // 150k + 200k
   });
 });

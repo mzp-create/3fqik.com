@@ -24,6 +24,7 @@ export const en = {
   liveNote: "Only goals after this bet count",
   outWin: "Win",
   outHalfWin: "Half-win",
+  outOnLine: "On the line",
   outPush: "Push",
   outHalfLose: "Half-lose",
   outLose: "Lose",

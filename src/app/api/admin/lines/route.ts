@@ -46,13 +46,12 @@ export async function POST(req: Request) {
         );
       if (
         !Number.isInteger(body.priceC) ||
-        body.priceC === 0 ||
-        body.priceC < -100 ||
+        body.priceC < 1 ||
         body.priceC > 100
       )
         return fail(
           "bad_request",
-          "priceC must be a non-zero integer in [-100, 100]",
+          "priceC must be a positive integer in [1, 100]",
         );
       return ok(
         postLine(

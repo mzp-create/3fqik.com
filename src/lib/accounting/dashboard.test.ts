@@ -75,13 +75,15 @@ beforeEach(() => {
     },
     NOW,
   ); // Thiri dog
-  confirmFinalScore(db, 1, 1, 2, 0, NOW); // BRA -0.5 covers → Zaw +90,000, Thiri −200,000
+  // A3: BRA -0.5 wins 2-0 → d=1.5>0 → full win. Zaw +100,000, Thiri −200,000. House net=+100,000
+  confirmFinalScore(db, 1, 1, 2, 0, NOW);
 });
 
 it("aggregates volume, exposure, and house P&L", () => {
   const d = dashboard(db, "2026-06-12");
-  expect(d.todayHouseNet).toBe(110_000);
-  expect(d.tournamentHouseNet).toBe(110_000);
+  // A3: Zaw +100k, Thiri -200k → house net = 200k - 100k = +100k
+  expect(d.todayHouseNet).toBe(100_000);
+  expect(d.tournamentHouseNet).toBe(100_000);
   expect(d.todayStakeVolume).toBe(300_000);
   expect(d.todayBetCount).toBe(2);
   expect(d.activePlayers).toBe(2);
@@ -94,10 +96,11 @@ it("aggregates volume, exposure, and house P&L", () => {
   );
 });
 
-it("includes outstanding settlements: toPayMmk=90000 toCollectMmk=200000 payCount=1 collectCount=1", () => {
+it("includes outstanding settlements: toPayMmk=100000 toCollectMmk=200000 payCount=1 collectCount=1", () => {
   const d = dashboard(db, "2026-06-12");
   expect(d.outstanding).toBeDefined();
-  expect(d.outstanding.toPayMmk).toBe(90_000);
+  // A3: Zaw +100k
+  expect(d.outstanding.toPayMmk).toBe(100_000);
   expect(d.outstanding.toCollectMmk).toBe(200_000);
   expect(d.outstanding.payCount).toBe(1);
   expect(d.outstanding.collectCount).toBe(1);

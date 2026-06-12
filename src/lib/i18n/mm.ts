@@ -29,6 +29,7 @@ export const mm: Dict = {
   liveNote: "ဤလောင်းကြေးနောက်ပိုင်း ဂိုးများသာ ရေတွက်သည်",
   outWin: "နိုင်",
   outHalfWin: "တစ်ဝက်နိုင်",
+  outOnLine: "လိုင်းပေါ်ကျ",
   outPush: "ညီမျှ",
   outHalfLose: "တစ်ဝက်ရှုံး",
   outLose: "ရှုံး",

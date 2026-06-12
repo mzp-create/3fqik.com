@@ -307,50 +307,37 @@ export default function SettlePage() {
                               ? `Bet at ${t.scoreHomeAtBet}–${t.scoreAwayAtBet} · final ${finalHome}–${finalAway} · counts after-bet goals: ${effHome}–${effAway}`
                               : `Final ${finalHome}–${finalAway}`;
 
+                            // A3 model: show distance d and kind
                             let mathLine: string;
                             if (t.market === "ah") {
                               const sign = t.side === "fav" ? "−" : "+";
                               const handicapGoals = ball(t.ballQ);
                               const teamLabel = t.side === "fav" ? fav : dog;
-                              if (d.quarter) {
-                                const p0 = d.parts[0];
-                                const p1 = d.parts[1];
-                                mathLine = `${teamLabel} ${sign}${handicapGoals} (${effFav}–${effDog}): ½ at ${p0.lineGoals} (${p0.outcome}) · ½ at ${p1.lineGoals} (${p1.outcome})`;
-                              } else {
-                                mathLine = `${teamLabel} ${sign}${handicapGoals}: effective margin ${effFav}–${effDog} vs ${ball(t.ballQ)} — ${d.parts[0].outcome}`;
-                              }
+                              mathLine = `${teamLabel} ${sign}${handicapGoals}: effective ${effFav}–${effDog}, d=${d.d > 0 ? "+" : ""}${d.d} → ${d.kind}`;
                             } else {
                               const total = effFav + effDog;
                               const line = ball(t.ballQ);
-                              if (d.quarter) {
-                                const p0 = d.parts[0];
-                                const p1 = d.parts[1];
-                                mathLine = `Total ${total} vs ${line}: ½ at ${p0.lineGoals} (${p0.outcome}) · ½ at ${p1.lineGoals} (${p1.outcome})`;
-                              } else {
-                                mathLine = `Total ${total} vs ${line} — ${d.parts[0].outcome}`;
-                              }
+                              mathLine = `Total ${total} vs ${line}: d=${d.d > 0 ? "+" : ""}${d.d} → ${d.kind}`;
                             }
 
                             let resultLine: string;
                             const s = t.status;
                             if (s === "won") {
-                              resultLine = `WON +${mmk(t.netMmk)} = ${mmk(t.stakeMmk)}×${price(t.priceC)}`;
+                              if (d.kind === "full_win") {
+                                resultLine = `WON full stake +${mmk(t.netMmk)}`;
+                              } else {
+                                resultLine = `WON on-line +${mmk(t.netMmk)} (${price(t.priceC)} × ${mmk(t.stakeMmk)})`;
+                              }
                             } else if (s === "lost") {
-                              resultLine = `LOST −${mmk(t.stakeMmk)}`;
+                              if (d.kind === "full_lose") {
+                                resultLine = `LOST full stake −${mmk(t.stakeMmk)}`;
+                              } else if (d.kind === "partial_lose") {
+                                resultLine = `LOST partial −${mmk(Math.abs(t.netMmk))} (${d.lossFraction} × ${mmk(t.stakeMmk)})`;
+                              } else {
+                                resultLine = `LOST on-line −${mmk(Math.abs(t.netMmk))} (${price(t.priceC)} × ${mmk(t.stakeMmk)})`;
+                              }
                             } else if (s === "push") {
                               resultLine = `PUSH 0 (stake returned)`;
-                            } else if (s === "half_won") {
-                              const halfStake = t.stakeMmk / 2;
-                              resultLine = `HALF WON ½×${mmk(halfStake)}×${price(t.priceC)} → ${signedMmk(t.netMmk)}`;
-                            } else if (s === "half_lost") {
-                              const halfStake = t.stakeMmk / 2;
-                              const lossAmt =
-                                t.priceC > 0
-                                  ? halfStake
-                                  : Math.round(
-                                      (halfStake * Math.abs(t.priceC)) / 100,
-                                    );
-                              resultLine = `HALF LOST −${mmk(lossAmt)} → ${signedMmk(t.netMmk)}`;
                             } else {
                               resultLine = signedMmk(t.netMmk);
                             }

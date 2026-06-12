@@ -14,14 +14,23 @@ export type SlipState = {
 };
 const CHIPS = [10_000, 50_000, 100_000, 500_000, 1_000_000];
 
+/**
+ * Payout preview for the new even-money + on-the-line model (Amendment A3).
+ * priceC is the on-the-line fraction ×100 (integer 1–100, positive only).
+ *
+ * win      → +stake        (beats the line — price is irrelevant)
+ * on_line  → +stake × p    (result lands exactly on the line)
+ * lose     → −stake        (misses the line)
+ *
+ * For quarter-ball lines the on-line/half combos differ (one half wins, one is
+ * on-line), but the preview shows the three primary single-outcome cases.
+ */
 function preview(stake: number, priceC: number) {
-  const win = priceC > 0 ? Math.round((stake * priceC) / 100) : stake;
-  const lose = priceC > 0 ? stake : Math.round((stake * -priceC) / 100);
+  const p = priceC / 100;
   return {
-    win,
-    halfWin: Math.round(win / 2),
-    lose,
-    halfLose: Math.round(lose / 2),
+    win: stake,
+    onLine: Math.round(stake * p),
+    lose: stake,
   };
 }
 
@@ -114,20 +123,12 @@ export function BetSlip({
             ))}
           </div>
 
-          {/* 5-outcome preview — 2-col grid */}
+          {/* 3-outcome preview — 2-col grid (even-money model) */}
           <div className="my-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-canvas p-3 text-base leading-relaxed">
             <span className="text-ink/50">{t.outWin}</span>
             <span className="font-semibold text-mx">{signedMmk(p.win)}</span>
-            <span className="text-ink/50">{t.outHalfWin}</span>
-            <span className="font-semibold text-mx">
-              {signedMmk(p.halfWin)}
-            </span>
-            <span className="text-ink/50">{t.outPush}</span>
-            <span className="font-semibold text-gray-500">0</span>
-            <span className="text-ink/50">{t.outHalfLose}</span>
-            <span className="font-semibold text-ca">
-              {signedMmk(-p.halfLose)}
-            </span>
+            <span className="text-ink/50">{t.outOnLine}</span>
+            <span className="font-semibold text-mx">{signedMmk(p.onLine)}</span>
             <span className="text-ink/50">{t.outLose}</span>
             <span className="font-semibold text-ca">{signedMmk(-p.lose)}</span>
           </div>

@@ -188,18 +188,38 @@ Approved. Every player gets a personal invite link (capped, works immediately); 
 
 ---
 
-## Amendment A3 (2026-06-12): Even-money settlement model (REPLACES Malay odds)
+## Amendment A3 (2026-06-12): Even-money handicap/total grading model (REPLACES Malay-odds grading)
 
-The group does NOT settle as Malay/decimal odds. The price `p` (0 < p ≤ 1, stored ×100) is the **on-the-line payout fraction only**. Per line-part (quarter balls split into two half-stakes exactly as today):
+This replaces the decimal/Malay payout in §10 and Amendment A1. The price (`@` number) is NO LONGER a win multiplier — it is **the payout when the result lands exactly on a whole-number line**. Confirmed against the friend's settlements.
 
-- Result **beats** the part's line → **win full part-stake** (+S_part). Price ignored.
-- Result lands **exactly on** the part's line → **win part-stake × p** (+S_part·p).
-- Result **misses** the part's line → **lose full part-stake** (−S_part).
+### Inputs
+Stake `S` (integer MMK), price `p = priceC/100` (0 < p ≤ 1, positive only now), line value `L = ballQ/4`, effective per-team goals `effFav`/`effDog` (live-offset clamp unchanged: `max(final − atBet, 0)` per team).
 
-Net = sum of parts, rounded half-away-from-zero once. Identical for body (handicap) and goals (over/under), both sides, including Under/underdog landing on the line (that is a win × p, not a loss). No negative prices. Half/whole-integer lines where no exact landing is possible simply never use `p`.
+### Distance `d` — how far the result lands on the bet's WINNING side of the line
+- Body favourite (`ah`, side fav): `d = (effFav − effDog) − L`
+- Body underdog (`ah`, side dog): `d = (effDog − effFav) + L`
+- Goals over (`ou`, side over): `d = (effFav + effDog) − L`
+- Goals under (`ou`, side under): `d = L − (effFav + effDog)`
 
-**Status mapping:** net>0 all full-win → `won`; net>0 with an on-line part → `half_won`; net<0 all-lose → `lost`; net<0 with an on-line part → `half_lost`; net==0 → `push`.
+### Payout (net to player; round half-away-from-zero, once; integer MMK)
+- **`d > 0`** (beats the line by any amount) → **WIN full stake: `+S`**
+- **`d < 0`** (falls short) → **LOSE `min(|d|, 1) × S`** — short by 0.25 → −0.25S; by 0.5 → −0.5S; by 0.75 → −0.75S; by ≥1 full goal → −S
+- **`d = 0`** (exactly on a whole-number line) → **`p × S`**, sign by side:
+  - Body favourite (L>0) → **WIN** `+pS`
+  - Body underdog (L>0) → **WIN** `+pS`
+  - Body level (L=0, i.e. a draw) → **LOSE** `−pS`
+  - Goals Over → **LOSE** `−pS`
+  - Goals Under → **WIN** `+pS`
 
-**Ground-truth checksum (the 7 reference bets):** #1 MEX −1@0.30 200k, total 2–0 → +200,000; #4 KOR −0@1.00 4M, 2–1 → +4,000,000; #5 CZE +0@1.00 200k, lost → −200,000; #6 Over 2.0@0.35 200k, total 3 → +200,000; #7 Under 2.0@0.35 2M, total 3 → −2,000,000; #2 Over 2.0@0.50 200k, total **2 (on line)** → +100,000; #3 Over 2.0@0.50 4M, total **2 (on line)** → +2,000,000. **Player total +4,300,000 (banker −4,300,000).**
+Wins are always full stake (no fractional wins). Only losses are fractional, and only when the result misses by less than a whole goal (possible on half/quarter lines) or on the d=0 price case. There is no push/refund.
 
-**Impact:** grade engine payout mapping (ball/total/quarter-split logic unchanged), bet-slip payout preview, per-bet breakdown, Lines price input (now 0.01–1.00, positive only), and the (pending) fees layer. Existing bets are re-graded; production is NOT redeployed until the re-graded numbers are confirmed against this checksum.
+### Status (TS-only enum; net sign drives it)
+`won` (net>0), `lost` (net<0), `push` (net==0; effectively unused). `half_won`/`half_lost` retired (kept in enum, never produced). The per-bet settle breakdown shows the exact outcome kind (full-win / on-line-win / partial-lose / on-line-lose / full-lose).
+
+### Locked test cases (every confirmed figure)
+Body: MEX −1 @0.30 S200k — win-by-2 → +200,000; win-by-1 (d=0) → +60,000; draw → −200,000. KOR −0 @1.00 S4M won-by-1 → +4,000,000. CZE +0 @1.00 S200k lost-by-1 → −200,000. Brazil −0.75 @0.90 S100k — win → +100,000; draw (d=−0.75) → −75,000; lose-by-1 (d=−1.75) → −100,000. Body on-line direction: favourite WIN, underdog WIN, level LOSE.
+Goals: Over 2.0 @0.50 — total2 (d=0) S200k → −100,000, S4M → −2,000,000. Over 2.0 @0.35 S200k total3 → +200,000. Under 2.0 @0.35 S2M total3 → −2,000,000. Over 2.25 @0.90 S100k — 3+ → +100,000; exactly2 (d=−0.25) → −25,000; ≤1 (d≤−1) → −100,000. Goals on-line: Over LOSE, Under WIN.
+The seven seeded bets re-grade to player +100,000 / banker −100,000.
+
+### Ripple (must follow the engine)
+Bet-slip payout preview, ticket display, and the settle breakdown all reframe "price" as "on-the-line payout, not odds." Admin line price input range becomes positive-only (0.01–1.00). Existing graded bets are re-graded to the new model. The exhaustive grading test table is rebuilt to the cases above.

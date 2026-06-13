@@ -141,6 +141,21 @@ export default function LinesPage() {
       setError(matchId, "AH on-the-line payout must be between 0.01 and 1.00");
       return;
     }
+    // Favourite-flip guard: warn admin if the new line's favourite side differs
+    // from the current posted AH line (only applies when a line already exists).
+    const matchRow = matches.find((m) => m.id === matchId);
+    if (matchRow && matchRow.line && matchRow.line.favSide !== f.favSide) {
+      const currentFavTeam =
+        matchRow.line.favSide === "home"
+          ? matchRow.homeTeam
+          : matchRow.awayTeam;
+      const newFavTeam =
+        f.favSide === "home" ? matchRow.homeTeam : matchRow.awayTeam;
+      const confirmed = window.confirm(
+        `Switch favourite from ${currentFavTeam} to ${newFavTeam} on ${matchRow.homeTeam} vs ${matchRow.awayTeam}? This flips which side bettors are backing.`,
+      );
+      if (!confirmed) return;
+    }
     setError(matchId, "");
     setBusyFor(matchId, true);
     try {

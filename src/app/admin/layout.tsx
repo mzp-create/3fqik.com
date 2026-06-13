@@ -17,6 +17,8 @@ export default async function AdminLayout({
     ["/admin/lines", "Lines"],
     ["/admin/scores", "Scores"],
     ["/admin/settle", "Settle"],
+    ["/admin/bets", "Bets"],
+    ["/admin/audit", "Audit"],
     ["/admin/players", "Players"],
     ["/admin/settings", "Settings"],
   ];

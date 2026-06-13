@@ -1,116 +1,61 @@
-"use client";
-import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "@/lib/client/api";
-import { useT, I18nProvider } from "@/lib/i18n";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { eq } from "drizzle-orm";
+import { getDb, schema } from "@/lib/db";
+import { I18nProvider } from "@/lib/i18n";
+import { RegisterForm } from "@/components/RegisterForm";
 
-function RegisterForm() {
-  const { t } = useT();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [form, setForm] = useState({
-    code: searchParams.get("code") ?? "",
-    phone: "",
-    name: "",
-    pin: "",
-    pin2: "",
-  });
-  const [error, setError] = useState("");
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({
-      ...f,
-      [k]:
-        k === "pin" || k === "pin2"
-          ? e.target.value.replace(/\D/g, "")
-          : e.target.value,
-    }));
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string }>;
+}) {
+  const { code } = await searchParams;
 
-  async function submit() {
-    if (form.pin !== form.pin2) {
-      setError(`${t.pin} ≠ ${t.pinConfirm}`);
-      return;
-    }
-    try {
-      await api("/api/auth/register", {
-        code: form.code,
-        phone: form.phone,
-        name: form.name,
-        pin: form.pin,
-      });
-      router.push("/");
-    } catch (e) {
-      setError((e as Error).message);
+  const h = await headers();
+  const ip =
+    (h.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
+    h.get("x-real-ip") ||
+    "unknown";
+  const ua = h.get("user-agent") ?? "unknown";
+
+  // Determine validity and reason
+  type Reason = "missing" | "unknown" | "expired" | "exhausted";
+  let reason: Reason | null = null;
+
+  // eslint-disable-next-line react-hooks/purity -- server component, not a hook
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+
+  if (!code) {
+    reason = "missing";
+  } else {
+    const db = getDb();
+    const row = await db
+      .select()
+      .from(schema.inviteCodes)
+      .where(eq(schema.inviteCodes.code, code))
+      .get();
+
+    if (!row) {
+      reason = "unknown";
+    } else if (Date.parse(row.expiresAt) <= now) {
+      reason = "expired";
+    } else if (row.usedCount >= row.maxUses) {
+      reason = "exhausted";
     }
   }
 
-  return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-4 bg-canvas p-6">
-      {/* App name hero (same as login) */}
-      <div className="text-center">
-        <p className="text-base font-semibold uppercase tracking-widest text-ink/50">
-          FIFA World Cup
-        </p>
-        <h1 className="text-5xl font-bold text-ink">
-          WorldBet<span className="font-display text-6xl">26</span>
-        </h1>
-        <div className="triband-skew mx-auto mt-2 w-32" />
-        <p className="mt-2 text-base font-semibold text-ink/60">{t.register}</p>
-      </div>
+  if (reason !== null) {
+    console.warn(
+      `[register-blocked] ${nowIso} ip=${ip} ua="${ua}" code="${code ?? ""}" reason=${reason}`,
+    );
+    redirect("/invite-only");
+  }
 
-      <input
-        className="rounded-lg border border-ink/20 bg-white p-5 text-xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-        placeholder={t.inviteCode}
-        value={form.code}
-        onChange={set("code")}
-      />
-      <input
-        className="rounded-lg border border-ink/20 bg-white p-5 text-xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-        inputMode="tel"
-        placeholder={t.phone}
-        value={form.phone}
-        onChange={set("phone")}
-      />
-      <input
-        className="rounded-lg border border-ink/20 bg-white p-5 text-xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-        placeholder={t.displayName}
-        value={form.name}
-        onChange={set("name")}
-      />
-      <input
-        className="rounded-lg border border-ink/20 bg-white p-5 text-xl tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-        type="password"
-        inputMode="numeric"
-        maxLength={6}
-        placeholder={t.pin}
-        value={form.pin}
-        onChange={set("pin")}
-      />
-      <input
-        className="rounded-lg border border-ink/20 bg-white p-5 text-xl tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-        type="password"
-        inputMode="numeric"
-        maxLength={6}
-        placeholder={t.pinConfirm}
-        value={form.pin2}
-        onChange={set("pin2")}
-      />
-      {error && <p className="text-center text-base text-ca">{error}</p>}
-      <button
-        className="rounded-lg bg-ink p-5 text-xl font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-        onClick={submit}
-      >
-        {t.register}
-      </button>
-    </main>
-  );
-}
-
-export default function RegisterPage() {
   return (
     <I18nProvider initial="en">
-      <Suspense>
-        <RegisterForm />
-      </Suspense>
+      <RegisterForm code={code!} />
     </I18nProvider>
   );
 }

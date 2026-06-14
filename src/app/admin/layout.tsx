@@ -21,6 +21,7 @@ export default async function AdminLayout({
     ["/admin/audit", "Audit"],
     ["/admin/players", "Players"],
     ["/admin/settings", "Settings"],
+    ["/admin/reports", "Reports"],
   ];
   return (
     <I18nProvider initial={me.language}>

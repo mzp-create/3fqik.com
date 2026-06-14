@@ -223,3 +223,26 @@ The seven seeded bets re-grade to player +100,000 / banker −100,000.
 
 ### Ripple (must follow the engine)
 Bet-slip payout preview, ticket display, and the settle breakdown all reframe "price" as "on-the-line payout, not odds." Admin line price input range becomes positive-only (0.01–1.00). Existing graded bets are re-graded to the new model. The exhaustive grading test table is rebuilt to the cases above.
+
+---
+
+## Amendment A4 (2026-06-14): Commission/discount fees + reconciliation reporting
+
+### Fees
+- `settings.commission_pct` (default 3), `settings.discount_pct` (default 2) — integer percent, admin-editable.
+- `bets.fee_mmk` (nullable, signed) — the fee adjustment, computed at grading for UNSETTLED bets only:
+  - net>0 (win): `fee = -round(commission_pct/100 × net)` (house commission, reduces the win)
+  - net<0 (loss): `fee = +round(discount_pct/100 × |net|)` (player discount, reduces the loss)
+  - net==0 (push) or void: fee = 0/null
+  - round half-away-from-zero, integer MMK; base is the win/loss AMOUNT (net), not stake.
+- **Effective net** = `net_mmk + COALESCE(fee_mmk, 0)`. ALL accounting (dayBoard, outstanding, playerDayItems, dashboard, settlement net) uses effective net.
+- Already-settled bets (settlement_id set) are NOT re-feed — their settlement stands at the net they were settled at. The re-grade only sets fee_mmk on unsettled graded bets.
+- Display: ticket, settle breakdown, and balance show gross net, the commission/discount line, and net-after-fee.
+
+### Reconciliation reports (admin, on-screen + CSV download)
+New `/admin/reports` section with four reports, each filterable and with a client-side "Download CSV":
+1. **Per-player statement** (player + date range): every bet (gross, fee, net-after-fee, status, match, pick), settlements with refs, and a running balance. For face-to-face reconciliation.
+2. **Daily settlement summary** (date or range): per player — net-after-fee, settled status (paid/collected/unsettled) + ref, and the house position per day.
+3. **House P&L** (date range): turnover (sum stakes, non-void), gross win, gross loss, commission collected, discount given, net house result.
+4. **Outstanding & settled totals** (all players): per player — unsettled effective net (to pay / to collect) and settled total; grand totals.
+All report APIs are requireAdmin. CSV is generated client-side from the fetched JSON (no separate endpoints).

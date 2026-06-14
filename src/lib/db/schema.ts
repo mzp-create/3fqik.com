@@ -148,6 +148,7 @@ export const bets = sqliteTable("bets", {
     .notNull()
     .default("pending"),
   netMmk: integer("net_mmk"),
+  feeMmk: integer("fee_mmk"),
   settledAt: text("settled_at"),
   settlementId: integer("settlement_id").references(() => settlements.id),
   voidedBy: integer("voided_by").references(() => players.id),
@@ -161,6 +162,8 @@ export const settings = sqliteTable("settings", {
     .notNull()
     .default(10),
   referralBonusMmk: integer("referral_bonus_mmk").notNull().default(0),
+  commissionPct: integer("commission_pct").notNull().default(3),
+  discountPct: integer("discount_pct").notNull().default(2),
 });
 
 export const auditLog = sqliteTable("audit_log", {

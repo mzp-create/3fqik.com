@@ -11,6 +11,7 @@ export function playerDayItems(db: Db, playerId: number, date: string) {
       stakeMmk: schema.bets.stakeMmk,
       status: schema.bets.status,
       netMmk: schema.bets.netMmk,
+      feeMmk: schema.bets.feeMmk,
       settlementId: schema.bets.settlementId,
       favSide: schema.lines.favSide,
       ballQ: schema.lines.ballQ,
@@ -52,7 +53,7 @@ export function dayBoard(db: Db, date: string) {
     .select({
       playerId: schema.bets.playerId,
       displayName: schema.players.displayName,
-      netMmk: sql<number>`coalesce(sum(${schema.bets.netMmk}), 0)`,
+      netMmk: sql<number>`coalesce(sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0)), 0)`,
       ticketCount: sql<number>`count(*)`,
       settled: sql<number>`min(${schema.bets.settlementId} is not null)`,
     })
@@ -79,7 +80,7 @@ export function outstandingSettlements(db: Db) {
     .select({
       playerId: schema.bets.playerId,
       matchDay: schema.matches.matchDay,
-      unitNet: sql<number>`sum(${schema.bets.netMmk})`,
+      unitNet: sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`,
     })
     .from(schema.bets)
     .innerJoin(schema.matches, eq(schema.bets.matchId, schema.matches.id))

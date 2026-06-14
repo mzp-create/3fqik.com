@@ -13,6 +13,7 @@ type BalanceItem = {
   stakeMmk: number;
   status: string;
   netMmk: number | null;
+  feeMmk: number | null;
   settlementId: number | null;
   favSide: "home" | "away";
   ballQ: number;
@@ -55,7 +56,11 @@ export default function BalancePage() {
         <p className="mt-8 text-center text-ink/40">{t.noDays}</p>
       )}
       {days.map((day) => {
-        const net = day.items.reduce((s, i) => s + (i.netMmk ?? 0), 0);
+        // effective net = net + fee for each item
+        const net = day.items.reduce(
+          (s, i) => s + (i.netMmk ?? 0) + (i.feeMmk ?? 0),
+          0,
+        );
         const dayStatusLabel =
           day.status === "open"
             ? t.dayOpen
@@ -120,6 +125,8 @@ export default function BalancePage() {
                       ? `${fav} −${ball(item.ballQ)} @ ${price(item.priceC)}`
                       : `${dog} +${ball(item.ballQ)} @ ${price(item.priceC)}`;
                 }
+                const fee = item.feeMmk ?? 0;
+                const effectiveNet = (item.netMmk ?? 0) + fee;
                 return (
                   <li key={item.id} className="py-2">
                     <div className="flex justify-between">
@@ -149,6 +156,20 @@ export default function BalancePage() {
                         </span>
                       )}
                     </div>
+                    {fee !== 0 && item.netMmk != null && (
+                      <div className="flex justify-between text-xs text-ink/40 mt-0.5">
+                        <span>
+                          {fee < 0
+                            ? `Commission −${mmk(Math.abs(fee))} MMK`
+                            : `Discount +${mmk(fee)} MMK`}
+                        </span>
+                        <span
+                          className={`font-semibold ${effectiveNet >= 0 ? "text-mx" : "text-ca"}`}
+                        >
+                          Net after fee: {signedMmk(effectiveNet)} MMK
+                        </span>
+                      </div>
+                    )}
                   </li>
                 );
               })}

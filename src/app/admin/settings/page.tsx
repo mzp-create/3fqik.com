@@ -6,11 +6,15 @@ import { mmk } from "@/lib/client/format";
 type Settings = {
   id: number;
   dailyTotalLimitMmk: number;
+  commissionPct: number;
+  discountPct: number;
 };
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [limitInput, setLimitInput] = useState("");
+  const [commissionInput, setCommissionInput] = useState("");
+  const [discountInput, setDiscountInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -20,6 +24,8 @@ export default function SettingsPage() {
       .then((s) => {
         setSettings(s);
         setLimitInput(String(s.dailyTotalLimitMmk));
+        setCommissionInput(String(s.commissionPct));
+        setDiscountInput(String(s.discountPct));
       })
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Failed to load"),
@@ -49,6 +55,34 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveFeeRates() {
+    const commission = parseInt(commissionInput, 10);
+    const discount = parseInt(discountInput, 10);
+    if (!Number.isInteger(commission) || commission < 0 || commission > 100) {
+      setError("Commission % must be an integer 0–100");
+      return;
+    }
+    if (!Number.isInteger(discount) || discount < 0 || discount > 100) {
+      setError("Discount % must be an integer 0–100");
+      return;
+    }
+    setError("");
+    setSaved(false);
+    setBusy(true);
+    try {
+      await api("/api/admin/settings", {
+        commissionPct: commission,
+        discountPct: discount,
+      });
+      setSaved(true);
+      reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <main>
       <h1 className="mb-4 text-lg font-bold">Settings</h1>
@@ -58,7 +92,7 @@ export default function SettingsPage() {
         <p className="text-green-700 text-sm mb-3">Saved successfully.</p>
       )}
 
-      <div className="rounded border p-4">
+      <div className="rounded border p-4 mb-4">
         <h2 className="font-semibold mb-3">Daily Bet Limit</h2>
         <p className="text-sm text-gray-500 mb-3">
           Maximum total stake across all players for any match day. Set to 0 for
@@ -95,6 +129,63 @@ export default function SettingsPage() {
           >
             Save
           </button>
+        </div>
+      </div>
+
+      <div className="rounded border p-4">
+        <h2 className="font-semibold mb-3">Commission &amp; Discount Rates</h2>
+        <p className="text-sm text-gray-500 mb-3">
+          Commission is deducted from player winnings; discount reduces player
+          losses. Both applied at grading for unsettled bets only.
+        </p>
+        <div className="grid gap-3">
+          <div className="flex gap-2 items-center">
+            <label className="text-sm w-32 text-gray-600">Commission %</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              className="border rounded px-2 py-1 text-sm w-20"
+              placeholder="3"
+              value={commissionInput}
+              onChange={(e) => {
+                setCommissionInput(e.target.value);
+                setSaved(false);
+              }}
+            />
+            <span className="text-sm text-gray-500">
+              {settings != null && `(current: ${settings.commissionPct}%)`}
+            </span>
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="text-sm w-32 text-gray-600">Discount %</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              className="border rounded px-2 py-1 text-sm w-20"
+              placeholder="2"
+              value={discountInput}
+              onChange={(e) => {
+                setDiscountInput(e.target.value);
+                setSaved(false);
+              }}
+            />
+            <span className="text-sm text-gray-500">
+              {settings != null && `(current: ${settings.discountPct}%)`}
+            </span>
+          </div>
+          <div>
+            <button
+              disabled={busy}
+              onClick={saveFeeRates}
+              className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+            >
+              Save Fee Rates
+            </button>
+          </div>
         </div>
       </div>
     </main>

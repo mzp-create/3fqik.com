@@ -62,7 +62,10 @@ export function markPlayerPaid(
       .all().length;
     const mmdd = date.slice(5, 7) + date.slice(8, 10);
     const ref = `S-${mmdd}-${String(count + 1).padStart(2, "0")}`;
-    const net = items.reduce((s, i) => s + (i.netMmk ?? 0), 0);
+    const net = items.reduce(
+      (s, i) => s + (i.netMmk ?? 0) + (i.feeMmk ?? 0),
+      0,
+    );
 
     const settlement = tx
       .insert(schema.settlements)

@@ -84,12 +84,14 @@ beforeEach(() => {
 it("board shows nets and ticket items; marking paid stamps ref onto tickets", () => {
   const board = dayBoard(db, "2026-06-12");
   expect(board.day.status).toBe("closed");
-  // A3: Zaw fav wins full stake → +100,000; Thiri dog loses full stake → −200,000
+  // A4: Zaw fav wins gross +100,000; fee = -3% × 100k = -3,000 → effective +97,000
+  //     Thiri dog loses gross -200,000; fee = +2% × 200k = +4,000 → effective -196,000
+  //     houseNet = -(97,000 + (-196,000)) = +99,000
   expect(board.rows).toEqual([
-    expect.objectContaining({ playerId: 2, netMmk: 100_000, ticketCount: 1 }),
-    expect.objectContaining({ playerId: 3, netMmk: -200_000, ticketCount: 1 }),
+    expect.objectContaining({ playerId: 2, netMmk: 97_000, ticketCount: 1 }),
+    expect.objectContaining({ playerId: 3, netMmk: -196_000, ticketCount: 1 }),
   ]);
-  expect(board.houseNet).toBe(100_000);
+  expect(board.houseNet).toBe(99_000);
 
   const s1 = markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
   expect(s1.ref).toBe("S-0612-01");
@@ -212,10 +214,10 @@ it("no-tickets 404: markPlayerPaid for player with no tickets throws", () => {
 
 describe("outstandingSettlements", () => {
   it("basic: payCount=1(+100k), collectCount=1(-200k), settled and void excluded", () => {
-    // A3: Zaw +100,000 unsettled, Thiri -200,000 unsettled
+    // A4: Zaw effective +97,000 unsettled, Thiri effective -196,000 unsettled
     const r = outstandingSettlements(db);
-    expect(r.toPayMmk).toBe(100_000);
-    expect(r.toCollectMmk).toBe(200_000);
+    expect(r.toPayMmk).toBe(97_000);
+    expect(r.toCollectMmk).toBe(196_000);
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(1);
   });
@@ -224,9 +226,9 @@ describe("outstandingSettlements", () => {
     // Mark Zaw paid → his day1 unit is now settled
     markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
     const r = outstandingSettlements(db);
-    // Zaw's +100k unit is settled → only Thiri remains
+    // Zaw's effective +97k unit is settled → only Thiri remains (effective -196k)
     expect(r.toPayMmk).toBe(0);
-    expect(r.toCollectMmk).toBe(200_000);
+    expect(r.toCollectMmk).toBe(196_000);
     expect(r.payCount).toBe(0);
     expect(r.collectCount).toBe(1);
   });
@@ -240,7 +242,8 @@ describe("outstandingSettlements", () => {
       .get()!;
     voidTicket(db, 1, thiriTicket.ticketNo, "test", NOW);
     const r = outstandingSettlements(db);
-    expect(r.toPayMmk).toBe(100_000);
+    // Zaw effective +97,000 remains; Thiri voided → 0
+    expect(r.toPayMmk).toBe(97_000);
     expect(r.toCollectMmk).toBe(0);
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(0);
@@ -295,12 +298,14 @@ describe("outstandingSettlements", () => {
       })
       .run();
     const r = outstandingSettlements(db);
-    // Zaw has two units: day1 +100k and day1 push(0). The push contributes nothing.
-    // Both push bet and original bet are on day "2026-06-12" for player 2.
-    // They GROUP into ONE unit: net = 100000 + 0 = 100000 (still pay).
+    // A4: Zaw has two bets on day "2026-06-12":
+    //   - original: effective +97,000 (net +100k + fee -3k)
+    //   - push:     feeMmk=null → effective 0 (coalesce 0)
+    // They GROUP into ONE unit: net = 97,000 + 0 = 97,000 (still pay).
+    // Thiri effective -196,000 still collect.
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(1);
-    expect(r.toPayMmk).toBe(100_000);
+    expect(r.toPayMmk).toBe(97_000);
   });
 
   it("two match-days for player A: appears as separate (player,day) units", () => {
@@ -350,10 +355,13 @@ describe("outstandingSettlements", () => {
       })
       .run();
     const r = outstandingSettlements(db);
-    // Units: (Zaw, day1) = +100k → pay, (Zaw, day2) = -150k → collect, (Thiri, day1) = -200k → collect
+    // A4 effective nets:
+    //   (Zaw, day1)   = +97,000  (net +100k, fee -3k) → pay
+    //   (Zaw, day2)   = -150,000 (direct insert, feeMmk null → +0) → collect
+    //   (Thiri, day1) = -196,000 (net -200k, fee +4k) → collect
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(2);
-    expect(r.toPayMmk).toBe(100_000);
-    expect(r.toCollectMmk).toBe(350_000); // 150k + 200k
+    expect(r.toPayMmk).toBe(97_000);
+    expect(r.toCollectMmk).toBe(346_000); // 150k + 196k
   });
 });

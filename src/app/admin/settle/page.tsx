@@ -11,6 +11,7 @@ type TicketItem = {
   stakeMmk: number;
   status: string;
   netMmk: number | null;
+  feeMmk: number | null;
   settlementId: number | null;
   favSide: "home" | "away";
   ballQ: number;
@@ -33,6 +34,11 @@ type PlayerRow = {
   tickets: TicketItem[];
 };
 
+type FeeSettings = {
+  commissionPct: number;
+  discountPct: number;
+};
+
 type DayBoard = {
   day: {
     id: number;
@@ -42,6 +48,7 @@ type DayBoard = {
   };
   rows: PlayerRow[];
   houseNet: number;
+  feeSettings: FeeSettings;
 };
 
 export default function SettlePage() {
@@ -151,6 +158,12 @@ export default function SettlePage() {
                 {signedMmk(board.houseNet)}
               </span>
             </span>
+            {board.feeSettings && (
+              <span className="text-xs text-gray-400">
+                commission {board.feeSettings.commissionPct}% · discount{" "}
+                {board.feeSettings.discountPct}%
+              </span>
+            )}
           </div>
 
           {board.rows.length > 0 && (
@@ -342,6 +355,41 @@ export default function SettlePage() {
                               resultLine = signedMmk(t.netMmk);
                             }
 
+                            // Fee line (A4)
+                            const fee = t.feeMmk ?? 0;
+                            let feeLine: React.ReactNode = null;
+                            if (fee !== 0 && board.feeSettings) {
+                              if (fee < 0) {
+                                // win → commission reduces win
+                                feeLine = (
+                                  <div className="text-orange-500">
+                                    Commission −{mmk(Math.abs(fee))} (
+                                    {board.feeSettings.commissionPct}%)
+                                  </div>
+                                );
+                              } else {
+                                // loss → discount reduces loss
+                                feeLine = (
+                                  <div className="text-blue-500">
+                                    Discount +{mmk(fee)} (
+                                    {board.feeSettings.discountPct}%)
+                                  </div>
+                                );
+                              }
+                            }
+                            const netAfterFee =
+                              fee !== 0 ? (
+                                <div
+                                  className={
+                                    t.netMmk + fee >= 0
+                                      ? "text-green-600 font-semibold"
+                                      : "text-red-500 font-semibold"
+                                  }
+                                >
+                                  Net after fee: {signedMmk(t.netMmk + fee)}
+                                </div>
+                              ) : null;
+
                             breakdown = (
                               <div className="text-xs text-gray-400 mt-1 space-y-0.5 font-mono">
                                 <div>{scoreLine}</div>
@@ -355,6 +403,8 @@ export default function SettlePage() {
                                 >
                                   {resultLine}
                                 </div>
+                                {feeLine}
+                                {netAfterFee}
                               </div>
                             );
                           } catch {

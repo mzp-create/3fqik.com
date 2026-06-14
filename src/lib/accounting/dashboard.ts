@@ -7,7 +7,7 @@ export function dashboard(db: Db, today: string) {
     ne(schema.bets.status, "void"),
     isNotNull(schema.bets.netMmk),
   );
-  const sumNet = sql<number>`coalesce(sum(${schema.bets.netMmk}), 0)`;
+  const sumNet = sql<number>`coalesce(sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0)), 0)`;
 
   const tournament = db
     .select({ s: sumNet })

@@ -14,7 +14,13 @@ export async function GET() {
 export async function POST(req: Request) {
   return handle(async () => {
     const admin = await requireAdmin();
-    const { dailyTotalLimitMmk, matchId, betLimitMmk } = await req.json();
+    const {
+      dailyTotalLimitMmk,
+      matchId,
+      betLimitMmk,
+      commissionPct,
+      discountPct,
+    } = await req.json();
 
     // Validate dailyTotalLimitMmk if present
     if (dailyTotalLimitMmk != null) {
@@ -38,6 +44,28 @@ export async function POST(req: Request) {
             "betLimitMmk must be an integer >= 0 or null to clear",
           );
         }
+      }
+    }
+
+    // Validate commissionPct if present
+    if (commissionPct != null) {
+      if (
+        !Number.isInteger(commissionPct) ||
+        commissionPct < 0 ||
+        commissionPct > 100
+      ) {
+        return fail("bad_request", "commissionPct must be an integer 0–100");
+      }
+    }
+
+    // Validate discountPct if present
+    if (discountPct != null) {
+      if (
+        !Number.isInteger(discountPct) ||
+        discountPct < 0 ||
+        discountPct > 100
+      ) {
+        return fail("bad_request", "discountPct must be an integer 0–100");
       }
     }
 
@@ -74,6 +102,25 @@ export async function POST(req: Request) {
           action: "limit_change",
           subject: `match:${matchId}`,
           detail: String(limitValue),
+          at,
+        })
+        .run();
+    }
+
+    if (commissionPct != null || discountPct != null) {
+      const feeUpdate: Record<string, number> = {};
+      if (commissionPct != null) feeUpdate.commissionPct = commissionPct;
+      if (discountPct != null) feeUpdate.discountPct = discountPct;
+      db.update(schema.settings)
+        .set(feeUpdate)
+        .where(eq(schema.settings.id, 1))
+        .run();
+      db.insert(schema.auditLog)
+        .values({
+          actorId: admin.id,
+          action: "fee_change",
+          subject: "settings",
+          detail: JSON.stringify(feeUpdate),
           at,
         })
         .run();

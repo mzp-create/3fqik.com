@@ -1,4 +1,5 @@
-import { getDb } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { getDb, schema } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/session";
 import { dayBoard, playerDayItems } from "@/lib/accounting/queries";
 import { markPlayerPaid, voidTicket } from "@/lib/accounting/settle";
@@ -17,7 +18,15 @@ export async function GET(req: Request) {
       ...r,
       tickets: playerDayItems(db, r.playerId, date),
     }));
-    return ok({ ...board, rows: rowsWithTickets });
+    const feeSettings = db
+      .select({
+        commissionPct: schema.settings.commissionPct,
+        discountPct: schema.settings.discountPct,
+      })
+      .from(schema.settings)
+      .where(eq(schema.settings.id, 1))
+      .get() ?? { commissionPct: 3, discountPct: 2 };
+    return ok({ ...board, rows: rowsWithTickets, feeSettings });
   });
 }
 

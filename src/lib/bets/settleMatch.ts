@@ -1,6 +1,7 @@
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 import { gradeBet, type GradeInput } from "@/lib/engine/grade";
+import { computeFee } from "@/lib/fees";
 import { sseHub } from "@/lib/sse";
 
 function err(message: string, httpStatus = 400, code = "error") {
@@ -27,6 +28,16 @@ function gradeMatchTickets(
   away: number,
   at: string,
 ) {
+  // Read fee rates from settings (row id=1 always exists; defaults 3/2 apply)
+  const settings = tx
+    .select({
+      commissionPct: schema.settings.commissionPct,
+      discountPct: schema.settings.discountPct,
+    })
+    .from(schema.settings)
+    .where(eq(schema.settings.id, 1))
+    .get() ?? { commissionPct: 3, discountPct: 2 };
+
   const lines = new Map(
     tx
       .select()
@@ -66,8 +77,13 @@ function gradeMatchTickets(
       effFav: Math.max(effFav, 0),
       effDog: Math.max(effDog, 0),
     } as GradeInput);
+    const fee = computeFee(
+      r.netMmk,
+      settings.commissionPct,
+      settings.discountPct,
+    );
     tx.update(schema.bets)
-      .set({ status: r.status, netMmk: r.netMmk, settledAt: at })
+      .set({ status: r.status, netMmk: r.netMmk, feeMmk: fee, settledAt: at })
       .where(eq(schema.bets.id, t.id))
       .run();
   }

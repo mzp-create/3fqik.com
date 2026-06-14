@@ -11,8 +11,19 @@
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { getDb, schema } from "../src/lib/db/index";
 import { gradeBet, type GradeInput } from "../src/lib/engine/grade";
+import { computeFee } from "../src/lib/fees";
 
 const db = getDb();
+
+// Read fee rates once from settings
+const settingsRow = db
+  .select({
+    commissionPct: schema.settings.commissionPct,
+    discountPct: schema.settings.discountPct,
+  })
+  .from(schema.settings)
+  .where(eq(schema.settings.id, 1))
+  .get() ?? { commissionPct: 3, discountPct: 2 };
 
 // Fetch all finished matches
 const finishedMatches = db
@@ -88,8 +99,13 @@ for (const match of finishedMatches) {
       effDog,
     } as GradeInput);
 
+    const fee = computeFee(
+      r.netMmk,
+      settingsRow.commissionPct,
+      settingsRow.discountPct,
+    );
     db.update(schema.bets)
-      .set({ status: r.status, netMmk: r.netMmk })
+      .set({ status: r.status, netMmk: r.netMmk, feeMmk: fee })
       .where(eq(schema.bets.id, bet.id))
       .run();
 

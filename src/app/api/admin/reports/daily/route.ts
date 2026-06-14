@@ -37,6 +37,9 @@ export async function GET(req: Request) {
         minSettlementId: min(schema.bets.settlementId),
         // Get ref from settlements (works because one settlement per player per day)
         ref: schema.settlements.ref,
+        paymentMethod: schema.settlements.paymentMethod,
+        paymentReference: schema.settlements.paymentReference,
+        remark: schema.settlements.remark,
       })
       .from(schema.bets)
       .innerJoin(
@@ -71,6 +74,9 @@ export async function GET(req: Request) {
       ticketCount: r.ticketCount,
       settled: r.minSettlementId != null,
       ref: r.ref ?? null,
+      paymentMethod: r.paymentMethod ?? null,
+      paymentReference: r.paymentReference ?? null,
+      remark: r.remark ?? null,
     }));
 
     // Per-day house position

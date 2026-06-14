@@ -54,6 +54,9 @@ type SettlementRow = {
   matchDay: string;
   netMmk: number;
   markedAt: string;
+  paymentMethod: string | null;
+  paymentReference: string | null;
+  remark: string | null;
 };
 
 type PlayerSummary = {
@@ -78,6 +81,9 @@ type DailyRow = {
   ticketCount: number;
   settled: boolean;
   ref: string | null;
+  paymentMethod: string | null;
+  paymentReference: string | null;
+  remark: string | null;
 };
 
 type DayTotal = {
@@ -270,6 +276,34 @@ export default function ReportsPage() {
     );
   }
 
+  function downloadPlayerSettlementsCsv() {
+    if (!playerReport) return;
+    const playerName =
+      players.find((p) => p.id === playerId)?.displayName ?? String(playerId);
+    const headers = [
+      "Ref",
+      "Match Day",
+      "Net MMK",
+      "Marked At",
+      "Payment Method",
+      "Payment Reference",
+      "Remark",
+    ];
+    const rows = playerReport.settlements.map((s) => [
+      s.ref,
+      s.matchDay,
+      s.netMmk,
+      s.markedAt,
+      s.paymentMethod ?? "",
+      s.paymentReference ?? "",
+      s.remark ?? "",
+    ]);
+    downloadCsv(
+      `player-settlements-${playerName}-${from}_${to}.csv`,
+      toCsv(headers, rows),
+    );
+  }
+
   function downloadDailyCsv() {
     if (!dailyReport) return;
     const headers = [
@@ -279,6 +313,9 @@ export default function ReportsPage() {
       "Effective Net",
       "Settled",
       "Settlement Ref",
+      "Payment Method",
+      "Payment Reference",
+      "Remark",
     ];
     const rows = dailyReport.rows.map((r) => [
       r.matchDay,
@@ -287,6 +324,9 @@ export default function ReportsPage() {
       r.net,
       r.settled ? "Y" : "N",
       r.ref ?? "",
+      r.paymentMethod ?? "",
+      r.paymentReference ?? "",
+      r.remark ?? "",
     ]);
     downloadCsv(`daily-summary-${from}_${to}.csv`, toCsv(headers, rows));
   }
@@ -509,7 +549,15 @@ export default function ReportsPage() {
 
           {playerReport.settlements.length > 0 && (
             <>
-              <h2 className="font-semibold text-sm mt-4 mb-2">Settlements</h2>
+              <div className="flex justify-between items-center mt-4 mb-2">
+                <h2 className="font-semibold text-sm">Settlements</h2>
+                <button
+                  onClick={downloadPlayerSettlementsCsv}
+                  className="text-xs border rounded px-2 py-0.5 text-gray-600 hover:text-gray-900"
+                >
+                  Download CSV
+                </button>
+              </div>
               <table className="w-full border-collapse text-xs">
                 <thead>
                   <tr className="border-b text-left text-gray-500">
@@ -517,6 +565,9 @@ export default function ReportsPage() {
                     <th className="py-1 pr-2">Match Day</th>
                     <th className="py-1 pr-2 text-right">Net MMK</th>
                     <th className="py-1 pr-2">Marked At</th>
+                    <th className="py-1 pr-2">Payment Method</th>
+                    <th className="py-1 pr-2">Payment Ref</th>
+                    <th className="py-1 pr-2">Remark</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -528,6 +579,13 @@ export default function ReportsPage() {
                         <NetCell n={s.netMmk} />
                       </td>
                       <td className="py-1 pr-2 text-gray-500">{s.markedAt}</td>
+                      <td className="py-1 pr-2">{s.paymentMethod ?? "—"}</td>
+                      <td className="py-1 pr-2 font-mono">
+                        {s.paymentReference ?? "—"}
+                      </td>
+                      <td className="py-1 pr-2 text-gray-600">
+                        {s.remark ?? "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -562,6 +620,9 @@ export default function ReportsPage() {
                   <th className="py-1 pr-2 text-right">Eff Net</th>
                   <th className="py-1 pr-2">Settled</th>
                   <th className="py-1 pr-2">Ref</th>
+                  <th className="py-1 pr-2">Payment Method</th>
+                  <th className="py-1 pr-2">Payment Ref</th>
+                  <th className="py-1 pr-2">Remark</th>
                 </tr>
               </thead>
               <tbody>
@@ -602,6 +663,15 @@ export default function ReportsPage() {
                           <td className="py-1 pr-2 text-gray-500">
                             {r.ref ?? "—"}
                           </td>
+                          <td className="py-1 pr-2">
+                            {r.paymentMethod ?? "—"}
+                          </td>
+                          <td className="py-1 pr-2 font-mono">
+                            {r.paymentReference ?? "—"}
+                          </td>
+                          <td className="py-1 pr-2 text-gray-600">
+                            {r.remark ?? "—"}
+                          </td>
                         </tr>
                       )),
                       dt ? (
@@ -617,7 +687,7 @@ export default function ReportsPage() {
                           <td className="py-1 pr-2 text-right">
                             <NetCell n={dt.houseNet} />
                           </td>
-                          <td colSpan={2} />
+                          <td colSpan={5} />
                         </tr>
                       ) : null,
                     ];
@@ -635,7 +705,7 @@ export default function ReportsPage() {
                   <td className="py-1 pr-2 text-right">
                     <NetCell n={dailyReport.grandTotal.net} />
                   </td>
-                  <td colSpan={2} />
+                  <td colSpan={5} />
                 </tr>
                 <tr className="bg-gray-100 font-bold">
                   <td colSpan={2} className="py-1 pr-2 text-gray-500 italic">
@@ -645,7 +715,7 @@ export default function ReportsPage() {
                   <td className="py-1 pr-2 text-right">
                     <NetCell n={dailyReport.grandTotal.houseNet} />
                   </td>
-                  <td colSpan={2} />
+                  <td colSpan={5} />
                 </tr>
               </tfoot>
             </table>

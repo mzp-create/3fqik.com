@@ -5,6 +5,14 @@ import { mmk, signedMmk, ball, price, todayMmt } from "@/lib/client/format";
 import { gradeDetail } from "@/lib/engine/grade";
 import type { GradeInput } from "@/lib/engine/grade";
 
+const PAYMENT_METHODS = [
+  "Cash",
+  "KBZ Pay",
+  "Wave Money",
+  "AYA Pay",
+  "Bank Transfer",
+];
+
 type TicketItem = {
   ticketNo: string;
   side: "fav" | "dog" | "over" | "under";
@@ -31,6 +39,10 @@ type PlayerRow = {
   netMmk: number;
   ticketCount: number;
   settled: number;
+  ref: string | null;
+  paymentMethod: string | null;
+  paymentReference: string | null;
+  remark: string | null;
   tickets: TicketItem[];
 };
 
@@ -51,6 +63,12 @@ type DayBoard = {
   feeSettings: FeeSettings;
 };
 
+type SettleForm = {
+  paymentMethod: string;
+  paymentReference: string;
+  remark: string;
+};
+
 export default function SettlePage() {
   const [date, setDate] = useState(todayMmt);
   const [board, setBoard] = useState<DayBoard | null>(null);
@@ -58,6 +76,10 @@ export default function SettlePage() {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
+  // inline settle form state: playerId -> form fields (null = form closed)
+  const [settleForm, setSettleForm] = useState<
+    Record<number, SettleForm | null>
+  >({});
 
   const reload = (d: string) =>
     api<DayBoard>(`/api/admin/settle?date=${d}`)
@@ -78,12 +100,45 @@ export default function SettlePage() {
     setBusy((prev) => ({ ...prev, [key]: val }));
   }
 
-  async function markPaid(playerId: number) {
+  function openSettleForm(playerId: number) {
+    setSettleForm((prev) => ({
+      ...prev,
+      [playerId]: { paymentMethod: "", paymentReference: "", remark: "" },
+    }));
+  }
+
+  function closeSettleForm(playerId: number) {
+    setSettleForm((prev) => ({ ...prev, [playerId]: null }));
+  }
+
+  function updateSettleForm(
+    playerId: number,
+    field: keyof SettleForm,
+    value: string,
+  ) {
+    setSettleForm((prev) => {
+      const cur = prev[playerId];
+      if (!cur) return prev;
+      return { ...prev, [playerId]: { ...cur, [field]: value } };
+    });
+  }
+
+  async function confirmSettle(playerId: number) {
+    const form = settleForm[playerId];
+    if (!form) return;
     const key = `pay-${playerId}`;
     setBusyFor(key, true);
     setError("");
     try {
-      await api("/api/admin/settle", { action: "mark_paid", date, playerId });
+      await api("/api/admin/settle", {
+        action: "mark_paid",
+        date,
+        playerId,
+        paymentMethod: form.paymentMethod,
+        paymentReference: form.paymentReference,
+        remark: form.remark,
+      });
+      closeSettleForm(playerId);
       reload(date);
     } catch (e) {
       setError(e instanceof Error ? e.message : "error");
@@ -204,6 +259,8 @@ export default function SettlePage() {
             const isExpanded = expanded[row.playerId] ?? false;
             const isSettled = row.settled === 1;
             const payKey = `pay-${row.playerId}`;
+            const isBusy = busy[payKey] ?? false;
+            const form = settleForm[row.playerId] ?? null;
             // Direction by net sign: >0 house PAYS the player; <0 house COLLECTS.
             const dir =
               row.netMmk > 0 ? "pay" : row.netMmk < 0 ? "collect" : "even";
@@ -449,13 +506,147 @@ export default function SettlePage() {
                       })}
                     </div>
 
-                    <button
-                      disabled={busy[payKey] || isSettled}
-                      onClick={() => markPaid(row.playerId)}
-                      className="mt-3 bg-green-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50 w-full"
-                    >
-                      {isSettled ? "Settled" : actionLabel}
-                    </button>
+                    {/* Settlement area */}
+                    {isSettled ? (
+                      /* Read-only settled payment detail */
+                      <div className="mt-3 rounded bg-green-50 border border-green-200 px-3 py-2 text-sm space-y-0.5">
+                        <div className="text-green-700 font-semibold text-xs uppercase tracking-wide mb-1">
+                          Settled · {row.ref}
+                        </div>
+                        {row.paymentMethod && (
+                          <div className="text-gray-700">
+                            <span className="text-gray-500 text-xs">
+                              Payment method:
+                            </span>{" "}
+                            {row.paymentMethod}
+                          </div>
+                        )}
+                        {row.paymentReference && (
+                          <div className="text-gray-700">
+                            <span className="text-gray-500 text-xs">Ref:</span>{" "}
+                            <span className="font-mono">
+                              {row.paymentReference}
+                            </span>
+                          </div>
+                        )}
+                        {row.remark && (
+                          <div className="text-gray-700">
+                            <span className="text-gray-500 text-xs">
+                              Remark:
+                            </span>{" "}
+                            {row.remark}
+                          </div>
+                        )}
+                        {!row.paymentMethod &&
+                          !row.paymentReference &&
+                          !row.remark && (
+                            <div className="text-gray-400 text-xs italic">
+                              No payment details recorded.
+                            </div>
+                          )}
+                      </div>
+                    ) : form ? (
+                      /* Inline settle form */
+                      <div className="mt-3 rounded border border-gray-300 bg-gray-50 px-3 py-3 space-y-3">
+                        <div className="text-sm font-semibold text-gray-700">
+                          Record payment for {row.displayName}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Payment method
+                          </label>
+                          <input
+                            list={`pm-list-${row.playerId}`}
+                            value={form.paymentMethod}
+                            onChange={(e) =>
+                              updateSettleForm(
+                                row.playerId,
+                                "paymentMethod",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="e.g. Cash"
+                            className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                          />
+                          <datalist id={`pm-list-${row.playerId}`}>
+                            {PAYMENT_METHODS.map((m) => (
+                              <option key={m} value={m} />
+                            ))}
+                          </datalist>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Reference{" "}
+                            <span className="font-normal text-gray-400">
+                              (external payment ref, optional)
+                            </span>
+                          </label>
+                          <input
+                            type="text"
+                            value={form.paymentReference}
+                            onChange={(e) =>
+                              updateSettleForm(
+                                row.playerId,
+                                "paymentReference",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="e.g. TXN123456"
+                            className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Remark{" "}
+                            <span className="font-normal text-gray-400">
+                              (optional)
+                            </span>
+                          </label>
+                          <input
+                            type="text"
+                            value={form.remark}
+                            onChange={(e) =>
+                              updateSettleForm(
+                                row.playerId,
+                                "remark",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="e.g. Paid in person"
+                            className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                          />
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            disabled={isBusy}
+                            onClick={() => confirmSettle(row.playerId)}
+                            className="flex-1 bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded disabled:opacity-50 hover:bg-green-700 active:bg-green-800"
+                          >
+                            {isBusy ? "Settling…" : `Confirm ${actionLabel}`}
+                          </button>
+                          <button
+                            disabled={isBusy}
+                            onClick={() => closeSettleForm(row.playerId)}
+                            className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Settle trigger button */
+                      <button
+                        disabled={isBusy}
+                        onClick={() => openSettleForm(row.playerId)}
+                        className="mt-3 bg-green-600 text-white text-sm font-semibold px-3 py-2 rounded disabled:opacity-50 w-full hover:bg-green-700 active:bg-green-800"
+                      >
+                        {actionLabel}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

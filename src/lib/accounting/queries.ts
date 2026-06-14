@@ -69,8 +69,37 @@ export function dayBoard(db: Db, date: string) {
     )
     .groupBy(schema.bets.playerId)
     .all();
+
+  // Fetch settlement detail fields for settled players on this day
+  const settlementDetails =
+    day.id > 0
+      ? db
+          .select({
+            playerId: schema.settlements.playerId,
+            ref: schema.settlements.ref,
+            paymentMethod: schema.settlements.paymentMethod,
+            paymentReference: schema.settlements.paymentReference,
+            remark: schema.settlements.remark,
+          })
+          .from(schema.settlements)
+          .where(eq(schema.settlements.matchDayId, day.id))
+          .all()
+      : [];
+  const settlementMap = new Map(settlementDetails.map((s) => [s.playerId, s]));
+
+  const enrichedRows = rows.map((r) => {
+    const s = settlementMap.get(r.playerId);
+    return {
+      ...r,
+      ref: s?.ref ?? null,
+      paymentMethod: s?.paymentMethod ?? null,
+      paymentReference: s?.paymentReference ?? null,
+      remark: s?.remark ?? null,
+    };
+  });
+
   const houseNet = -rows.reduce((s, r) => s + r.netMmk, 0);
-  return { day, rows, houseNet };
+  return { day, rows: enrichedRows, houseNet };
 }
 
 /** All-time outstanding settlement units: (playerId, matchDay) with unsettled graded non-void bets. */

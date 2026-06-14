@@ -98,6 +98,9 @@ export async function GET(req: Request) {
         matchDay: schema.matchDays.date,
         netMmk: schema.settlements.netMmk,
         markedAt: schema.settlements.markedAt,
+        paymentMethod: schema.settlements.paymentMethod,
+        paymentReference: schema.settlements.paymentReference,
+        remark: schema.settlements.remark,
       })
       .from(schema.settlements)
       .innerJoin(

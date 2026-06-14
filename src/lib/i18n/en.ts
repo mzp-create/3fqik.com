@@ -79,6 +79,9 @@ export const en = {
   outClearMiss: "Clear miss",
   commission: "Commission",
   discount: "Discount",
+  paidVia: "Paid via",
+  refLabel: "Ref",
+  remarkLabel: "Remark",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

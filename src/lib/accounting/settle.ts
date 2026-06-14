@@ -38,6 +38,11 @@ export function markPlayerPaid(
   date: string,
   playerId: number,
   at: string,
+  opts?: {
+    paymentMethod?: string;
+    paymentReference?: string;
+    remark?: string;
+  },
 ) {
   return db.transaction((tx) => {
     const txd = tx as unknown as Db;
@@ -67,6 +72,8 @@ export function markPlayerPaid(
       0,
     );
 
+    const trim = (v?: string) => (v?.trim() || null) ?? null;
+
     const settlement = tx
       .insert(schema.settlements)
       .values({
@@ -76,6 +83,9 @@ export function markPlayerPaid(
         netMmk: net,
         markedBy: adminId,
         markedAt: at,
+        paymentMethod: trim(opts?.paymentMethod),
+        paymentReference: trim(opts?.paymentReference),
+        remark: trim(opts?.remark),
       })
       .returning()
       .get();

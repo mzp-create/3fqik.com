@@ -27,6 +27,9 @@ type BalanceDay = {
   date: string;
   status: "open" | "closed" | "settled";
   ref: string | null;
+  paymentMethod: string | null;
+  paymentReference: string | null;
+  remark: string | null;
   items: BalanceItem[];
 };
 
@@ -100,10 +103,33 @@ export default function BalancePage() {
             </div>
 
             {day.ref && (
-              <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-gold/20 px-3 py-1 text-sm font-bold text-ink">
-                <span className="text-gold">●</span>
-                {t.settledRef} · {day.ref}
-              </p>
+              <div className="mt-1 space-y-1">
+                <p className="inline-flex items-center gap-1 rounded-full bg-gold/20 px-3 py-1 text-sm font-bold text-ink">
+                  <span className="text-gold">●</span>
+                  {t.settledRef} · {day.ref}
+                </p>
+                {(day.paymentMethod || day.paymentReference || day.remark) && (
+                  <p className="text-xs text-ink/50 pl-1">
+                    {day.paymentMethod && (
+                      <span>
+                        {t.paidVia} {day.paymentMethod}
+                      </span>
+                    )}
+                    {day.paymentReference && (
+                      <span>
+                        {day.paymentMethod ? " · " : ""}
+                        {t.refLabel} {day.paymentReference}
+                      </span>
+                    )}
+                    {day.remark && (
+                      <span>
+                        {day.paymentMethod || day.paymentReference ? " · " : ""}
+                        {t.remarkLabel}: {day.remark}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
             )}
             {!day.ref && day.status !== "settled" && (
               <p className="text-sm text-ink/40">{t.unsettled}</p>

@@ -85,6 +85,9 @@ export const mm: Dict = {
   outClearMiss: "လုံးဝလွဲ",
   commission: "ကော်မရှင်",
   discount: "လျှော့စျေး",
+  paidVia: "ပေးချေမှု",
+  refLabel: "ကိုး",
+  remarkLabel: "မှတ်ချက်",
 } as const;
 
 /*

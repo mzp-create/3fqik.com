@@ -41,7 +41,17 @@ export async function POST(req: Request) {
         return fail("bad_request", "date required (YYYY-MM-DD)");
       if (!Number.isInteger(playerId))
         return fail("bad_request", "playerId must be an integer");
-      return ok(markPlayerPaid(getDb(), admin.id, date, playerId, nowIso()));
+
+      const capStr = (v: unknown, max = 200) =>
+        typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined;
+
+      return ok(
+        markPlayerPaid(getDb(), admin.id, date, playerId, nowIso(), {
+          paymentMethod: capStr(body.paymentMethod),
+          paymentReference: capStr(body.paymentReference),
+          remark: capStr(body.remark),
+        }),
+      );
     }
 
     if (body.action === "void") {

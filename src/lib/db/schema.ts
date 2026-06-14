@@ -109,7 +109,7 @@ export const settlements = sqliteTable(
   "settlements",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    ref: text("ref").notNull().unique(), // S-MMDD-NN
+    ref: text("ref").notNull().unique(), // S-MMDD-NN (system ref)
     matchDayId: integer("match_day_id")
       .notNull()
       .references(() => matchDays.id),
@@ -121,6 +121,9 @@ export const settlements = sqliteTable(
       .notNull()
       .references(() => players.id),
     markedAt: text("marked_at").notNull(),
+    paymentMethod: text("payment_method"), // e.g. Cash, KBZ Pay — nullable
+    paymentReference: text("payment_reference"), // external payment ref — nullable
+    remark: text("remark"), // free-text note — nullable
   },
   (t) => [unique().on(t.matchDayId, t.playerId)],
 );

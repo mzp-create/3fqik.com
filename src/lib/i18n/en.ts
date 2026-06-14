@@ -77,6 +77,8 @@ export const en = {
   outNarrowMiss: "Narrow miss",
   outNarrowMissRange: "−¼ to −¾ stake",
   outClearMiss: "Clear miss",
+  commission: "Commission",
+  discount: "Discount",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

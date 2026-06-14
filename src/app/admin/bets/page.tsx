@@ -18,6 +18,7 @@ type BetRow = {
   scoreAwayAtBet: number;
   status: string;
   netMmk: number | null;
+  feeMmk: number | null;
   settlementId: number | null;
   placedAt: string;
   favSide: "home" | "away";
@@ -165,6 +166,10 @@ function GradeBreakdown({ t }: { t: BetRow }) {
   const lines = computeGradeLines(t);
   if (!lines) return null;
 
+  const fee = t.feeMmk ?? 0;
+  const hasFee = fee !== 0;
+  const effectiveNet = lines.net + fee;
+
   return (
     <div className="text-xs text-gray-400 mt-1 space-y-0.5 font-mono">
       <div>{lines.scoreLine}</div>
@@ -172,6 +177,23 @@ function GradeBreakdown({ t }: { t: BetRow }) {
       <div className={lines.net >= 0 ? "text-green-600" : "text-red-500"}>
         {lines.resultLine}
       </div>
+      {hasFee && (
+        <>
+          <div>
+            {fee < 0 ? "Commission" : "Discount"}:{" "}
+            {fee < 0 ? `−${mmk(Math.abs(fee))}` : `+${mmk(fee)}`} MMK
+          </div>
+          <div
+            className={
+              effectiveNet >= 0
+                ? "text-green-700 font-semibold"
+                : "text-red-600 font-semibold"
+            }
+          >
+            Net after fee: {signedMmk(effectiveNet)} MMK
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -216,7 +238,6 @@ export default function BetsPage() {
     if (q.trim()) params.set("q", q.trim());
     const url = `/api/admin/bets${params.toString() ? `?${params}` : ""}`;
     fetchBets(url);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, q]);
 
   async function handleVoid(ticketNo: string) {
@@ -325,18 +346,29 @@ export default function BetsPage() {
                       <div className="text-sm mt-0.5">{label}</div>
                       <div className="text-xs text-gray-500">
                         Stake: {mmk(t.stakeMmk)} MMK
-                        {t.netMmk != null && (
-                          <span
-                            className={
-                              t.netMmk >= 0
-                                ? " text-green-700 font-semibold"
-                                : " text-red-600 font-semibold"
-                            }
-                          >
-                            {" "}
-                            · Net: {signedMmk(t.netMmk)}
-                          </span>
-                        )}
+                        {t.netMmk != null &&
+                          (() => {
+                            const fee = t.feeMmk ?? 0;
+                            const effectiveNet = t.netMmk + fee;
+                            return (
+                              <span
+                                className={
+                                  effectiveNet >= 0
+                                    ? " text-green-700 font-semibold"
+                                    : " text-red-600 font-semibold"
+                                }
+                              >
+                                {" "}
+                                · Net: {signedMmk(effectiveNet)}
+                                {fee !== 0 && (
+                                  <span className="text-gray-400 font-normal">
+                                    {" "}
+                                    ({fee < 0 ? "Commission" : "Discount"})
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })()}
                       </div>
                     </div>
                     <span className="text-gray-400 text-sm shrink-0">

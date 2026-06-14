@@ -83,6 +83,8 @@ export const mm: Dict = {
   outNarrowMiss: "နည်းနည်းလွဲ",
   outNarrowMissRange: "−¼ မှ −¾ လောင်းငွေ",
   outClearMiss: "လုံးဝလွဲ",
+  commission: "ကော်မရှင်",
+  discount: "လျှော့စျေး",
 } as const;
 
 /*

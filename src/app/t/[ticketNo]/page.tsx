@@ -103,9 +103,36 @@ export default async function VerifyTicket({
         />
         <Row k="Placed" v={formatMmt(bet.placedAt)} />
         <Row k="Status" v={bet.status.toUpperCase()} />
-        {bet.netMmk != null && (
-          <Row k="Net" v={`${bet.netMmk.toLocaleString()} MMK`} />
-        )}
+        {bet.netMmk != null &&
+          (() => {
+            const fee = bet.feeMmk ?? 0;
+            const hasFee = fee !== 0;
+            const effectiveNet = bet.netMmk + fee;
+            return (
+              <>
+                {hasFee && (
+                  <Row
+                    k="Net (gross)"
+                    v={`${bet.netMmk.toLocaleString()} MMK`}
+                  />
+                )}
+                {hasFee && (
+                  <Row
+                    k={fee < 0 ? "Commission" : "Discount"}
+                    v={
+                      fee < 0
+                        ? `−${Math.abs(fee).toLocaleString()} MMK`
+                        : `+${fee.toLocaleString()} MMK`
+                    }
+                  />
+                )}
+                <Row
+                  k="Net"
+                  v={`${(hasFee ? effectiveNet : bet.netMmk).toLocaleString()} MMK`}
+                />
+              </>
+            );
+          })()}
         {settlement != null && <Row k="Settled" v={settlement.ref} />}
       </dl>
     </main>

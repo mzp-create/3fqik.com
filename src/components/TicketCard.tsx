@@ -14,6 +14,7 @@ export type TicketRow = {
   scoreAwayAtBet: number;
   placedAt: string;
   netMmk: number | null;
+  feeMmk: number | null;
   qrUrl: string;
   match: { homeTeam: string; awayTeam: string; stage: string };
   line: {
@@ -76,7 +77,10 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
     try {
       const qrData = qr || (await QRCode.toDataURL(b.qrUrl, { width: 160 }));
       const hasNet = b.netMmk != null;
-      const canvasHeight = hasNet ? 660 : 620;
+      const fee = b.feeMmk ?? 0;
+      const hasFee = hasNet && fee !== 0;
+      // Each extra fee+effectiveNet line adds 36px; base 620, +40 for net, +72 for fee lines
+      const canvasHeight = hasNet ? (hasFee ? 732 : 660) : 620;
       const canvas = document.createElement("canvas");
       canvas.width = 360;
       canvas.height = canvasHeight;
@@ -100,7 +104,23 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
         [t.statusLbl, t[statusKey(b.status)]],
       ];
       if (hasNet) {
-        rows.push([t.net, `${signedMmk(b.netMmk!)} MMK`]);
+        if (hasFee) {
+          // gross net (before fee)
+          rows.push([t.net, `${signedMmk(b.netMmk!)} MMK`]);
+          // fee line
+          const feeLabel = fee < 0 ? t.commission : t.discount;
+          const feeDisplay =
+            fee < 0 ? `−${mmk(Math.abs(fee))} MMK` : `+${mmk(fee)} MMK`;
+          rows.push([feeLabel, feeDisplay]);
+          // effective net (after fee) — headline
+          const effectiveNet = b.netMmk! + fee;
+          rows.push([
+            `${t.net} (${feeLabel})`,
+            `${signedMmk(effectiveNet)} MMK`,
+          ]);
+        } else {
+          rows.push([t.net, `${signedMmk(b.netMmk!)} MMK`]);
+        }
       }
       rows.forEach(([k, v], idx) => {
         ctx.fillStyle = "#777";
@@ -163,9 +183,37 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
             />
             <Row k={t.placed} v={formatMmt(b.placedAt)} />
             <Row k={t.statusLbl} v={t[statusKey(b.status)]} />
-            {b.netMmk != null && (
-              <Row k={t.net} v={`${signedMmk(b.netMmk)} MMK`} />
-            )}
+            {b.netMmk != null &&
+              (() => {
+                const fee = b.feeMmk ?? 0;
+                const hasFee = fee !== 0;
+                const effectiveNet = b.netMmk + fee;
+                return (
+                  <>
+                    {hasFee && (
+                      <Row k={t.net} v={`${signedMmk(b.netMmk)} MMK`} />
+                    )}
+                    {hasFee && (
+                      <Row
+                        k={fee < 0 ? t.commission : t.discount}
+                        v={
+                          fee < 0
+                            ? `−${mmk(Math.abs(fee))} MMK`
+                            : `+${mmk(fee)} MMK`
+                        }
+                      />
+                    )}
+                    <Row
+                      k={
+                        hasFee
+                          ? `${t.net} (${fee < 0 ? t.commission : t.discount})`
+                          : t.net
+                      }
+                      v={`${signedMmk(hasFee ? effectiveNet : b.netMmk)} MMK`}
+                    />
+                  </>
+                );
+              })()}
           </dl>
           {!qrError && qr && (
             // eslint-disable-next-line @next/next/no-img-element

@@ -70,6 +70,7 @@ export async function GET() {
         placedAt: schema.bets.placedAt,
         status: schema.bets.status,
         netMmk: schema.bets.netMmk,
+        feeMmk: schema.bets.feeMmk,
         settledAt: schema.bets.settledAt,
         settlementId: schema.bets.settlementId,
         voidedBy: schema.bets.voidedBy,

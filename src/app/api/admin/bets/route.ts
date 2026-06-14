@@ -21,6 +21,7 @@ type BetRow = {
   scoreAwayAtBet: number;
   status: string;
   netMmk: number | null;
+  feeMmk: number | null;
   settlementId: number | null;
   placedAt: string;
   favSide: "home" | "away";
@@ -85,6 +86,7 @@ export function getAllBets(
       scoreAwayAtBet: schema.bets.scoreAwayAtBet,
       status: schema.bets.status,
       netMmk: schema.bets.netMmk,
+      feeMmk: schema.bets.feeMmk,
       settlementId: schema.bets.settlementId,
       placedAt: schema.bets.placedAt,
       favSide: schema.lines.favSide,

@@ -82,6 +82,10 @@ export const en = {
   paidVia: "Paid via",
   refLabel: "Ref",
   remarkLabel: "Remark",
+  installTitle: "Add WorldBet to your home screen",
+  installBtn: "Install",
+  installIos: "Tap Share, then 'Add to Home Screen'",
+  dismiss: "Not now",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

@@ -88,6 +88,10 @@ export const mm: Dict = {
   paidVia: "ပေးချေမှု",
   refLabel: "ကိုး",
   remarkLabel: "မှတ်ချက်",
+  installTitle: "WorldBet ကို သင့်ဖုန်းပင်မဖန်သားပြင်တွင် ထည့်သွင်းပါ",
+  installBtn: "ထည့်သွင်းမည်",
+  installIos: "Share နှိပ်ပြီး 'Add to Home Screen' ရွေးပါ",
+  dismiss: "နောက်မှ",
 } as const;
 
 /*

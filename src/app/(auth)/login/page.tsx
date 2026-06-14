@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/client/api";
 import { useT, I18nProvider } from "@/lib/i18n";
 import { errMsg } from "@/lib/client/errMsg";
+import { InstallBanner } from "@/components/InstallBanner";
 
 function LoginForm() {
   const { t } = useT();
@@ -76,6 +77,7 @@ export default function LoginPage() {
   return (
     <I18nProvider initial="en">
       <LoginForm />
+      <InstallBanner />
     </I18nProvider>
   );
 }

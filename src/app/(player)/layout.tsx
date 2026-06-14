@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { currentPlayer } from "@/lib/auth/session";
 import { I18nProvider } from "@/lib/i18n";
 import { Tabs } from "@/components/Tabs";
+import { InstallBanner } from "@/components/InstallBanner";
 
 export default async function PlayerLayout({
   children,
@@ -14,6 +15,7 @@ export default async function PlayerLayout({
     <I18nProvider initial={me.language}>
       <div className="mx-auto w-full max-w-md pb-20">{children}</div>
       <Tabs isAdmin={me.role === "admin"} />
+      <InstallBanner />
     </I18nProvider>
   );
 }

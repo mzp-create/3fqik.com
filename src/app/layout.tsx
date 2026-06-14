@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Anton } from "next/font/google";
 import "./globals.css";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,6 +21,20 @@ const anton = Anton({
 
 export const metadata: Metadata = {
   title: "WorldBet2026",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "WorldBet26",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#14161B",
 };
 
 export default function RootLayout({
@@ -38,6 +53,7 @@ export default function RootLayout({
         className="flex min-h-full flex-col bg-canvas text-ink"
         suppressHydrationWarning
       >
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>

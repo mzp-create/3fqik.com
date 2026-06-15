@@ -9,14 +9,16 @@ export async function GET() {
   return handle(async () => {
     await requireAdmin();
     const db = getDb();
-    const rows = db.select().from(schema.players).all();
+    const rows = await db.select().from(schema.players);
     return ok(
-      rows.map(({ pinHash: _ph, ...rest }) => ({
-        ...rest,
-        referredByName: rest.referredBy
-          ? referrerNameById(db, rest.referredBy)
-          : null,
-      })),
+      await Promise.all(
+        rows.map(async ({ pinHash: _ph, ...rest }) => ({
+          ...rest,
+          referredByName: rest.referredBy
+            ? await referrerNameById(db, rest.referredBy)
+            : null,
+        })),
+      ),
     );
   });
 }
@@ -35,11 +37,11 @@ export async function POST(req: Request) {
     if (action === "reset_pin") {
       if (!/^\d{6}$/.test(String(tempPin ?? "")))
         return fail("bad_request", "tempPin must be exactly 6 digits");
-      resetPin(db, admin.id, playerId, tempPin as string, nowIso());
+      await resetPin(db, admin.id, playerId, tempPin as string, nowIso());
     } else if (action === "unlock") {
-      unlockPlayer(db, admin.id, playerId, nowIso());
+      await unlockPlayer(db, admin.id, playerId, nowIso());
     } else if (action === "grant_admin") {
-      grantAdmin(db, admin.id, playerId, nowIso());
+      await grantAdmin(db, admin.id, playerId, nowIso());
     } else {
       return fail("bad_action", "unknown action");
     }

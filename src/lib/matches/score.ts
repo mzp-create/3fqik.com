@@ -13,12 +13,11 @@ function err(message: string, httpStatus = 400, code = "error") {
  *   not_found      — match does not exist
  *   match_finished — match is already finished (addition beyond plan spec)
  */
-export function setMatchLive(db: Db, matchId: number) {
-  const m = db
+export async function setMatchLive(db: Db, matchId: number) {
+  const [m] = await db
     .select()
     .from(schema.matches)
-    .where(eq(schema.matches.id, matchId))
-    .get();
+    .where(eq(schema.matches.id, matchId));
   if (!m) throw err("match not found", 404, "not_found");
   if (m.status === "live") return; // idempotent: re-tap must not wipe the running score
   if (m.status === "finished")
@@ -28,10 +27,10 @@ export function setMatchLive(db: Db, matchId: number) {
       "match_finished",
     );
 
-  db.update(schema.matches)
+  await db
+    .update(schema.matches)
     .set({ status: "live", homeScore: 0, awayScore: 0 })
-    .where(eq(schema.matches.id, matchId))
-    .run();
+    .where(eq(schema.matches.id, matchId));
 
   sseHub.broadcast("score_update", {
     matchId,
@@ -51,7 +50,7 @@ export function setMatchLive(db: Db, matchId: number) {
  *
  * Broadcasts a 'score_update' SSE event on success.
  */
-export function updateLiveScore(
+export async function updateLiveScore(
   db: Db,
   matchId: number,
   home: number,
@@ -68,11 +67,10 @@ export function updateLiveScore(
     throw err("invalid score: must be integers in 0–99", 400, "bad_score");
   }
 
-  const m = db
+  const [m] = await db
     .select()
     .from(schema.matches)
-    .where(eq(schema.matches.id, matchId))
-    .get();
+    .where(eq(schema.matches.id, matchId));
   if (!m) throw err("match not found", 404, "not_found");
   if (m.status === "finished")
     throw err(
@@ -81,10 +79,10 @@ export function updateLiveScore(
       "match_finished",
     );
 
-  db.update(schema.matches)
+  await db
+    .update(schema.matches)
     .set({ status: "live", homeScore: home, awayScore: away })
-    .where(eq(schema.matches.id, matchId))
-    .run();
+    .where(eq(schema.matches.id, matchId));
 
   sseHub.broadcast("score_update", {
     matchId,

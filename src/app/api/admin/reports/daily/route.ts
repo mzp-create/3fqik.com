@@ -26,13 +26,15 @@ export async function GET(req: Request) {
     const db = getDb();
 
     // Per (matchDay, player) over graded non-void bets
-    const rows = db
+    const rows = await db
       .select({
         matchDay: schema.matches.matchDay,
         playerId: schema.bets.playerId,
         playerName: schema.players.displayName,
-        net: sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`,
-        ticketCount: sql<number>`count(*)`,
+        net: sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`.mapWith(
+          Number,
+        ),
+        ticketCount: sql<number>`count(*)`.mapWith(Number),
         // min(settlementId) is null means at least one ticket unsettled
         minSettlementId: min(schema.bets.settlementId),
         // Get ref from settlements (works because one settlement per player per day)
@@ -62,9 +64,23 @@ export async function GET(req: Request) {
         ),
       )
       .where(and(ne(schema.bets.status, "void"), isNotNull(schema.bets.netMmk)))
-      .groupBy(schema.matches.matchDay, schema.bets.playerId)
-      .orderBy(sql`${schema.matches.matchDay} desc`, schema.players.displayName)
-      .all();
+      // Postgres requires every non-aggregated selected column in GROUP BY.
+      // displayName is functionally dependent on playerId, and there is exactly
+      // one settlement per (player, matchDay), so grouping by the settlement
+      // detail columns does not split groups.
+      .groupBy(
+        schema.matches.matchDay,
+        schema.bets.playerId,
+        schema.players.displayName,
+        schema.settlements.ref,
+        schema.settlements.paymentMethod,
+        schema.settlements.paymentReference,
+        schema.settlements.remark,
+      )
+      .orderBy(
+        sql`${schema.matches.matchDay} desc`,
+        schema.players.displayName,
+      );
 
     const playerRows = rows.map((r) => ({
       matchDay: r.matchDay,

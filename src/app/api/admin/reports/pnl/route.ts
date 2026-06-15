@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     const db = getDb();
 
     // Graded non-void bets in date range with effective net
-    const rows = db
+    const rows = await db
       .select({
         stakeMmk: schema.bets.stakeMmk,
         netMmk: schema.bets.netMmk,
@@ -45,8 +45,7 @@ export async function GET(req: Request) {
           gte(schema.matches.matchDay, from),
           lte(schema.matches.matchDay, to),
         ),
-      )
-      .all();
+      );
 
     let turnover = 0;
     let grossWin = 0;

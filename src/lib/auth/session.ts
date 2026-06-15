@@ -68,11 +68,10 @@ export async function currentPlayer() {
   const s = await verifySessionToken(tok);
   if (!s) return null;
   const db = getDb();
-  const p = db
+  const [p] = await db
     .select()
     .from(schema.players)
-    .where(eq(schema.players.id, s.playerId))
-    .get();
+    .where(eq(schema.players.id, s.playerId));
   if (!p || p.sessionEpoch !== s.epoch) return null;
   return p;
 }

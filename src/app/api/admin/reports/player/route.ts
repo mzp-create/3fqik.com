@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     const db = getDb();
 
     // Get bets with match/line context for this player in date range
-    const betRows = db
+    const betRows = await db
       .select({
         ticketNo: schema.bets.ticketNo,
         matchDay: schema.matches.matchDay,
@@ -65,8 +65,7 @@ export async function GET(req: Request) {
           lte(schema.matches.matchDay, to),
         ),
       )
-      .orderBy(schema.bets.placedAt)
-      .all();
+      .orderBy(schema.bets.placedAt);
 
     const bets = betRows.map((r) => {
       const grossNet = r.netMmk ?? 0;
@@ -92,7 +91,7 @@ export async function GET(req: Request) {
     });
 
     // Get settlements for this player in date range
-    const settlementRows = db
+    const settlementRows = await db
       .select({
         ref: schema.settlements.ref,
         matchDay: schema.matchDays.date,
@@ -114,8 +113,7 @@ export async function GET(req: Request) {
           lte(schema.matchDays.date, to),
         ),
       )
-      .orderBy(schema.settlements.markedAt)
-      .all();
+      .orderBy(schema.settlements.markedAt);
 
     // Summary — only graded tickets (netMmk not null)
     const gradedBets = bets.filter(

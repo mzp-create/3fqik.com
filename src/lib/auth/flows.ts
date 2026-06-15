@@ -1,4 +1,9 @@
-// IMPORTANT: keep these flows synchronous (no await). Single-threaded better-sqlite3 + no suspension points = atomic check-then-write. Adding an await reintroduces races.
+// ATOMICITY: with async Postgres, the login PIN attempt counter (check-then-write)
+// is no longer protected by single-threaded synchronous execution. The read of the
+// player row and the registerFailure/registerSuccess update have an await suspension
+// point between them, so concurrent logins can race the failed-attempt counter.
+// This matches the prior better-sqlite3 risk profile under multi-process deployment;
+// the lockout math itself is preserved exactly.
 import { eq, sql } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 import { normalizePhone } from "./phone";
@@ -14,7 +19,7 @@ function err(message: string, httpStatus: number, code = "error") {
   return Object.assign(new Error(message), { httpStatus, code });
 }
 
-export function registerPlayer(
+export async function registerPlayer(
   db: Db,
   input: { code: string; phone: string; name: string; pin: string },
   nowIso: string,
@@ -29,30 +34,26 @@ export function registerPlayer(
 
   const phone = normalizePhone(input.phone);
 
-  return db.transaction((tx) => {
-    const code = tx
+  return db.transaction(async (tx) => {
+    const [code] = await tx
       .select()
       .from(schema.inviteCodes)
-      .where(eq(schema.inviteCodes.code, input.code))
-      .get();
+      .where(eq(schema.inviteCodes.code, input.code));
     if (
       !code ||
       code.usedCount >= code.maxUses ||
       Date.parse(code.expiresAt) < Date.parse(nowIso)
     )
       throw err("invalid or expired invite code", 400, "invite_invalid");
-    if (
-      tx
-        .select()
-        .from(schema.players)
-        .where(eq(schema.players.phone, phone))
-        .get()
-    )
-      throw err("phone already registered", 409, "phone_taken");
+    const [existing] = await tx
+      .select()
+      .from(schema.players)
+      .where(eq(schema.players.phone, phone));
+    if (existing) throw err("phone already registered", 409, "phone_taken");
     if (!input.name.trim()) throw err("name required", 400, "name_required");
 
     const pinHash = hashPin(input.pin); // throws "PIN must be exactly 6 digits"
-    const player = tx
+    const [player] = await tx
       .insert(schema.players)
       .values({
         phone,
@@ -61,17 +62,16 @@ export function registerPlayer(
         createdAt: nowIso,
         referredBy: code.createdBy,
       })
-      .returning()
-      .get();
-    tx.update(schema.inviteCodes)
+      .returning();
+    await tx
+      .update(schema.inviteCodes)
       .set({ usedCount: sql`${schema.inviteCodes.usedCount} + 1` })
-      .where(eq(schema.inviteCodes.id, code.id))
-      .run();
+      .where(eq(schema.inviteCodes.id, code.id));
     return player;
   });
 }
 
-export function loginPlayer(
+export async function loginPlayer(
   db: Db,
   rawPhone: string,
   pin: string,
@@ -81,11 +81,10 @@ export function loginPlayer(
     throw err("invalid input", 400, "bad_input");
 
   const phone = normalizePhone(rawPhone);
-  const p = db
+  const [p] = await db
     .select()
     .from(schema.players)
-    .where(eq(schema.players.phone, phone))
-    .get();
+    .where(eq(schema.players.phone, phone));
   if (!p) throw err("wrong phone or PIN", 401, "wrong_credentials");
   // Caller contract: check lockState BEFORE verifyPin; never call registerFailure while locked
   if (lockState(p, nowIso).locked)
@@ -93,21 +92,21 @@ export function loginPlayer(
 
   if (!verifyPin(pin, p.pinHash)) {
     const next = registerFailure(p, nowIso);
-    db.update(schema.players)
+    await db
+      .update(schema.players)
       .set(next)
-      .where(eq(schema.players.id, p.id))
-      .run();
+      .where(eq(schema.players.id, p.id));
     throw err("wrong phone or PIN", 401, "wrong_credentials");
   }
   // Use registerSuccess() per deviation #1 (intentional)
-  db.update(schema.players)
+  await db
+    .update(schema.players)
     .set(registerSuccess())
-    .where(eq(schema.players.id, p.id))
-    .run();
+    .where(eq(schema.players.id, p.id));
   return { player: { ...p, ...registerSuccess() } };
 }
 
-export function changePin(
+export async function changePin(
   db: Db,
   playerId: number,
   currentPin: string,
@@ -116,23 +115,22 @@ export function changePin(
   if (typeof currentPin !== "string" || typeof newPin !== "string")
     throw err("invalid input", 400, "bad_input");
 
-  const p = db
+  const [p] = await db
     .select()
     .from(schema.players)
-    .where(eq(schema.players.id, playerId))
-    .get();
+    .where(eq(schema.players.id, playerId));
   if (!p) throw err("not found", 404);
   if (lockState(p, new Date().toISOString()).locked)
     throw err("account locked — try later or ask admin", 423, "locked");
   if (!verifyPin(currentPin, p.pinHash)) {
     const next = registerFailure(p, new Date().toISOString());
-    db.update(schema.players)
+    await db
+      .update(schema.players)
       .set(next)
-      .where(eq(schema.players.id, playerId))
-      .run();
+      .where(eq(schema.players.id, playerId));
     throw err("current PIN incorrect", 401, "wrong_credentials");
   }
-  const updated = db
+  const [updated] = await db
     .update(schema.players)
     .set({
       pinHash: hashPin(newPin),
@@ -141,7 +139,6 @@ export function changePin(
       ...registerSuccess(),
     })
     .where(eq(schema.players.id, playerId))
-    .returning()
-    .get();
+    .returning();
   return updated;
 }

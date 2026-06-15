@@ -54,7 +54,7 @@ export async function POST(req: Request) {
           "priceC must be a positive integer in [1, 100]",
         );
       return ok(
-        postLine(
+        await postLine(
           db,
           admin.id,
           {
@@ -70,11 +70,13 @@ export async function POST(req: Request) {
     }
 
     if (body.action === "suspend")
-      return ok(setLineStatus(db, body.matchId, body.market, "suspended"));
+      return ok(
+        await setLineStatus(db, body.matchId, body.market, "suspended"),
+      );
     if (body.action === "resume")
-      return ok(setLineStatus(db, body.matchId, body.market, "active"));
+      return ok(await setLineStatus(db, body.matchId, body.market, "active"));
     if (body.action === "close")
-      return ok(setLineStatus(db, body.matchId, body.market, "closed"));
+      return ok(await setLineStatus(db, body.matchId, body.market, "closed"));
 
     return fail("bad_action", "unknown action");
   });

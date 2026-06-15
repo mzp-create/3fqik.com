@@ -7,13 +7,15 @@ export async function GET() {
   return handle(async () => {
     await requirePlayer();
     const db = getDb();
-    const all = db.select().from(schema.matches).all();
+    const all = await db.select().from(schema.matches);
     return ok(
-      all.map((m) => ({
-        ...m,
-        line: latestLine(db, m.id, "ah"),
-        ouLine: latestLine(db, m.id, "ou"),
-      })),
+      await Promise.all(
+        all.map(async (m) => ({
+          ...m,
+          line: await latestLine(db, m.id, "ah"),
+          ouLine: await latestLine(db, m.id, "ou"),
+        })),
+      ),
     );
   });
 }

@@ -13,19 +13,21 @@ export async function GET(req: Request) {
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date))
       return fail("bad_request", "date query param required (YYYY-MM-DD)");
     const db = getDb();
-    const board = dayBoard(db, date);
-    const rowsWithTickets = board.rows.map((r) => ({
-      ...r,
-      tickets: playerDayItems(db, r.playerId, date),
-    }));
-    const feeSettings = db
+    const board = await dayBoard(db, date);
+    const rowsWithTickets = await Promise.all(
+      board.rows.map(async (r) => ({
+        ...r,
+        tickets: await playerDayItems(db, r.playerId, date),
+      })),
+    );
+    const [feeRow] = await db
       .select({
         commissionPct: schema.settings.commissionPct,
         discountPct: schema.settings.discountPct,
       })
       .from(schema.settings)
-      .where(eq(schema.settings.id, 1))
-      .get() ?? { commissionPct: 3, discountPct: 2 };
+      .where(eq(schema.settings.id, 1));
+    const feeSettings = feeRow ?? { commissionPct: 3, discountPct: 2 };
     return ok({ ...board, rows: rowsWithTickets, feeSettings });
   });
 }
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
         typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined;
 
       return ok(
-        markPlayerPaid(getDb(), admin.id, date, playerId, nowIso(), {
+        await markPlayerPaid(getDb(), admin.id, date, playerId, nowIso(), {
           paymentMethod: capStr(body.paymentMethod),
           paymentReference: capStr(body.paymentReference),
           remark: capStr(body.remark),
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
       if (typeof ticketNo !== "string" || !ticketNo)
         return fail("bad_request", "ticketNo (string) required");
       if (!reason?.trim()) return fail("bad_request", "void reason required");
-      voidTicket(getDb(), admin.id, ticketNo, reason, nowIso());
+      await voidTicket(getDb(), admin.id, ticketNo, reason, nowIso());
       return ok({});
     }
 

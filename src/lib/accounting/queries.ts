@@ -2,8 +2,8 @@ import { and, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { schema, type Db } from "@/lib/db";
 
 /** Graded, non-void tickets for a player on a match day, with line/match context. */
-export function playerDayItems(db: Db, playerId: number, date: string) {
-  return db
+export async function playerDayItems(db: Db, playerId: number, date: string) {
+  return await db
     .select({
       id: schema.bets.id,
       ticketNo: schema.bets.ticketNo,
@@ -33,29 +33,34 @@ export function playerDayItems(db: Db, playerId: number, date: string) {
         eq(schema.matches.matchDay, date),
         ne(schema.bets.status, "void"),
       ),
-    )
-    .all();
+    );
 }
 
 /** Per-player nets for a day (graded tickets only). */
-export function dayBoard(db: Db, date: string) {
-  const day = db
+export async function dayBoard(db: Db, date: string) {
+  const [dayRow] = await db
     .select()
     .from(schema.matchDays)
-    .where(eq(schema.matchDays.date, date))
-    .get() ?? {
+    .where(eq(schema.matchDays.date, date));
+  const day = dayRow ?? {
     id: 0,
     date,
     status: "open" as const,
     closedAt: null,
   };
-  const rows = db
+  const rows = await db
     .select({
       playerId: schema.bets.playerId,
       displayName: schema.players.displayName,
-      netMmk: sql<number>`coalesce(sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0)), 0)`,
-      ticketCount: sql<number>`count(*)`,
-      settled: sql<number>`min(${schema.bets.settlementId} is not null)`,
+      netMmk:
+        sql<number>`coalesce(sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0)), 0)`.mapWith(
+          Number,
+        ),
+      ticketCount: sql<number>`count(*)`.mapWith(Number),
+      settled:
+        sql<number>`case when bool_and(${schema.bets.settlementId} is not null) then 1 else 0 end`.mapWith(
+          Number,
+        ),
     })
     .from(schema.bets)
     .innerJoin(schema.matches, eq(schema.bets.matchId, schema.matches.id))
@@ -67,13 +72,12 @@ export function dayBoard(db: Db, date: string) {
         isNotNull(schema.bets.netMmk),
       ),
     )
-    .groupBy(schema.bets.playerId)
-    .all();
+    .groupBy(schema.bets.playerId, schema.players.displayName);
 
   // Fetch settlement detail fields for settled players on this day
   const settlementDetails =
     day.id > 0
-      ? db
+      ? await db
           .select({
             playerId: schema.settlements.playerId,
             ref: schema.settlements.ref,
@@ -83,7 +87,6 @@ export function dayBoard(db: Db, date: string) {
           })
           .from(schema.settlements)
           .where(eq(schema.settlements.matchDayId, day.id))
-          .all()
       : [];
   const settlementMap = new Map(settlementDetails.map((s) => [s.playerId, s]));
 
@@ -103,13 +106,16 @@ export function dayBoard(db: Db, date: string) {
 }
 
 /** All-time outstanding settlement units: (playerId, matchDay) with unsettled graded non-void bets. */
-export function outstandingSettlements(db: Db) {
+export async function outstandingSettlements(db: Db) {
   // Group bets by (playerId, matchDay) → compute net per unit
-  const units = db
+  const units = await db
     .select({
       playerId: schema.bets.playerId,
       matchDay: schema.matches.matchDay,
-      unitNet: sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`,
+      unitNet:
+        sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`.mapWith(
+          Number,
+        ),
     })
     .from(schema.bets)
     .innerJoin(schema.matches, eq(schema.bets.matchId, schema.matches.id))
@@ -120,8 +126,7 @@ export function outstandingSettlements(db: Db) {
         isNull(schema.bets.settlementId),
       ),
     )
-    .groupBy(schema.bets.playerId, schema.matches.matchDay)
-    .all();
+    .groupBy(schema.bets.playerId, schema.matches.matchDay);
 
   let toPayMmk = 0;
   let toCollectMmk = 0;

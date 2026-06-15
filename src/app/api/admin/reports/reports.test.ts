@@ -19,66 +19,62 @@ const MATCH_DAY = "2026-06-12";
 
 let db: Db;
 
-beforeEach(() => {
-  db = createTestDb();
-  db.insert(schema.players)
-    .values([
-      {
-        phone: "09700000001",
-        pinHash: hashPin("111111"),
-        displayName: "Admin",
-        role: "admin",
-        createdAt: NOW,
-      },
-      {
-        phone: "09700000002",
-        pinHash: hashPin("222222"),
-        displayName: "Alice",
-        createdAt: NOW,
-      },
-      {
-        phone: "09700000003",
-        pinHash: hashPin("333333"),
-        displayName: "Bob",
-        createdAt: NOW,
-      },
-    ])
-    .run();
+beforeEach(async () => {
+  db = await createTestDb();
+  await db.insert(schema.players).values([
+    {
+      phone: "09700000001",
+      pinHash: hashPin("111111"),
+      displayName: "Admin",
+      role: "admin",
+      createdAt: NOW,
+    },
+    {
+      phone: "09700000002",
+      pinHash: hashPin("222222"),
+      displayName: "Alice",
+      createdAt: NOW,
+    },
+    {
+      phone: "09700000003",
+      pinHash: hashPin("333333"),
+      displayName: "Bob",
+      createdAt: NOW,
+    },
+  ]);
   // Settings: commission 3%, discount 2%
-  db.insert(schema.settings)
-    .values({ id: 1, dailyTotalLimitMmk: 0, commissionPct: 3, discountPct: 2 })
-    .run();
-  db.insert(schema.matches)
-    .values({
-      stage: "Group A",
-      homeTeam: "BRA",
-      awayTeam: "MEX",
-      kickoffUtc: "2026-06-12T02:00:00Z",
-      venue: "X",
-      matchDay: MATCH_DAY,
-    })
-    .run();
+  await db
+    .insert(schema.settings)
+    .values({ id: 1, dailyTotalLimitMmk: 0, commissionPct: 3, discountPct: 2 });
+  await db.insert(schema.matches).values({
+    stage: "Group A",
+    homeTeam: "BRA",
+    awayTeam: "MEX",
+    kickoffUtc: "2026-06-12T02:00:00Z",
+    venue: "X",
+    matchDay: MATCH_DAY,
+  });
 });
 
 /**
  * Seed a graded bet with explicit netMmk and feeMmk (bypassing grade engine for
  * predictable values). Returns the bet row after update.
  */
-function seedGradedBet(
+async function seedGradedBet(
   playerId: number,
   stakeMmk: number,
   netMmk: number,
   feeMmk: number,
   settlementId: number | null = null,
 ) {
-  const match = db.select().from(schema.matches).get()!;
-  const line = postLine(
+  const [match] = await db.select().from(schema.matches);
+  const line = await postLine(
     db,
     1,
     { matchId: match.id, market: "ah", favSide: "home", ballQ: 4, priceC: 92 },
     NOW,
   );
-  const bet = placeBet(
+  const bet = await placeBet(
     db,
     playerId,
     {
@@ -91,12 +87,13 @@ function seedGradedBet(
     NOW,
   );
   // Suspend line so next bet creates a new version
-  db.update(schema.lines)
+  await db
+    .update(schema.lines)
     .set({ status: "suspended" })
-    .where(eq(schema.lines.id, line.id))
-    .run();
+    .where(eq(schema.lines.id, line.id));
   // Directly write graded values
-  db.update(schema.bets)
+  await db
+    .update(schema.bets)
     .set({
       status: netMmk >= 0 ? "won" : "lost",
       netMmk,
@@ -104,15 +101,14 @@ function seedGradedBet(
       settledAt: NOW,
       settlementId,
     })
-    .where(eq(schema.bets.id, bet.id))
-    .run();
+    .where(eq(schema.bets.id, bet.id));
   return bet;
 }
 
 // ─── P&L report logic ────────────────────────────────────────────────────────
 
 describe("P&L report query", () => {
-  it("computes turnover, commission, discount, houseNet from known bets", () => {
+  it("computes turnover, commission, discount, houseNet from known bets", async () => {
     /**
      * Scenario:
      *   Alice wins:  netMmk=+200_000, feeMmk=−6_000 (3% commission)
@@ -127,13 +123,13 @@ describe("P&L report query", () => {
      *   playerNet     = 194_000 − 98_000 = +96_000
      *   houseNet      = −96_000
      */
-    seedGradedBet(2, 200_000, 200_000, -6_000); // Alice wins
-    seedGradedBet(3, 100_000, -100_000, 2_000); // Bob loses
+    await seedGradedBet(2, 200_000, 200_000, -6_000); // Alice wins
+    await seedGradedBet(3, 100_000, -100_000, 2_000); // Bob loses
 
     const from = MATCH_DAY;
     const to = MATCH_DAY;
 
-    const rows = db
+    const rows = await db
       .select({
         stakeMmk: schema.bets.stakeMmk,
         netMmk: schema.bets.netMmk,
@@ -152,8 +148,7 @@ describe("P&L report query", () => {
           gte(schema.matches.matchDay, from),
           lte(schema.matches.matchDay, to),
         ),
-      )
-      .all();
+      );
 
     let turnover = 0;
     let grossWin = 0;
@@ -188,11 +183,11 @@ describe("P&L report query", () => {
     expect(rows).toHaveLength(2);
   });
 
-  it("excludes void bets from all aggregates", () => {
-    seedGradedBet(2, 100_000, 100_000, -3_000); // valid win
+  it("excludes void bets from all aggregates", async () => {
+    await seedGradedBet(2, 100_000, 100_000, -3_000); // valid win
     // Insert a void bet directly
-    const match = db.select().from(schema.matches).get()!;
-    const line = postLine(
+    const [match] = await db.select().from(schema.matches);
+    const line = await postLine(
       db,
       1,
       {
@@ -204,7 +199,7 @@ describe("P&L report query", () => {
       },
       NOW,
     );
-    const voidBet = placeBet(
+    const voidBet = await placeBet(
       db,
       3,
       {
@@ -216,20 +211,21 @@ describe("P&L report query", () => {
       },
       NOW,
     );
-    db.update(schema.bets)
+    await db
+      .update(schema.bets)
       .set({ status: "void" })
-      .where(eq(schema.bets.id, voidBet.id))
-      .run();
+      .where(eq(schema.bets.id, voidBet.id));
 
-    const rows = db
+    const rows = await db
       .select({ stakeMmk: schema.bets.stakeMmk })
       .from(schema.bets)
       .innerJoin(
         schema.matches,
         sql`${schema.bets.matchId} = ${schema.matches.id}`,
       )
-      .where(and(ne(schema.bets.status, "void"), isNotNull(schema.bets.netMmk)))
-      .all();
+      .where(
+        and(ne(schema.bets.status, "void"), isNotNull(schema.bets.netMmk)),
+      );
 
     const turnover = rows.reduce((s, r) => s + r.stakeMmk, 0);
     expect(turnover).toBe(100_000); // void 500k excluded
@@ -239,20 +235,23 @@ describe("P&L report query", () => {
 // ─── Balances report logic ────────────────────────────────────────────────────
 
 describe("Balances report query", () => {
-  it("splits toPay / toCollect correctly with effective net", () => {
+  it("splits toPay / toCollect correctly with effective net", async () => {
     /**
      * Scenario:
      *   Alice: unsettled win  netMmk=+200_000 feeMmk=−6_000 → effNet=+194_000  (toPay)
      *   Bob:   unsettled loss netMmk=−100_000 feeMmk=+2_000 → effNet=−98_000   (toCollect)
      */
-    seedGradedBet(2, 200_000, 200_000, -6_000, null); // unsettled
-    seedGradedBet(3, 100_000, -100_000, 2_000, null); // unsettled
+    await seedGradedBet(2, 200_000, 200_000, -6_000, null); // unsettled
+    await seedGradedBet(3, 100_000, -100_000, 2_000, null); // unsettled
 
-    const rows = db
+    const rows = await db
       .select({
         playerId: schema.bets.playerId,
         playerName: schema.players.displayName,
-        unsettledNet: sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`,
+        unsettledNet:
+          sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`.mapWith(
+            Number,
+          ),
       })
       .from(schema.bets)
       .innerJoin(
@@ -266,8 +265,7 @@ describe("Balances report query", () => {
           isNull(schema.bets.settlementId),
         ),
       )
-      .groupBy(schema.bets.playerId)
-      .all();
+      .groupBy(schema.bets.playerId, schema.players.displayName);
 
     let totalToPay = 0;
     let totalToCollect = 0;
@@ -289,7 +287,7 @@ describe("Balances report query", () => {
     expect(totalToCollect).toBe(98_000);
   });
 
-  it("settled bets (settlementId set) are excluded from unsettled totals", () => {
+  it("settled bets (settlementId set) are excluded from unsettled totals", async () => {
     /**
      * Alice has a settled bet (settlementId = 1) and Bob has an unsettled bet.
      * Only Bob should appear in the unsettled query.
@@ -297,17 +295,16 @@ describe("Balances report query", () => {
      * Place bets first (match day must be open), then create the settlement
      * record and stamp settlementId on Alice's bet.
      */
-    const aliceBet = seedGradedBet(2, 200_000, 200_000, -6_000, null);
-    seedGradedBet(3, 100_000, -100_000, 2_000, null); // Bob unsettled
+    const aliceBet = await seedGradedBet(2, 200_000, 200_000, -6_000, null);
+    await seedGradedBet(3, 100_000, -100_000, 2_000, null); // Bob unsettled
 
     // Now create the settlement record and link Alice's bet to it.
     // placeBet already inserted the match_days row; just fetch it.
-    const matchDay = db
+    const [matchDay] = await db
       .select()
       .from(schema.matchDays)
-      .where(eq(schema.matchDays.date, MATCH_DAY))
-      .get()!;
-    const settlement = db
+      .where(eq(schema.matchDays.date, MATCH_DAY));
+    const [settlement] = await db
       .insert(schema.settlements)
       .values({
         ref: "S-0612-01",
@@ -317,17 +314,19 @@ describe("Balances report query", () => {
         markedBy: 1,
         markedAt: NOW,
       })
-      .returning()
-      .get();
-    db.update(schema.bets)
+      .returning();
+    await db
+      .update(schema.bets)
       .set({ settlementId: settlement.id })
-      .where(eq(schema.bets.id, aliceBet.id))
-      .run();
+      .where(eq(schema.bets.id, aliceBet.id));
 
-    const rows = db
+    const rows = await db
       .select({
         playerId: schema.bets.playerId,
-        unsettledNet: sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`,
+        unsettledNet:
+          sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`.mapWith(
+            Number,
+          ),
       })
       .from(schema.bets)
       .where(
@@ -337,8 +336,7 @@ describe("Balances report query", () => {
           isNull(schema.bets.settlementId),
         ),
       )
-      .groupBy(schema.bets.playerId)
-      .all();
+      .groupBy(schema.bets.playerId);
 
     // Only Bob (playerId=3) should appear in unsettled
     expect(rows).toHaveLength(1);
@@ -346,13 +344,16 @@ describe("Balances report query", () => {
     expect(rows[0].unsettledNet).toBe(-98_000);
   });
 
-  it("a push (net=0) contributes zero to toPay and toCollect", () => {
-    seedGradedBet(2, 100_000, 0, 0, null); // push
+  it("a push (net=0) contributes zero to toPay and toCollect", async () => {
+    await seedGradedBet(2, 100_000, 0, 0, null); // push
 
-    const rows = db
+    const rows = await db
       .select({
         playerId: schema.bets.playerId,
-        unsettledNet: sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`,
+        unsettledNet:
+          sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`.mapWith(
+            Number,
+          ),
       })
       .from(schema.bets)
       .where(
@@ -362,8 +363,7 @@ describe("Balances report query", () => {
           isNull(schema.bets.settlementId),
         ),
       )
-      .groupBy(schema.bets.playerId)
-      .all();
+      .groupBy(schema.bets.playerId);
 
     let totalToPay = 0;
     let totalToCollect = 0;

@@ -37,10 +37,10 @@ type BetRow = {
 
 const CAP = 500;
 
-export function getAllBets(
+export async function getAllBets(
   db: Db,
   filter: BetsFilter,
-): { rows: BetRow[]; capped: boolean } {
+): Promise<{ rows: BetRow[]; capped: boolean }> {
   const VALID_STATUSES = [
     "pending",
     "won",
@@ -72,7 +72,7 @@ export function getAllBets(
       ? and(statusFilter, searchFilter)
       : (statusFilter ?? searchFilter);
 
-  const rows = db
+  const rows = await db
     .select({
       ticketNo: schema.bets.ticketNo,
       playerId: schema.bets.playerId,
@@ -105,8 +105,7 @@ export function getAllBets(
     .innerJoin(schema.matches, eq(schema.bets.matchId, schema.matches.id))
     .where(whereClause)
     .orderBy(desc(schema.bets.placedAt))
-    .limit(CAP + 1)
-    .all();
+    .limit(CAP + 1);
 
   const capped = rows.length > CAP;
   const limited = capped ? rows.slice(0, CAP) : rows;
@@ -119,11 +118,10 @@ export function getAllBets(
   ];
   const voiderMap = new Map<number, string>();
   for (const id of voidedByIds) {
-    const p = db
+    const [p] = await db
       .select({ displayName: schema.players.displayName })
       .from(schema.players)
-      .where(eq(schema.players.id, id))
-      .get();
+      .where(eq(schema.players.id, id));
     if (p) voiderMap.set(id, p.displayName);
   }
 
@@ -145,7 +143,7 @@ export async function GET(req: Request) {
       q: sp.get("q") ?? undefined,
     };
     const db = getDb();
-    const { rows, capped } = getAllBets(db, filter);
+    const { rows, capped } = await getAllBets(db, filter);
     return ok({
       rows,
       capped,

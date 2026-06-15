@@ -11,49 +11,45 @@ import { eq } from "drizzle-orm";
 let db: Db;
 const NOW = "2026-06-12T10:00:00Z";
 
-beforeEach(() => {
-  db = createTestDb();
-  db.insert(schema.players)
-    .values([
-      {
-        phone: "09700000001",
-        pinHash: hashPin("111111"),
-        displayName: "Admin",
-        role: "admin",
-        createdAt: NOW,
-      },
-      {
-        phone: "09700000002",
-        pinHash: hashPin("222222"),
-        displayName: "Zaw",
-        createdAt: NOW,
-      },
-      {
-        phone: "09700000003",
-        pinHash: hashPin("333333"),
-        displayName: "Thiri",
-        createdAt: NOW,
-      },
-    ])
-    .run();
-  db.insert(schema.settings).values({ id: 1, dailyTotalLimitMmk: 0 }).run();
-  db.insert(schema.matches)
-    .values({
-      stage: "Group C",
-      homeTeam: "BRA",
-      awayTeam: "MEX",
-      kickoffUtc: "2026-06-12T02:00:00Z",
-      venue: "X",
-      matchDay: "2026-06-12",
-    })
-    .run();
-  const line = postLine(
+beforeEach(async () => {
+  db = await createTestDb();
+  await db.insert(schema.players).values([
+    {
+      phone: "09700000001",
+      pinHash: hashPin("111111"),
+      displayName: "Admin",
+      role: "admin",
+      createdAt: NOW,
+    },
+    {
+      phone: "09700000002",
+      pinHash: hashPin("222222"),
+      displayName: "Zaw",
+      createdAt: NOW,
+    },
+    {
+      phone: "09700000003",
+      pinHash: hashPin("333333"),
+      displayName: "Thiri",
+      createdAt: NOW,
+    },
+  ]);
+  await db.insert(schema.settings).values({ id: 1, dailyTotalLimitMmk: 0 });
+  await db.insert(schema.matches).values({
+    stage: "Group C",
+    homeTeam: "BRA",
+    awayTeam: "MEX",
+    kickoffUtc: "2026-06-12T02:00:00Z",
+    venue: "X",
+    matchDay: "2026-06-12",
+  });
+  const line = await postLine(
     db,
     1,
     { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
     NOW,
   );
-  placeBet(
+  await placeBet(
     db,
     2,
     {
@@ -65,7 +61,7 @@ beforeEach(() => {
     },
     NOW,
   ); // Zaw fav
-  placeBet(
+  await placeBet(
     db,
     3,
     {
@@ -78,11 +74,11 @@ beforeEach(() => {
     NOW,
   ); // Thiri dog
   // A3: BRA -0.5 wins 2-0 → d=(2-0)-0.5=1.5>0 → full win. Zaw +100,000, Thiri −200,000
-  confirmFinalScore(db, 1, 1, 2, 0, NOW);
+  await confirmFinalScore(db, 1, 1, 2, 0, NOW);
 });
 
-it("board shows nets and ticket items; marking paid stamps ref onto tickets", () => {
-  const board = dayBoard(db, "2026-06-12");
+it("board shows nets and ticket items; marking paid stamps ref onto tickets", async () => {
+  const board = await dayBoard(db, "2026-06-12");
   expect(board.day.status).toBe("closed");
   // A4: Zaw fav wins gross +100,000; fee = -3% × 100k = -3,000 → effective +97,000
   //     Thiri dog loses gross -200,000; fee = +2% × 200k = +4,000 → effective -196,000
@@ -93,119 +89,110 @@ it("board shows nets and ticket items; marking paid stamps ref onto tickets", ()
   ]);
   expect(board.houseNet).toBe(99_000);
 
-  const s1 = markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+  const s1 = await markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
   expect(s1.ref).toBe("S-0612-01");
-  const s2 = markPlayerPaid(db, 1, "2026-06-12", 3, NOW);
+  const s2 = await markPlayerPaid(db, 1, "2026-06-12", 3, NOW);
   expect(s2.ref).toBe("S-0612-02");
   // every covered ticket stamped
-  const zawItems = playerDayItems(db, 2, "2026-06-12");
+  const zawItems = await playerDayItems(db, 2, "2026-06-12");
   expect(zawItems[0].settlementId).toBe(s1.id);
   // all players paid → day settled
-  expect(db.select().from(schema.matchDays).all()[0].status).toBe("settled");
+  expect((await db.select().from(schema.matchDays))[0].status).toBe("settled");
   // double-pay rejected
-  expect(() => markPlayerPaid(db, 1, "2026-06-12", 2, NOW)).toThrow(/already/);
+  await expect(markPlayerPaid(db, 1, "2026-06-12", 2, NOW)).rejects.toThrow(
+    /already/,
+  );
 });
 
-it("cannot mark paid while day open; void excludes ticket from accounting", () => {
-  db.update(schema.matchDays).set({ status: "open" }).run();
-  expect(() => markPlayerPaid(db, 1, "2026-06-12", 2, NOW)).toThrow(
+it("cannot mark paid while day open; void excludes ticket from accounting", async () => {
+  await db.update(schema.matchDays).set({ status: "open" });
+  await expect(markPlayerPaid(db, 1, "2026-06-12", 2, NOW)).rejects.toThrow(
     /not closed/,
   );
-  db.update(schema.matchDays).set({ status: "closed" }).run();
+  await db.update(schema.matchDays).set({ status: "closed" });
 
-  const ticket = db
+  const [ticket] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.playerId, 2))
-    .get()!;
-  voidTicket(db, 1, ticket.ticketNo, "admin error", NOW);
-  const board = dayBoard(db, "2026-06-12");
+    .where(eq(schema.bets.playerId, 2));
+  await voidTicket(db, 1, ticket.ticketNo, "admin error", NOW);
+  const board = await dayBoard(db, "2026-06-12");
   expect(board.rows.find((r) => r.playerId === 2)).toBeUndefined();
   expect(
-    db
-      .select()
-      .from(schema.auditLog)
-      .all()
-      .some((a) => a.action === "void"),
+    (await db.select().from(schema.auditLog)).some((a) => a.action === "void"),
   ).toBe(true);
 });
 
 // --- stuck-day regression: pay A then void B's only ticket → day settled ---
-it("stuck-day regression: pay A then void B's only ticket settles the day", () => {
+it("stuck-day regression: pay A then void B's only ticket settles the day", async () => {
   // Pay Zaw (player 2)
-  markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+  await markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
   // Day should still be closed (Thiri not paid yet)
-  expect(db.select().from(schema.matchDays).all()[0].status).toBe("closed");
+  expect((await db.select().from(schema.matchDays))[0].status).toBe("closed");
 
   // Void Thiri's (player 3) only ticket
-  const thiriTicket = db
+  const [thiriTicket] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.playerId, 3))
-    .get()!;
-  voidTicket(db, 1, thiriTicket.ticketNo, "admin error", NOW);
+    .where(eq(schema.bets.playerId, 3));
+  await voidTicket(db, 1, thiriTicket.ticketNo, "admin error", NOW);
 
   // After void, the board has only Zaw who is settled → day should auto-settle
-  expect(db.select().from(schema.matchDays).all()[0].status).toBe("settled");
+  expect((await db.select().from(schema.matchDays))[0].status).toBe("settled");
 });
 
 // --- order symmetry: void B first, then pay A → day settled ---
-it("order symmetry: void B's only ticket first then pay A settles the day", () => {
+it("order symmetry: void B's only ticket first then pay A settles the day", async () => {
   // Void Thiri's (player 3) only ticket first
-  const thiriTicket = db
+  const [thiriTicket] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.playerId, 3))
-    .get()!;
-  voidTicket(db, 1, thiriTicket.ticketNo, "admin error", NOW);
+    .where(eq(schema.bets.playerId, 3));
+  await voidTicket(db, 1, thiriTicket.ticketNo, "admin error", NOW);
 
   // Day should still be closed
-  expect(db.select().from(schema.matchDays).all()[0].status).toBe("closed");
+  expect((await db.select().from(schema.matchDays))[0].status).toBe("closed");
 
   // Now pay Zaw (player 2) — the only remaining player on board
-  markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+  await markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
 
   // Day should now be settled
-  expect(db.select().from(schema.matchDays).all()[0].status).toBe("settled");
+  expect((await db.select().from(schema.matchDays))[0].status).toBe("settled");
 });
 
 // --- void-after-paid: pay A then voidTicket on A's stamped ticket → throws /settled/ ---
-it("void-after-paid: voiding an already-stamped ticket throws", () => {
-  markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
-  const zawTicket = db
+it("void-after-paid: voiding an already-stamped ticket throws", async () => {
+  await markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+  const [zawTicket] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.playerId, 2))
-    .get()!;
-  expect(() =>
+    .where(eq(schema.bets.playerId, 2));
+  await expect(
     voidTicket(db, 1, zawTicket.ticketNo, "should fail", NOW),
-  ).toThrow(/settled/);
+  ).rejects.toThrow(/settled/);
 });
 
 // --- DB backstop: after paying A, raw insert same (matchDayId, playerId) → throws /UNIQUE/ ---
-it("DB backstop: duplicate settlement insert throws UNIQUE constraint", () => {
-  const s1 = markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
-  const day = db.select().from(schema.matchDays).all()[0];
-  expect(() =>
-    db
-      .insert(schema.settlements)
-      .values({
-        ref: "S-0612-99",
-        matchDayId: day.id,
-        playerId: 2,
-        netMmk: 0,
-        markedBy: 1,
-        markedAt: NOW,
-      })
-      .run(),
-  ).toThrow(/UNIQUE/);
+it("DB backstop: duplicate settlement insert throws UNIQUE constraint", async () => {
+  const s1 = await markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+  const [day] = await db.select().from(schema.matchDays);
+  await expect(
+    db.insert(schema.settlements).values({
+      ref: "S-0612-99",
+      matchDayId: day.id,
+      playerId: 2,
+      netMmk: 0,
+      markedBy: 1,
+      markedAt: NOW,
+    }),
+  ).rejects.toMatchObject({ cause: { code: "23505" } }); // unique_violation
   expect(s1).toBeDefined();
 });
 
 // --- no-tickets 404: markPlayerPaid for player with no tickets that day → throws /no tickets/ ---
-it("no-tickets 404: markPlayerPaid for player with no tickets throws", () => {
+it("no-tickets 404: markPlayerPaid for player with no tickets throws", async () => {
   // Player 1 is admin and has no bets
-  expect(() => markPlayerPaid(db, 1, "2026-06-12", 1, NOW)).toThrow(
+  await expect(markPlayerPaid(db, 1, "2026-06-12", 1, NOW)).rejects.toThrow(
     /no tickets/,
   );
 });
@@ -213,19 +200,19 @@ it("no-tickets 404: markPlayerPaid for player with no tickets throws", () => {
 // ─── outstandingSettlements ───────────────────────────────────────────────
 
 describe("outstandingSettlements", () => {
-  it("basic: payCount=1(+100k), collectCount=1(-200k), settled and void excluded", () => {
+  it("basic: payCount=1(+100k), collectCount=1(-200k), settled and void excluded", async () => {
     // A4: Zaw effective +97,000 unsettled, Thiri effective -196,000 unsettled
-    const r = outstandingSettlements(db);
+    const r = await outstandingSettlements(db);
     expect(r.toPayMmk).toBe(97_000);
     expect(r.toCollectMmk).toBe(196_000);
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(1);
   });
 
-  it("settled unit is excluded", () => {
+  it("settled unit is excluded", async () => {
     // Mark Zaw paid → his day1 unit is now settled
-    markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
-    const r = outstandingSettlements(db);
+    await markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
+    const r = await outstandingSettlements(db);
     // Zaw's effective +97k unit is settled → only Thiri remains (effective -196k)
     expect(r.toPayMmk).toBe(0);
     expect(r.toCollectMmk).toBe(196_000);
@@ -233,15 +220,14 @@ describe("outstandingSettlements", () => {
     expect(r.collectCount).toBe(1);
   });
 
-  it("void bet is excluded from units", () => {
+  it("void bet is excluded from units", async () => {
     // Void Thiri's ticket → her unit disappears
-    const thiriTicket = db
+    const [thiriTicket] = await db
       .select()
       .from(schema.bets)
-      .where(eq(schema.bets.playerId, 3))
-      .get()!;
-    voidTicket(db, 1, thiriTicket.ticketNo, "test", NOW);
-    const r = outstandingSettlements(db);
+      .where(eq(schema.bets.playerId, 3));
+    await voidTicket(db, 1, thiriTicket.ticketNo, "test", NOW);
+    const r = await outstandingSettlements(db);
     // Zaw effective +97,000 remains; Thiri voided → 0
     expect(r.toPayMmk).toBe(97_000);
     expect(r.toCollectMmk).toBe(0);
@@ -249,26 +235,23 @@ describe("outstandingSettlements", () => {
     expect(r.collectCount).toBe(0);
   });
 
-  it("push (net==0) unit contributes to neither pay nor collect", () => {
+  it("push (net==0) unit contributes to neither pay nor collect", async () => {
     // Insert a push bet directly: net_mmk = 0, settlement_id = null, status != void
     // Use a second match on the same day
-    db.insert(schema.matches)
-      .values({
-        stage: "Group D",
-        homeTeam: "ARG",
-        awayTeam: "POL",
-        kickoffUtc: "2026-06-12T05:00:00Z",
-        venue: "Y",
-        matchDay: "2026-06-12",
-      })
-      .run();
-    const match2 = db
+    await db.insert(schema.matches).values({
+      stage: "Group D",
+      homeTeam: "ARG",
+      awayTeam: "POL",
+      kickoffUtc: "2026-06-12T05:00:00Z",
+      venue: "Y",
+      matchDay: "2026-06-12",
+    });
+    const [match2] = await db
       .select()
       .from(schema.matches)
-      .where(eq(schema.matches.homeTeam, "ARG"))
-      .get()!;
+      .where(eq(schema.matches.homeTeam, "ARG"));
     // Insert a line first (required FK)
-    const line2 = postLine(
+    const line2 = await postLine(
       db,
       1,
       {
@@ -281,23 +264,21 @@ describe("outstandingSettlements", () => {
       NOW,
     );
     // Insert a push bet directly with net_mmk=0
-    db.insert(schema.bets)
-      .values({
-        ticketNo: "T-PUSH-001",
-        playerId: 2,
-        matchId: match2.id,
-        lineId: line2.id,
-        side: "fav",
-        stakeMmk: 50_000,
-        scoreHomeAtBet: 0,
-        scoreAwayAtBet: 0,
-        placedAt: NOW,
-        status: "push",
-        netMmk: 0,
-        settlementId: null,
-      })
-      .run();
-    const r = outstandingSettlements(db);
+    await db.insert(schema.bets).values({
+      ticketNo: "T-PUSH-001",
+      playerId: 2,
+      matchId: match2.id,
+      lineId: line2.id,
+      side: "fav",
+      stakeMmk: 50_000,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
+      placedAt: NOW,
+      status: "push",
+      netMmk: 0,
+      settlementId: null,
+    });
+    const r = await outstandingSettlements(db);
     // A4: Zaw has two bets on day "2026-06-12":
     //   - original: effective +97,000 (net +100k + fee -3k)
     //   - push:     feeMmk=null → effective 0 (coalesce 0)
@@ -308,24 +289,21 @@ describe("outstandingSettlements", () => {
     expect(r.toPayMmk).toBe(97_000);
   });
 
-  it("two match-days for player A: appears as separate (player,day) units", () => {
+  it("two match-days for player A: appears as separate (player,day) units", async () => {
     // Add a second match day with Zaw net -150,000
-    db.insert(schema.matches)
-      .values({
-        stage: "Group D",
-        homeTeam: "ARG",
-        awayTeam: "POL",
-        kickoffUtc: "2026-06-13T05:00:00Z",
-        venue: "Y",
-        matchDay: "2026-06-13",
-      })
-      .run();
-    const match2 = db
+    await db.insert(schema.matches).values({
+      stage: "Group D",
+      homeTeam: "ARG",
+      awayTeam: "POL",
+      kickoffUtc: "2026-06-13T05:00:00Z",
+      venue: "Y",
+      matchDay: "2026-06-13",
+    });
+    const [match2] = await db
       .select()
       .from(schema.matches)
-      .where(eq(schema.matches.matchDay, "2026-06-13"))
-      .get()!;
-    const line2 = postLine(
+      .where(eq(schema.matches.matchDay, "2026-06-13"));
+    const line2 = await postLine(
       db,
       1,
       {
@@ -338,23 +316,21 @@ describe("outstandingSettlements", () => {
       NOW,
     );
     // Zaw bets dog on day2, loses → net = -150000
-    db.insert(schema.bets)
-      .values({
-        ticketNo: "T-DAY2-001",
-        playerId: 2,
-        matchId: match2.id,
-        lineId: line2.id,
-        side: "dog",
-        stakeMmk: 150_000,
-        scoreHomeAtBet: 0,
-        scoreAwayAtBet: 0,
-        placedAt: NOW,
-        status: "lost",
-        netMmk: -150_000,
-        settlementId: null,
-      })
-      .run();
-    const r = outstandingSettlements(db);
+    await db.insert(schema.bets).values({
+      ticketNo: "T-DAY2-001",
+      playerId: 2,
+      matchId: match2.id,
+      lineId: line2.id,
+      side: "dog",
+      stakeMmk: 150_000,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
+      placedAt: NOW,
+      status: "lost",
+      netMmk: -150_000,
+      settlementId: null,
+    });
+    const r = await outstandingSettlements(db);
     // A4 effective nets:
     //   (Zaw, day1)   = +97,000  (net +100k, fee -3k) → pay
     //   (Zaw, day2)   = -150,000 (direct insert, feeMmk null → +0) → collect

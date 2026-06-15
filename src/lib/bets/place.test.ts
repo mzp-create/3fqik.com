@@ -8,11 +8,11 @@ import { placeBet, MAX_STAKE } from "./place";
 let db: Db;
 const NOW = "2026-06-12T10:00:00Z";
 
-function seedMatch(
+async function seedMatch(
   db: Db,
   overrides: Partial<typeof schema.matches.$inferInsert> = {},
 ) {
-  return db
+  const [row] = await db
     .insert(schema.matches)
     .values({
       stage: "Group C",
@@ -23,41 +23,39 @@ function seedMatch(
       matchDay: "2026-06-12",
       ...overrides,
     })
-    .returning()
-    .get();
+    .returning();
+  return row;
 }
 
-beforeEach(() => {
-  db = createTestDb();
-  db.insert(schema.players)
-    .values([
-      {
-        phone: "09700000001",
-        pinHash: hashPin("111111"),
-        displayName: "Admin",
-        role: "admin",
-        createdAt: NOW,
-      },
-      {
-        phone: "09700000002",
-        pinHash: hashPin("222222"),
-        displayName: "Zaw",
-        createdAt: NOW,
-      },
-    ])
-    .run();
-  db.insert(schema.settings).values({ id: 1, dailyTotalLimitMmk: 0 }).run();
+beforeEach(async () => {
+  db = await createTestDb();
+  await db.insert(schema.players).values([
+    {
+      phone: "09700000001",
+      pinHash: hashPin("111111"),
+      displayName: "Admin",
+      role: "admin",
+      createdAt: NOW,
+    },
+    {
+      phone: "09700000002",
+      pinHash: hashPin("222222"),
+      displayName: "Zaw",
+      createdAt: NOW,
+    },
+  ]);
+  await db.insert(schema.settings).values({ id: 1, dailyTotalLimitMmk: 0 });
 });
 
-it("places a bet locking line version and snapshotting score", () => {
-  const m = seedMatch(db, { status: "live", homeScore: 1, awayScore: 0 });
-  const line = postLine(
+it("places a bet locking line version and snapshotting score", async () => {
+  const m = await seedMatch(db, { status: "live", homeScore: 1, awayScore: 0 });
+  const line = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
     NOW,
   );
-  const bet = placeBet(
+  const bet = await placeBet(
     db,
     2,
     {
@@ -75,21 +73,21 @@ it("places a bet locking line version and snapshotting score", () => {
   expect(bet.lineId).toBe(line.id);
 });
 
-it("rejects: stale version, suspended line, finished match, sub-floor stake", () => {
-  const m = seedMatch(db);
-  postLine(
+it("rejects: stale version, suspended line, finished match, sub-floor stake", async () => {
+  const m = await seedMatch(db);
+  await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
     NOW,
   );
-  const l2 = postLine(
+  const l2 = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 4, priceC: 95 },
     NOW,
   );
-  expect(() =>
+  await expect(
     placeBet(
       db,
       2,
@@ -102,9 +100,9 @@ it("rejects: stale version, suspended line, finished match, sub-floor stake", ()
       },
       NOW,
     ),
-  ).toThrow(/line moved/);
-  setLineStatus(db, m.id, "ah", "suspended");
-  expect(() =>
+  ).rejects.toThrow(/line moved/);
+  await setLineStatus(db, m.id, "ah", "suspended");
+  await expect(
     placeBet(
       db,
       2,
@@ -117,9 +115,9 @@ it("rejects: stale version, suspended line, finished match, sub-floor stake", ()
       },
       NOW,
     ),
-  ).toThrow(/suspended/);
-  setLineStatus(db, m.id, "ah", "active");
-  expect(() =>
+  ).rejects.toThrow(/suspended/);
+  await setLineStatus(db, m.id, "ah", "active");
+  await expect(
     placeBet(
       db,
       2,
@@ -132,32 +130,32 @@ it("rejects: stale version, suspended line, finished match, sub-floor stake", ()
       },
       NOW,
     ),
-  ).toThrow(/between/);
+  ).rejects.toThrow(/between/);
 });
 
-it("enforces the daily pool and per-match carve-out", () => {
-  const a = seedMatch(db);
-  const b = seedMatch(db, {
+it("enforces the daily pool and per-match carve-out", async () => {
+  const a = await seedMatch(db);
+  const b = await seedMatch(db, {
     homeTeam: "USA",
     awayTeam: "JPN",
     betLimitMmk: 150_000,
   });
-  const la = postLine(
+  const la = await postLine(
     db,
     1,
     { matchId: a.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
     NOW,
   );
-  const lb = postLine(
+  const lb = await postLine(
     db,
     1,
     { matchId: b.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
     NOW,
   );
-  db.update(schema.settings).set({ dailyTotalLimitMmk: 300_000 }).run();
+  await db.update(schema.settings).set({ dailyTotalLimitMmk: 300_000 });
 
   // carve-out match b: its own cap, not the pool
-  placeBet(
+  await placeBet(
     db,
     2,
     {
@@ -169,7 +167,7 @@ it("enforces the daily pool and per-match carve-out", () => {
     },
     NOW,
   );
-  expect(() =>
+  await expect(
     placeBet(
       db,
       2,
@@ -182,9 +180,9 @@ it("enforces the daily pool and per-match carve-out", () => {
       },
       NOW,
     ),
-  ).toThrow(/50,000/); // headroom message
+  ).rejects.toThrow(/50,000/); // headroom message
   // pool match a: 300k daily, b's 100k does NOT consume it
-  placeBet(
+  await placeBet(
     db,
     2,
     {
@@ -196,7 +194,7 @@ it("enforces the daily pool and per-match carve-out", () => {
     },
     NOW,
   );
-  expect(() =>
+  await expect(
     placeBet(
       db,
       2,
@@ -209,23 +207,23 @@ it("enforces the daily pool and per-match carve-out", () => {
       },
       NOW,
     ),
-  ).toThrow(/10,000/);
+  ).rejects.toThrow(/10,000/);
 });
 
-it("rejects a bet on a finished match", () => {
-  const m = seedMatch(db); // seed as scheduled so postLine accepts it
-  const line = postLine(
+it("rejects a bet on a finished match", async () => {
+  const m = await seedMatch(db); // seed as scheduled so postLine accepts it
+  const line = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
     NOW,
   );
   // mark finished after line is posted
-  db.update(schema.matches)
+  await db
+    .update(schema.matches)
     .set({ status: "finished" })
-    .where(eq(schema.matches.id, m.id))
-    .run();
-  expect(() =>
+    .where(eq(schema.matches.id, m.id));
+  await expect(
     placeBet(
       db,
       2,
@@ -238,19 +236,19 @@ it("rejects a bet on a finished match", () => {
       },
       NOW,
     ),
-  ).toThrow(/finished/);
+  ).rejects.toThrow(/finished/);
 });
 
-it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/ headroom", () => {
-  const m = seedMatch(db, { betLimitMmk: 150_000 });
-  const line = postLine(
+it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/ headroom", async () => {
+  const m = await seedMatch(db, { betLimitMmk: 150_000 });
+  const line = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
     NOW,
   );
   // exactly 150k should be accepted
-  placeBet(
+  await placeBet(
     db,
     2,
     {
@@ -263,7 +261,7 @@ it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/
     NOW,
   );
   // second bet of 10k should be rejected — headroom is 0
-  expect(() =>
+  await expect(
     placeBet(
       db,
       2,
@@ -276,22 +274,22 @@ it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/
       },
       NOW,
     ),
-  ).toThrow(/0/);
+  ).rejects.toThrow(/0/);
 });
 
-it("rejects betting when match day is closed", () => {
-  const m = seedMatch(db);
-  const line = postLine(
+it("rejects betting when match day is closed", async () => {
+  const m = await seedMatch(db);
+  const line = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
     NOW,
   );
   // insert a closed matchDays row for this date
-  db.insert(schema.matchDays)
-    .values({ date: "2026-06-12", status: "closed" })
-    .run();
-  expect(() =>
+  await db
+    .insert(schema.matchDays)
+    .values({ date: "2026-06-12", status: "closed" });
+  await expect(
     placeBet(
       db,
       2,
@@ -304,18 +302,18 @@ it("rejects betting when match day is closed", () => {
       },
       NOW,
     ),
-  ).toThrow(/closed/);
+  ).rejects.toThrow(/closed/);
 });
 
-it("void restores headroom: voided bet stake does not count toward carve-out", () => {
-  const m = seedMatch(db, { betLimitMmk: 150_000 });
-  const line = postLine(
+it("void restores headroom: voided bet stake does not count toward carve-out", async () => {
+  const m = await seedMatch(db, { betLimitMmk: 150_000 });
+  const line = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
     NOW,
   );
-  const bet = placeBet(
+  const bet = await placeBet(
     db,
     2,
     {
@@ -328,12 +326,12 @@ it("void restores headroom: voided bet stake does not count toward carve-out", (
     NOW,
   );
   // void the bet
-  db.update(schema.bets)
+  await db
+    .update(schema.bets)
     .set({ status: "void" })
-    .where(eq(schema.bets.id, bet.id))
-    .run();
+    .where(eq(schema.bets.id, bet.id));
   // headroom should be fully restored — 150k should succeed
-  placeBet(
+  await placeBet(
     db,
     2,
     {
@@ -347,15 +345,15 @@ it("void restores headroom: voided bet stake does not count toward carve-out", (
   );
 });
 
-it("MAX_STAKE: stake 1_000_000_001 and 2_000_000_000_000 are both rejected", () => {
-  const m = seedMatch(db);
-  const line = postLine(
+it("MAX_STAKE: stake 1_000_000_001 and 2_000_000_000_000 are both rejected", async () => {
+  const m = await seedMatch(db);
+  const line = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
     NOW,
   );
-  expect(() =>
+  await expect(
     placeBet(
       db,
       2,
@@ -368,8 +366,8 @@ it("MAX_STAKE: stake 1_000_000_001 and 2_000_000_000_000 are both rejected", () 
       },
       NOW,
     ),
-  ).toThrow(/bad|between/);
-  expect(() =>
+  ).rejects.toThrow(/bad|between/);
+  await expect(
     placeBet(
       db,
       2,
@@ -382,20 +380,20 @@ it("MAX_STAKE: stake 1_000_000_001 and 2_000_000_000_000 are both rejected", () 
       },
       NOW,
     ),
-  ).toThrow(/bad|between/);
+  ).rejects.toThrow(/bad|between/);
 });
 
 // ── O2 NEW TESTS ─────────────────────────────────────────────────────────────
 
-it("ou bet happy path: snapshot, ticket, linked to ou line", () => {
-  const m = seedMatch(db, { status: "live", homeScore: 1, awayScore: 0 });
-  const ouLine = postLine(
+it("ou bet happy path: snapshot, ticket, linked to ou line", async () => {
+  const m = await seedMatch(db, { status: "live", homeScore: 1, awayScore: 0 });
+  const ouLine = await postLine(
     db,
     1,
     { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
     NOW,
   );
-  const bet = placeBet(
+  const bet = await placeBet(
     db,
     2,
     {
@@ -414,16 +412,16 @@ it("ou bet happy path: snapshot, ticket, linked to ou line", () => {
   expect(bet.scoreAwayAtBet).toBe(0);
 });
 
-it("stale ou version returns 409 with currentLine.market = 'ou'", () => {
-  const m = seedMatch(db);
-  postLine(
+it("stale ou version returns 409 with currentLine.market = 'ou'", async () => {
+  const m = await seedMatch(db);
+  await postLine(
     db,
     1,
     { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
     NOW,
   );
   // post a second ou line → v1 is now stale
-  postLine(
+  await postLine(
     db,
     1,
     { matchId: m.id, market: "ou", favSide: "home", ballQ: 11, priceC: 92 },
@@ -436,7 +434,7 @@ it("stale ou version returns 409 with currentLine.market = 'ou'", () => {
       })
     | null = null;
   try {
-    placeBet(
+    await placeBet(
       db,
       2,
       {
@@ -456,29 +454,29 @@ it("stale ou version returns 409 with currentLine.market = 'ou'", () => {
   expect(caught!.extra?.currentLine?.market).toBe("ou");
 });
 
-it("ah line stale check is unaffected by ou posts: ah v1 still valid after posting ou v2", () => {
-  const m = seedMatch(db);
-  const ahLine = postLine(
+it("ah line stale check is unaffected by ou posts: ah v1 still valid after posting ou v2", async () => {
+  const m = await seedMatch(db);
+  const ahLine = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
     NOW,
   );
   // post two ou lines — should not bump the ah version
-  postLine(
+  await postLine(
     db,
     1,
     { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
     NOW,
   );
-  postLine(
+  await postLine(
     db,
     1,
     { matchId: m.id, market: "ou", favSide: "home", ballQ: 11, priceC: 92 },
     NOW,
   );
   // placing an ah bet with v1 should still succeed
-  const bet = placeBet(
+  const bet = await placeBet(
     db,
     2,
     {
@@ -493,15 +491,15 @@ it("ah line stale check is unaffected by ou posts: ah v1 still valid after posti
   expect(bet.lineId).toBe(ahLine.id);
 });
 
-it("side-market mismatch is rejected with bad_side: over on ah, fav on ou", () => {
-  const m = seedMatch(db);
-  const ahLine = postLine(
+it("side-market mismatch is rejected with bad_side: over on ah, fav on ou", async () => {
+  const m = await seedMatch(db);
+  const ahLine = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
     NOW,
   );
-  const ouLine = postLine(
+  const ouLine = await postLine(
     db,
     1,
     { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
@@ -511,7 +509,7 @@ it("side-market mismatch is rejected with bad_side: over on ah, fav on ou", () =
   // over on ah market → bad_side
   let e1: { code?: string } | null = null;
   try {
-    placeBet(
+    await placeBet(
       db,
       2,
       {
@@ -531,7 +529,7 @@ it("side-market mismatch is rejected with bad_side: over on ah, fav on ou", () =
   // fav on ou market → bad_side
   let e2: { code?: string } | null = null;
   try {
-    placeBet(
+    await placeBet(
       db,
       2,
       {
@@ -549,16 +547,16 @@ it("side-market mismatch is rejected with bad_side: over on ah, fav on ou", () =
   expect(e2?.code).toBe("bad_side");
 });
 
-it("limits count ah+ou stakes together against one match cap", () => {
+it("limits count ah+ou stakes together against one match cap", async () => {
   // carve-out match with 200k cap; post both markets
-  const m = seedMatch(db, { betLimitMmk: 200_000 });
-  const ahLine = postLine(
+  const m = await seedMatch(db, { betLimitMmk: 200_000 });
+  const ahLine = await postLine(
     db,
     1,
     { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
     NOW,
   );
-  const ouLine = postLine(
+  const ouLine = await postLine(
     db,
     1,
     { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
@@ -566,7 +564,7 @@ it("limits count ah+ou stakes together against one match cap", () => {
   );
 
   // bet 130k on ah — uses 130k of 200k cap
-  placeBet(
+  await placeBet(
     db,
     2,
     {
@@ -580,7 +578,7 @@ it("limits count ah+ou stakes together against one match cap", () => {
   );
 
   // bet 50k on ou — uses 50k more → 180k total, still under 200k
-  placeBet(
+  await placeBet(
     db,
     2,
     {
@@ -594,7 +592,7 @@ it("limits count ah+ou stakes together against one match cap", () => {
   );
 
   // try to bet 30k more (would take total to 210k) → should fail with ~20k headroom
-  expect(() =>
+  await expect(
     placeBet(
       db,
       2,
@@ -607,22 +605,22 @@ it("limits count ah+ou stakes together against one match cap", () => {
       },
       NOW,
     ),
-  ).toThrow(/20,000/);
+  ).rejects.toThrow(/20,000/);
 });
 
-it("suspended ou line rejects placement with line_suspended code", () => {
-  const m = seedMatch(db);
-  const ouLine = postLine(
+it("suspended ou line rejects placement with line_suspended code", async () => {
+  const m = await seedMatch(db);
+  const ouLine = await postLine(
     db,
     1,
     { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
     NOW,
   );
-  setLineStatus(db, m.id, "ou", "suspended");
+  await setLineStatus(db, m.id, "ou", "suspended");
 
   let caught: (Error & { code?: string }) | null = null;
   try {
-    placeBet(
+    await placeBet(
       db,
       2,
       {

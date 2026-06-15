@@ -12,14 +12,17 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:create-admin": "tsx scripts/create-admin.ts",
     "db:setup": "npm run db:migrate && npm run db:seed",
-    "db:regrade": "tsx scripts/regrade.ts"
+    "db:regrade": "tsx scripts/regrade.ts",
+    "db:cutover": "node scripts/migrate-sqlite-to-pg.mjs"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.2",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.3",
     "next": "16.2.9",
+    "pg": "^8.21.0",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -29,6 +32,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22",
+    "@types/pg": "^8.20.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",

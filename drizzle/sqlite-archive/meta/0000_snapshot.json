@@ -1,189 +1,187 @@
 {
-  "id": "0a128b03-6c03-446e-b9d1-42593b5997b0",
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "34745778-3672-4146-b62c-55adce36ff5f",
   "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "7",
-  "dialect": "postgresql",
   "tables": {
-    "public.audit_log": {
+    "audit_log": {
       "name": "audit_log",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "byDefault",
-            "name": "audit_log_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "autoincrement": true
         },
         "actor_id": {
           "name": "actor_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "action": {
           "name": "action",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "subject": {
           "name": "subject",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "detail": {
           "name": "detail",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "at": {
           "name": "at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "checkConstraints": {}
     },
-    "public.bets": {
+    "bets": {
       "name": "bets",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "byDefault",
-            "name": "bets_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "autoincrement": true
         },
         "ticket_no": {
           "name": "ticket_no",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "player_id": {
           "name": "player_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "match_id": {
           "name": "match_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "line_id": {
           "name": "line_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "side": {
           "name": "side",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "stake_mmk": {
           "name": "stake_mmk",
-          "type": "bigint",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "score_home_at_bet": {
           "name": "score_home_at_bet",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "score_away_at_bet": {
           "name": "score_away_at_bet",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "placed_at": {
           "name": "placed_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "status": {
           "name": "status",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": "'pending'"
         },
         "net_mmk": {
           "name": "net_mmk",
-          "type": "bigint",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
-        },
-        "fee_mmk": {
-          "name": "fee_mmk",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "settled_at": {
           "name": "settled_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "settlement_id": {
           "name": "settlement_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "voided_by": {
           "name": "voided_by",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "void_reason": {
           "name": "void_reason",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "bets_ticket_no_unique": {
+          "name": "bets_ticket_no_unique",
+          "columns": [
+            "ticket_no"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "bets_player_id_players_id_fk": {
           "name": "bets_player_id_players_id_fk",
@@ -252,95 +250,63 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "bets_ticket_no_unique": {
-          "name": "bets_ticket_no_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "ticket_no"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.invite_codes": {
+    "invite_codes": {
       "name": "invite_codes",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "byDefault",
-            "name": "invite_codes_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "autoincrement": true
         },
         "code": {
           "name": "code",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "max_uses": {
           "name": "max_uses",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "used_count": {
           "name": "used_count",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": 0
         },
         "expires_at": {
           "name": "expires_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "created_by": {
           "name": "created_by",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true,
-          "default": "'admin'"
+          "autoincrement": false
         }
       },
       "indexes": {
-        "invite_personal_uq": {
-          "name": "invite_personal_uq",
+        "invite_codes_code_unique": {
+          "name": "invite_codes_code_unique",
           "columns": [
-            {
-              "expression": "created_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
+            "code"
           ],
-          "isUnique": true,
-          "where": "kind = 'personal'",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
+          "isUnique": true
         }
       },
       "foreignKeys": {
@@ -359,97 +325,86 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "invite_codes_code_unique": {
-          "name": "invite_codes_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.lines": {
+    "lines": {
       "name": "lines",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "byDefault",
-            "name": "lines_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "autoincrement": true
         },
         "match_id": {
           "name": "match_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
-        },
-        "market": {
-          "name": "market",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true,
-          "default": "'ah'"
+          "autoincrement": false
         },
         "version": {
           "name": "version",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "fav_side": {
           "name": "fav_side",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "ball_q": {
           "name": "ball_q",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "price_c": {
           "name": "price_c",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "status": {
           "name": "status",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "posted_by": {
           "name": "posted_by",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "posted_at": {
           "name": "posted_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "lines_match_id_version_unique": {
+          "name": "lines_match_id_version_unique",
+          "columns": [
+            "match_id",
+            "version"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "lines_match_id_matches_id_fk": {
           "name": "lines_match_id_matches_id_fk",
@@ -479,225 +434,195 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "lines_match_id_market_version_unique": {
-          "name": "lines_match_id_market_version_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "match_id",
-            "market",
-            "version"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.match_days": {
+    "match_days": {
       "name": "match_days",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "byDefault",
-            "name": "match_days_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "autoincrement": true
         },
         "date": {
           "name": "date",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "status": {
           "name": "status",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": "'open'"
         },
         "closed_at": {
           "name": "closed_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
+      "indexes": {
         "match_days_date_unique": {
           "name": "match_days_date_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "date"
-          ]
+          ],
+          "isUnique": true
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.matches": {
+    "matches": {
       "name": "matches",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "byDefault",
-            "name": "matches_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "autoincrement": true
         },
         "stage": {
           "name": "stage",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "home_team": {
           "name": "home_team",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "away_team": {
           "name": "away_team",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "kickoff_utc": {
           "name": "kickoff_utc",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "venue": {
           "name": "venue",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "match_day": {
           "name": "match_day",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "status": {
           "name": "status",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": "'scheduled'"
         },
         "home_score": {
           "name": "home_score",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "away_score": {
           "name": "away_score",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "score_confirmed_at": {
           "name": "score_confirmed_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "bet_limit_mmk": {
           "name": "bet_limit_mmk",
-          "type": "bigint",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "external_api_id": {
           "name": "external_api_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "checkConstraints": {}
     },
-    "public.players": {
+    "players": {
       "name": "players",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "byDefault",
-            "name": "players_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "autoincrement": true
         },
         "phone": {
           "name": "phone",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "pin_hash": {
           "name": "pin_hash",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "display_name": {
           "name": "display_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "role": {
           "name": "role",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": "'player'"
         },
         "language": {
@@ -705,6 +630,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": "'en'"
         },
         "failed_pin_attempts": {
@@ -712,19 +638,22 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": 0
         },
         "locked_until": {
           "name": "locked_until",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "must_change_pin": {
           "name": "must_change_pin",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": false
         },
         "session_epoch": {
@@ -732,182 +661,126 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": 0
         },
         "created_at": {
           "name": "created_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
-        },
-        "referred_by": {
-          "name": "referred_by",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "players_referred_by_players_id_fk": {
-          "name": "players_referred_by_players_id_fk",
-          "tableFrom": "players",
-          "tableTo": "players",
-          "columnsFrom": [
-            "referred_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
+      "indexes": {
         "players_phone_unique": {
           "name": "players_phone_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "phone"
-          ]
+          ],
+          "isUnique": true
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.settings": {
+    "settings": {
       "name": "settings",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "daily_total_limit_mmk": {
           "name": "daily_total_limit_mmk",
-          "type": "bigint",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": 0
-        },
-        "default_personal_invite_uses": {
-          "name": "default_personal_invite_uses",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 10
-        },
-        "referral_bonus_mmk": {
-          "name": "referral_bonus_mmk",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "commission_pct": {
-          "name": "commission_pct",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 3
-        },
-        "discount_pct": {
-          "name": "discount_pct",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 2
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "checkConstraints": {}
     },
-    "public.settlements": {
+    "settlements": {
       "name": "settlements",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "identity": {
-            "type": "byDefault",
-            "name": "settlements_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
+          "autoincrement": true
         },
         "ref": {
           "name": "ref",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "match_day_id": {
           "name": "match_day_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "player_id": {
           "name": "player_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "net_mmk": {
           "name": "net_mmk",
-          "type": "bigint",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "marked_by": {
           "name": "marked_by",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "marked_at": {
           "name": "marked_at",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
-        },
-        "payment_method": {
-          "name": "payment_method",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "payment_reference": {
-          "name": "payment_reference",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "remark": {
-          "name": "remark",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "settlements_ref_unique": {
+          "name": "settlements_ref_unique",
+          "columns": [
+            "ref"
+          ],
+          "isUnique": true
+        },
+        "settlements_match_day_id_player_id_unique": {
+          "name": "settlements_match_day_id_player_id_unique",
+          "columns": [
+            "match_day_id",
+            "player_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "settlements_match_day_id_match_days_id_fk": {
           "name": "settlements_match_day_id_match_days_id_fk",
@@ -950,37 +823,18 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "settlements_ref_unique": {
-          "name": "settlements_ref_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "ref"
-          ]
-        },
-        "settlements_match_day_id_player_id_unique": {
-          "name": "settlements_match_day_id_player_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "match_day_id",
-            "player_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     }
   },
-  "enums": {},
-  "schemas": {},
-  "sequences": {},
-  "roles": {},
-  "policies": {},
   "views": {},
+  "enums": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
   }
 }

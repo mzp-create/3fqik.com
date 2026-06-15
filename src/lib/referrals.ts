@@ -4,8 +4,8 @@ import { randomCode } from "@/lib/auth/adminActions";
 
 const PERSONAL_EXPIRES_AT = "2027-01-01T00:00:00Z";
 
-function selectPersonalCode(db: Db, playerId: number) {
-  return db
+async function selectPersonalCode(db: Db, playerId: number) {
+  const [row] = await db
     .select()
     .from(schema.inviteCodes)
     .where(
@@ -13,19 +13,19 @@ function selectPersonalCode(db: Db, playerId: number) {
         eq(schema.inviteCodes.createdBy, playerId),
         eq(schema.inviteCodes.kind, "personal"),
       ),
-    )
-    .get();
+    );
+  return row;
 }
 
-export function ensurePersonalCode(db: Db, playerId: number) {
-  const existing = selectPersonalCode(db, playerId);
+export async function ensurePersonalCode(db: Db, playerId: number) {
+  const existing = await selectPersonalCode(db, playerId);
   if (existing) return existing;
 
-  const settings = db.select().from(schema.settings).get();
+  const [settings] = await db.select().from(schema.settings);
   const maxUses = settings?.defaultPersonalInviteUses ?? 10;
 
   try {
-    return db
+    const [row] = await db
       .insert(schema.inviteCodes)
       .values({
         code: randomCode(6),
@@ -35,20 +35,21 @@ export function ensurePersonalCode(db: Db, playerId: number) {
         expiresAt: PERSONAL_EXPIRES_AT,
         createdBy: playerId,
       })
-      .returning()
-      .get();
+      .returning();
+    return row;
   } catch (e: unknown) {
-    // SQLITE_CONSTRAINT_UNIQUE — a concurrent insert won the race (now prevented
+    // unique_violation — a concurrent insert won the race (now prevented
     // by the invite_personal_uq partial index, but we keep this guard for
     // defence-in-depth). Re-select and return the existing row.
     // The idempotency test covers the normal path; the race path is not
     // practically unit-testable without concurrency harness.
-    const msg = e instanceof Error ? e.message : String(e);
     if (
-      msg.includes("UNIQUE constraint failed") ||
-      msg.includes("SQLITE_CONSTRAINT")
+      e &&
+      typeof e === "object" &&
+      "code" in e &&
+      (e as { code?: string }).code === "23505"
     ) {
-      const row = selectPersonalCode(db, playerId);
+      const row = await selectPersonalCode(db, playerId);
       if (row) return row;
     }
     throw e;
@@ -65,17 +66,21 @@ export function ensurePersonalCode(db: Db, playerId: number) {
  *                    referredCount > usedCount because admin-code registrations
  *                    also set referred_by to the code's creator.
  */
-export function referralInfo(
+export async function referralInfo(
   db: Db,
   playerId: number,
-): { code: string; maxUses: number; usedCount: number; referredCount: number } {
-  const codeRow = ensurePersonalCode(db, playerId);
+): Promise<{
+  code: string;
+  maxUses: number;
+  usedCount: number;
+  referredCount: number;
+}> {
+  const codeRow = await ensurePersonalCode(db, playerId);
 
-  const [{ value: referredCount }] = db
-    .select({ value: count() })
+  const [{ value: referredCount }] = await db
+    .select({ value: count().mapWith(Number) })
     .from(schema.players)
-    .where(eq(schema.players.referredBy, playerId))
-    .all();
+    .where(eq(schema.players.referredBy, playerId));
 
   return {
     code: codeRow.code,
@@ -85,19 +90,20 @@ export function referralInfo(
   };
 }
 
-export function referrerName(db: Db, playerId: number): string | null {
-  const player = db
+export async function referrerName(
+  db: Db,
+  playerId: number,
+): Promise<string | null> {
+  const [player] = await db
     .select()
     .from(schema.players)
-    .where(eq(schema.players.id, playerId))
-    .get();
+    .where(eq(schema.players.id, playerId));
   if (!player?.referredBy) return null;
 
-  const referrer = db
+  const [referrer] = await db
     .select({ displayName: schema.players.displayName })
     .from(schema.players)
-    .where(eq(schema.players.id, player.referredBy))
-    .get();
+    .where(eq(schema.players.id, player.referredBy));
   return referrer?.displayName ?? null;
 }
 
@@ -106,11 +112,13 @@ export function referrerName(db: Db, playerId: number): string | null {
  * Used in bulk-list contexts where the referredBy id is already known,
  * avoiding the extra self-lookup that referrerName() performs.
  */
-export function referrerNameById(db: Db, referrerId: number): string | null {
-  const referrer = db
+export async function referrerNameById(
+  db: Db,
+  referrerId: number,
+): Promise<string | null> {
+  const [referrer] = await db
     .select({ displayName: schema.players.displayName })
     .from(schema.players)
-    .where(eq(schema.players.id, referrerId))
-    .get();
+    .where(eq(schema.players.id, referrerId));
   return referrer?.displayName ?? null;
 }

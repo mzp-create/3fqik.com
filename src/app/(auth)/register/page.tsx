@@ -31,11 +31,10 @@ export default async function RegisterPage({
     reason = "missing";
   } else {
     const db = getDb();
-    const row = await db
+    const [row] = await db
       .select()
       .from(schema.inviteCodes)
-      .where(eq(schema.inviteCodes.code, code))
-      .get();
+      .where(eq(schema.inviteCodes.code, code));
 
     if (!row) {
       reason = "unknown";

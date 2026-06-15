@@ -24,13 +24,12 @@ export default async function VerifyTicket({
   const { v, sig } = await searchParams;
   const valid = !!v && !!sig && verifyTicketSig(ticketNo, Number(v), sig);
   const db = getDb();
-  const bet = valid
-    ? db
+  const [bet] = valid
+    ? await db
         .select()
         .from(schema.bets)
         .where(eq(schema.bets.ticketNo, ticketNo))
-        .get()
-    : undefined;
+    : [undefined];
 
   if (!valid || !bet) {
     return (
@@ -47,29 +46,25 @@ export default async function VerifyTicket({
     );
   }
 
-  const match = db
+  const [match] = await db
     .select()
     .from(schema.matches)
-    .where(eq(schema.matches.id, bet.matchId))
-    .get()!;
-  const line = db
+    .where(eq(schema.matches.id, bet.matchId));
+  const [line] = await db
     .select()
     .from(schema.lines)
-    .where(eq(schema.lines.id, bet.lineId))
-    .get()!;
-  const player = db
+    .where(eq(schema.lines.id, bet.lineId));
+  const [player] = await db
     .select({ displayName: schema.players.displayName })
     .from(schema.players)
-    .where(eq(schema.players.id, bet.playerId))
-    .get()!;
-  const settlement =
+    .where(eq(schema.players.id, bet.playerId));
+  const [settlement] =
     bet.settlementId != null
-      ? db
+      ? await db
           .select({ ref: schema.settlements.ref })
           .from(schema.settlements)
           .where(eq(schema.settlements.id, bet.settlementId))
-          .get()
-      : undefined;
+      : [undefined];
   const fav = line.favSide === "home" ? match.homeTeam : match.awayTeam;
   const dog = line.favSide === "home" ? match.awayTeam : match.homeTeam;
   let pick: string;

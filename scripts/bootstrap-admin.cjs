@@ -5,7 +5,7 @@
 //
 // ADMIN_BOOTSTRAP format: "<phone>:<6-digit-pin>:<name>"  e.g. "09448019562:090210:Zeya"
 // Safe to leave set — once the admin exists it is a no-op. Unset it for hygiene.
-const Database = require("better-sqlite3");
+const { Client } = require("pg");
 const bcrypt = require("bcryptjs");
 
 const spec = process.env.ADMIN_BOOTSTRAP;
@@ -24,22 +24,37 @@ if (!/^\d{6}$/.test(pin || "")) {
   process.exit(1);
 }
 
-const db = new Database(process.env.DATABASE_PATH);
-const existing = db
-  .prepare("select id, role from players where phone = ?")
-  .get(phone);
-if (existing) {
-  if (existing.role !== "admin") {
-    db.prepare("update players set role = 'admin' where id = ?").run(
-      existing.id,
+(async () => {
+  const c = new Client({ connectionString: process.env.DATABASE_URL });
+  await c.connect();
+  try {
+    const result = await c.query(
+      "select id, role from players where phone = $1",
+      [phone],
     );
-    console.log(`bootstrap-admin: promoted existing player ${phone} to admin`);
-  } else {
-    console.log(`bootstrap-admin: admin ${phone} already exists, no-op`);
+    const existing = result.rows[0];
+    if (existing) {
+      if (existing.role !== "admin") {
+        await c.query("update players set role = 'admin' where id = $1", [
+          existing.id,
+        ]);
+        console.log(
+          `bootstrap-admin: promoted existing player ${phone} to admin`,
+        );
+      } else {
+        console.log(`bootstrap-admin: admin ${phone} already exists, no-op`);
+      }
+    } else {
+      await c.query(
+        "insert into players (phone, pin_hash, display_name, role, created_at) values ($1, $2, $3, 'admin', $4)",
+        [phone, bcrypt.hashSync(pin, 10), name, new Date().toISOString()],
+      );
+      console.log(`bootstrap-admin: created admin ${phone}`);
+    }
+  } finally {
+    await c.end();
   }
-  process.exit(0);
-}
-db.prepare(
-  "insert into players (phone, pin_hash, display_name, role, created_at) values (?, ?, ?, 'admin', ?)",
-).run(phone, bcrypt.hashSync(pin, 10), name, new Date().toISOString());
-console.log(`bootstrap-admin: created admin ${phone}`);
+})().catch((e) => {
+  console.error("bootstrap-admin error:", e);
+  process.exit(1);
+});

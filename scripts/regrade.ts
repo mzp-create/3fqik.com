@@ -13,104 +13,108 @@ import { getDb, schema } from "../src/lib/db/index";
 import { gradeBet, type GradeInput } from "../src/lib/engine/grade";
 import { computeFee } from "../src/lib/fees";
 
-const db = getDb();
+async function main() {
+  const db = getDb();
 
-// Read fee rates once from settings
-const settingsRow = db
-  .select({
-    commissionPct: schema.settings.commissionPct,
-    discountPct: schema.settings.discountPct,
-  })
-  .from(schema.settings)
-  .where(eq(schema.settings.id, 1))
-  .get() ?? { commissionPct: 3, discountPct: 2 };
+  // Read fee rates once from settings
+  const [settingsRow] = await db
+    .select({
+      commissionPct: schema.settings.commissionPct,
+      discountPct: schema.settings.discountPct,
+    })
+    .from(schema.settings)
+    .where(eq(schema.settings.id, 1));
 
-// Fetch all finished matches
-const finishedMatches = db
-  .select()
-  .from(schema.matches)
-  .where(eq(schema.matches.status, "finished"))
-  .all();
+  const { commissionPct, discountPct } = settingsRow ?? {
+    commissionPct: 3,
+    discountPct: 2,
+  };
 
-console.log(`Found ${finishedMatches.length} finished match(es).`);
+  // Fetch all finished matches
+  const finishedMatches = await db
+    .select()
+    .from(schema.matches)
+    .where(eq(schema.matches.status, "finished"));
 
-let regraded = 0;
-let skipped = 0;
+  console.log(`Found ${finishedMatches.length} finished match(es).`);
 
-for (const match of finishedMatches) {
-  const finalHome = match.homeScore!;
-  const finalAway = match.awayScore!;
+  let regraded = 0;
+  let skipped = 0;
 
-  // Load all lines for this match keyed by id
-  const lines = new Map(
-    db
+  for (const match of finishedMatches) {
+    const finalHome = match.homeScore!;
+    const finalAway = match.awayScore!;
+
+    // Load all lines for this match keyed by id
+    const linesRows = await db
       .select()
       .from(schema.lines)
-      .where(eq(schema.lines.matchId, match.id))
-      .all()
-      .map((l) => [l.id, l]),
-  );
+      .where(eq(schema.lines.matchId, match.id));
+    const lines = new Map(linesRows.map((l) => [l.id, l]));
 
-  // Load non-void, non-settled bets for this match
-  const bets = db
-    .select()
-    .from(schema.bets)
-    .where(
-      and(
-        eq(schema.bets.matchId, match.id),
-        ne(schema.bets.status, "void"),
-        isNull(schema.bets.settlementId),
-      ),
-    )
-    .all();
-
-  for (const bet of bets) {
-    const line = lines.get(bet.lineId);
-    if (!line) {
-      console.warn(
-        `SKIP bet ${bet.ticketNo}: line ${bet.lineId} not found for match ${match.id}`,
+    // Load non-void, non-settled bets for this match
+    const bets = await db
+      .select()
+      .from(schema.bets)
+      .where(
+        and(
+          eq(schema.bets.matchId, match.id),
+          ne(schema.bets.status, "void"),
+          isNull(schema.bets.settlementId),
+        ),
       );
-      skipped++;
-      continue;
+
+    for (const bet of bets) {
+      const line = lines.get(bet.lineId);
+      if (!line) {
+        console.warn(
+          `SKIP bet ${bet.ticketNo}: line ${bet.lineId} not found for match ${match.id}`,
+        );
+        skipped++;
+        continue;
+      }
+
+      // Skip legacy negative-Malay lines
+      if (line.priceC < 1) {
+        console.warn(
+          `SKIP bet ${bet.ticketNo}: line priceC=${line.priceC} is a legacy negative-Malay line`,
+        );
+        skipped++;
+        continue;
+      }
+
+      // Compute effective scores (clamped to 0 for VAR-reversal safety)
+      const effHome = Math.max(finalHome - bet.scoreHomeAtBet, 0);
+      const effAway = Math.max(finalAway - bet.scoreAwayAtBet, 0);
+      const effFav = line.favSide === "home" ? effHome : effAway;
+      const effDog = line.favSide === "home" ? effAway : effHome;
+
+      const r = gradeBet({
+        market: line.market,
+        side: bet.side,
+        ballQ: line.ballQ,
+        priceC: line.priceC,
+        stake: bet.stakeMmk,
+        effFav,
+        effDog,
+      } as GradeInput);
+
+      const fee = computeFee(r.netMmk, commissionPct, discountPct);
+      await db
+        .update(schema.bets)
+        .set({ status: r.status, netMmk: r.netMmk, feeMmk: fee })
+        .where(eq(schema.bets.id, bet.id));
+
+      regraded++;
     }
-
-    // Skip legacy negative-Malay lines
-    if (line.priceC < 1) {
-      console.warn(
-        `SKIP bet ${bet.ticketNo}: line priceC=${line.priceC} is a legacy negative-Malay line`,
-      );
-      skipped++;
-      continue;
-    }
-
-    // Compute effective scores (clamped to 0 for VAR-reversal safety)
-    const effHome = Math.max(finalHome - bet.scoreHomeAtBet, 0);
-    const effAway = Math.max(finalAway - bet.scoreAwayAtBet, 0);
-    const effFav = line.favSide === "home" ? effHome : effAway;
-    const effDog = line.favSide === "home" ? effAway : effHome;
-
-    const r = gradeBet({
-      market: line.market,
-      side: bet.side,
-      ballQ: line.ballQ,
-      priceC: line.priceC,
-      stake: bet.stakeMmk,
-      effFav,
-      effDog,
-    } as GradeInput);
-
-    const fee = computeFee(
-      r.netMmk,
-      settingsRow.commissionPct,
-      settingsRow.discountPct,
-    );
-    db.update(schema.bets)
-      .set({ status: r.status, netMmk: r.netMmk, feeMmk: fee })
-      .where(eq(schema.bets.id, bet.id))
-      .run();
-
-    regraded++;
   }
+
+  console.log(
+    `Done. Regraded: ${regraded} bet(s), skipped: ${skipped} bet(s).`,
+  );
 }
 
-console.log(`Done. Regraded: ${regraded} bet(s), skipped: ${skipped} bet(s).`);
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

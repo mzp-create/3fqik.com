@@ -14,13 +14,13 @@
 
 Copy `.env.example` to `.env.local` (or set as system env vars) and fill all values:
 
-| Variable         | Required | Notes                                                                       |
-| ---------------- | -------- | --------------------------------------------------------------------------- |
-| `DATABASE_PATH`  | yes      | Absolute path to `worldbet.db` (e.g. `/srv/worldbet/worldbet.db`)           |
-| `SESSION_SECRET` | yes      | Random ≥32-char string — `openssl rand -hex 32`                             |
-| `TICKET_SECRETS` | yes      | Comma-separated; first entry = current signing key — `openssl rand -hex 32` |
-| `APP_ORIGIN`     | yes      | Public HTTPS base URL e.g. `https://bet.example.com` — no trailing slash    |
-| `NODE_ENV`       | yes      | Set to `production`                                                         |
+| Variable         | Required | Notes                                                                             |
+| ---------------- | -------- | --------------------------------------------------------------------------------- |
+| `DATABASE_URL`   | yes      | Postgres connection string, e.g. `postgres://worldbet:PW@localhost:5432/worldbet` |
+| `SESSION_SECRET` | yes      | Random ≥32-char string — `openssl rand -hex 32`                                   |
+| `TICKET_SECRETS` | yes      | Comma-separated; first entry = current signing key — `openssl rand -hex 32`       |
+| `APP_ORIGIN`     | yes      | Public HTTPS base URL e.g. `https://bet.example.com` — no trailing slash          |
+| `NODE_ENV`       | yes      | Set to `production`                                                               |
 
 ---
 
@@ -35,19 +35,39 @@ The build runs TypeScript type-checking. Fix any errors before continuing.
 
 ---
 
-## First-Run Database Setup
+## Database: PostgreSQL
 
-Run once on the production host before starting the app:
+The app runs on PostgreSQL (self-hosted on the box). One-time server setup:
 
 ```bash
-npm run db:migrate         # apply all Drizzle migrations
-npm run db:seed            # seed 104 WC2026 fixtures + default settings
-npm run db:create-admin <phone> <6-digit-pin> <name>
-# e.g.: npm run db:create-admin 09700000001 111111 Admin
+sudo apt-get install -y postgresql postgresql-contrib
+sudo systemctl enable --now postgresql
+# create role + database
+sudo -u postgres psql -c "CREATE ROLE worldbet LOGIN PASSWORD 'CHANGE_ME';"
+sudo -u postgres createdb -O worldbet worldbet
+# then put the matching DATABASE_URL in .env.local
 ```
 
-Re-running `db:seed` is safe (idempotent — skips if matches already exist).
+First-run schema + data:
+
+```bash
+export DATABASE_URL=postgres://worldbet:CHANGE_ME@localhost:5432/worldbet
+npm run db:migrate         # apply Postgres migrations (drizzle/0000_init_pg.sql …)
+npm run db:seed            # seed 104 WC2026 fixtures + default settings (idempotent)
+npm run db:create-admin <phone> <6-digit-pin> <name>
+```
+
 Run `db:migrate` again after each update to apply new migrations.
+
+### Migrating existing SQLite data → Postgres
+
+A one-time cutover script copies every row from a legacy `worldbet.db` into the
+Postgres DB (run after `db:migrate`):
+
+```bash
+SQLITE_PATH=./worldbet.db DATABASE_URL=postgres://… npm run db:cutover
+# re-run into a non-empty target with FORCE=1 (TRUNCATEs first)
+```
 
 ---
 
@@ -111,9 +131,12 @@ chmod +x scripts/backup.sh
 (crontab -l 2>/dev/null; echo "30 18 * * * /mnt/hermes-data/mmzphyo/Projects/WorldBet2026/scripts/backup.sh") | crontab -
 ```
 
-Backups land in `~/worldbet-backups/`. Run manually to verify: `bash scripts/backup.sh`.
+Backups land in `~/worldbet-backups/` as `worldbet-<stamp>.dump`. Run manually to
+verify: `bash scripts/backup.sh`. Restore with
+`pg_restore --clean --no-owner --dbname="$DATABASE_URL" <file>.dump`.
 
-The script uses the `better-sqlite3` Node.js API (`sqlite3` CLI not required).
+The script uses `pg_dump` (custom/compressed format) and reads `DATABASE_URL`
+from `.env.local`.
 
 ---
 

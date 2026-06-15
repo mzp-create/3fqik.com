@@ -9,49 +9,45 @@ import { dashboard } from "./dashboard";
 let db: Db;
 const NOW = "2026-06-12T10:00:00Z";
 
-beforeEach(() => {
-  db = createTestDb();
-  db.insert(schema.players)
-    .values([
-      {
-        phone: "09700000001",
-        pinHash: hashPin("111111"),
-        displayName: "Admin",
-        role: "admin",
-        createdAt: NOW,
-      },
-      {
-        phone: "09700000002",
-        pinHash: hashPin("222222"),
-        displayName: "Zaw",
-        createdAt: NOW,
-      },
-      {
-        phone: "09700000003",
-        pinHash: hashPin("333333"),
-        displayName: "Thiri",
-        createdAt: NOW,
-      },
-    ])
-    .run();
-  db.insert(schema.settings).values({ id: 1, dailyTotalLimitMmk: 0 }).run();
-  db.insert(schema.matches)
-    .values({
-      stage: "Group C",
-      homeTeam: "BRA",
-      awayTeam: "MEX",
-      kickoffUtc: "2026-06-12T02:00:00Z",
-      venue: "X",
-      matchDay: "2026-06-12",
-    })
-    .run();
-  const line = postLine(
+beforeEach(async () => {
+  db = await createTestDb();
+  await db.insert(schema.players).values([
+    {
+      phone: "09700000001",
+      pinHash: hashPin("111111"),
+      displayName: "Admin",
+      role: "admin",
+      createdAt: NOW,
+    },
+    {
+      phone: "09700000002",
+      pinHash: hashPin("222222"),
+      displayName: "Zaw",
+      createdAt: NOW,
+    },
+    {
+      phone: "09700000003",
+      pinHash: hashPin("333333"),
+      displayName: "Thiri",
+      createdAt: NOW,
+    },
+  ]);
+  await db.insert(schema.settings).values({ id: 1, dailyTotalLimitMmk: 0 });
+  await db.insert(schema.matches).values({
+    stage: "Group C",
+    homeTeam: "BRA",
+    awayTeam: "MEX",
+    kickoffUtc: "2026-06-12T02:00:00Z",
+    venue: "X",
+    matchDay: "2026-06-12",
+  });
+  const line = await postLine(
     db,
     1,
     { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
     NOW,
   );
-  placeBet(
+  await placeBet(
     db,
     2,
     {
@@ -63,7 +59,7 @@ beforeEach(() => {
     },
     NOW,
   ); // Zaw fav
-  placeBet(
+  await placeBet(
     db,
     3,
     {
@@ -76,11 +72,11 @@ beforeEach(() => {
     NOW,
   ); // Thiri dog
   // A3: BRA -0.5 wins 2-0 → d=1.5>0 → full win. Zaw +100,000, Thiri −200,000. House net=+100,000
-  confirmFinalScore(db, 1, 1, 2, 0, NOW);
+  await confirmFinalScore(db, 1, 1, 2, 0, NOW);
 });
 
-it("aggregates volume, exposure, and house P&L", () => {
-  const d = dashboard(db, "2026-06-12");
+it("aggregates volume, exposure, and house P&L", async () => {
+  const d = await dashboard(db, "2026-06-12");
   // A4: Zaw effective +97k (net +100k, fee -3k), Thiri effective -196k (net -200k, fee +4k)
   //     house net = -(97k + (-196k)) = +99k
   expect(d.todayHouseNet).toBe(99_000);
@@ -97,8 +93,8 @@ it("aggregates volume, exposure, and house P&L", () => {
   );
 });
 
-it("includes outstanding settlements: A4 effective nets applied", () => {
-  const d = dashboard(db, "2026-06-12");
+it("includes outstanding settlements: A4 effective nets applied", async () => {
+  const d = await dashboard(db, "2026-06-12");
   expect(d.outstanding).toBeDefined();
   // A4: Zaw effective +97k (commission 3%), Thiri effective -196k (discount 2%)
   expect(d.outstanding.toPayMmk).toBe(97_000);

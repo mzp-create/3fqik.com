@@ -12,11 +12,10 @@ export async function POST(req: Request) {
     const { language } = body as Record<string, unknown>;
     if (language !== "en" && language !== "mm")
       return fail("bad_request", 'language must be "en" or "mm"');
-    getDb()
+    await getDb()
       .update(schema.players)
       .set({ language })
-      .where(eq(schema.players.id, me.id))
-      .run();
+      .where(eq(schema.players.id, me.id));
     return ok({});
   });
 }

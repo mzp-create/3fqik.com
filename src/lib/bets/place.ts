@@ -6,9 +6,9 @@ import { newTicketNo } from "@/lib/ticket/ticketNo";
 export const MIN_STAKE = 10_000;
 export const MAX_STAKE = 1_000_000_000;
 
-// ATOMICITY WARNING: better-sqlite3 transactions are synchronous — never introduce
-// async operations (await, Promise, setTimeout) inside db.transaction(). Doing so
-// silently breaks the atomicity guarantee. Same discipline as flows.ts.
+// ATOMICITY: the whole read-check-write runs inside db.transaction(async tx).
+// Postgres row locks (SELECT … FOR UPDATE) on the line and match-day rows serialize
+// concurrent placements so the version check and stake-limit headroom can't race.
 
 function err(
   message: string,
@@ -21,7 +21,7 @@ function err(
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-export function placeBet(
+export async function placeBet(
   db: Db,
   playerId: number,
   input: {
@@ -52,19 +52,21 @@ export function placeBet(
   if (input.market === "ou" && !ouSides.has(input.side))
     throw err("side must be 'over' or 'under' for ou market", 400, "bad_side");
 
-  // better-sqlite3 transactions are synchronous — drizzle exposes db.transaction
-  return db.transaction((tx) => {
-    const match = tx
+  return db.transaction(async (tx) => {
+    const [match] = await tx
       .select()
       .from(schema.matches)
-      .where(eq(schema.matches.id, input.matchId))
-      .get();
+      .where(eq(schema.matches.id, input.matchId));
     if (!match) throw err("match not found", 404, "not_found");
     if (match.status === "finished")
       throw err("match finished", 400, "match_finished");
 
     // Version check against the specific market's latest line
-    const line = latestLine(tx as unknown as Db, input.matchId, input.market);
+    const line = await latestLine(
+      tx as unknown as Db,
+      input.matchId,
+      input.market,
+    );
     if (!line || line.status === "closed")
       throw err("betting closed for this match", 400, "betting_closed");
     if (line.status === "suspended")
@@ -75,43 +77,45 @@ export function placeBet(
       });
 
     // ensure match_day row exists and is open (cheaper check — correct precedence:
-    // closed day → 'betting_closed' before limit errors)
-    let day = tx
+    // closed day → 'betting_closed' before limit errors). Lock the row so the
+    // open→closed check and the limit headroom below see a consistent snapshot.
+    let [day] = await tx
       .select()
       .from(schema.matchDays)
       .where(eq(schema.matchDays.date, match.matchDay))
-      .get();
+      .for("update");
     if (!day)
-      day = tx
+      [day] = await tx
         .insert(schema.matchDays)
         .values({ date: match.matchDay })
-        .returning()
-        .get();
+        .returning();
     if (day.status !== "open")
       throw err("match day is closed for betting", 409, "betting_closed");
 
     // limits: carve-out vs daily pool (spec §8)
     // Limits span BOTH markets for a match — stakeOn sums by matchId regardless of market.
-    // ATOMICITY WARNING: stakeOn uses synchronous SQLite aggregates — no await
-    const stakeOn = (matchIds: number[]) =>
+    const stakeOn = async (matchIds: number[]) =>
       matchIds.length === 0
         ? 0
-        : tx
-            .select({
-              s: sql<number>`coalesce(sum(${schema.bets.stakeMmk}), 0)`,
-            })
-            .from(schema.bets)
-            .where(
-              and(
-                inArray(schema.bets.matchId, matchIds),
-                ne(schema.bets.status, "void"),
-              ),
-            )
-            .get()!.s;
+        : (
+            await tx
+              .select({
+                s: sql<number>`coalesce(sum(${schema.bets.stakeMmk}), 0)`.mapWith(
+                  Number,
+                ),
+              })
+              .from(schema.bets)
+              .where(
+                and(
+                  inArray(schema.bets.matchId, matchIds),
+                  ne(schema.bets.status, "void"),
+                ),
+              )
+          )[0].s;
 
     if (match.betLimitMmk != null) {
       // carve-out match: uses its own cap, completely independent of the daily pool
-      const head = match.betLimitMmk - stakeOn([match.id]);
+      const head = match.betLimitMmk - (await stakeOn([match.id]));
       if (input.stakeMmk > head)
         throw err(
           `house can accept only ${fmt(Math.max(head, 0))} MMK more on this match`,
@@ -121,22 +125,22 @@ export function placeBet(
         );
     } else {
       // non-carve-out match: counts against the daily pool
-      const cfg = tx.select().from(schema.settings).get();
+      const [cfg] = await tx.select().from(schema.settings);
       const daily = cfg?.dailyTotalLimitMmk ?? 0;
       if (daily > 0) {
         // only non-carve-out matches on the same matchDay count toward the pool
-        const poolMatches = tx
-          .select({ id: schema.matches.id })
-          .from(schema.matches)
-          .where(
-            and(
-              eq(schema.matches.matchDay, match.matchDay),
-              sql`${schema.matches.betLimitMmk} is null`,
-            ),
-          )
-          .all()
-          .map((r) => r.id);
-        const head = daily - stakeOn(poolMatches);
+        const poolMatches = (
+          await tx
+            .select({ id: schema.matches.id })
+            .from(schema.matches)
+            .where(
+              and(
+                eq(schema.matches.matchDay, match.matchDay),
+                sql`${schema.matches.betLimitMmk} is null`,
+              ),
+            )
+        ).map((r) => r.id);
+        const head = daily - (await stakeOn(poolMatches));
         if (input.stakeMmk > head)
           throw err(
             `house can accept only ${fmt(Math.max(head, 0))} MMK more on this match day`,
@@ -160,13 +164,20 @@ export function placeBet(
     let lastErr: unknown;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        return tx
+        const [inserted] = await tx
           .insert(schema.bets)
           .values({ ticketNo: newTicketNo(), ...rest })
-          .returning()
-          .get();
+          .returning();
+        return inserted;
       } catch (e) {
-        if (e instanceof Error && /UNIQUE.*ticket_no/.test(e.message)) {
+        // Postgres unique_violation on ticket_no → regenerate and retry
+        if (
+          e &&
+          typeof e === "object" &&
+          "code" in e &&
+          (e as { code?: string }).code === "23505" &&
+          /ticket_no/.test(String((e as { detail?: string }).detail ?? ""))
+        ) {
           lastErr = e;
           continue;
         }

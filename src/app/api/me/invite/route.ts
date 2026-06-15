@@ -9,7 +9,7 @@ export async function GET() {
     const origin = process.env.APP_ORIGIN;
     if (!origin)
       return fail("config_error", "APP_ORIGIN env var is not set", 500);
-    const info = referralInfo(getDb(), me.id);
+    const info = await referralInfo(getDb(), me.id);
     return ok({
       ...info,
       link: `${origin}/register?code=${info.code}`,

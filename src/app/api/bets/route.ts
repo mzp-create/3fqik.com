@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         `stakeMmk must be between ${MIN_STAKE} and ${MAX_STAKE}`,
       );
 
-    const bet = placeBet(
+    const bet = await placeBet(
       getDb(),
       me.id,
       { matchId, market, lineVersion, side, stakeMmk },
@@ -56,7 +56,7 @@ export async function GET() {
     // Join bets → lines → matches to provide rich row context for Task 22's UI needs.
     // Returns each bet with: match {homeTeam, awayTeam, stage}, line {favSide, ballQ, priceC, market},
     // playerName (from session player's displayName), and qrUrl.
-    const rows = db
+    const rows = await db
       .select({
         id: schema.bets.id,
         ticketNo: schema.bets.ticketNo,
@@ -91,8 +91,7 @@ export async function GET() {
       .innerJoin(schema.matches, eq(schema.bets.matchId, schema.matches.id))
       .innerJoin(schema.lines, eq(schema.bets.lineId, schema.lines.id))
       .where(eq(schema.bets.playerId, me.id))
-      .orderBy(desc(schema.bets.placedAt), desc(schema.bets.id))
-      .all();
+      .orderBy(desc(schema.bets.placedAt), desc(schema.bets.id));
 
     return ok(
       rows.map((row) => ({

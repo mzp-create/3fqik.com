@@ -7,7 +7,8 @@ import { nowIso } from "@/lib/time";
 export async function GET() {
   return handle(async () => {
     await requireAdmin();
-    return ok(getDb().select().from(schema.settings).get());
+    const [settings] = await getDb().select().from(schema.settings);
+    return ok(settings);
   });
 }
 
@@ -73,57 +74,51 @@ export async function POST(req: Request) {
     const at = nowIso();
 
     if (dailyTotalLimitMmk != null) {
-      db.update(schema.settings)
+      await db
+        .update(schema.settings)
         .set({ dailyTotalLimitMmk })
-        .where(eq(schema.settings.id, 1))
-        .run();
-      db.insert(schema.auditLog)
-        .values({
-          actorId: admin.id,
-          action: "limit_change",
-          subject: "daily",
-          detail: String(dailyTotalLimitMmk),
-          at,
-        })
-        .run();
+        .where(eq(schema.settings.id, 1));
+      await db.insert(schema.auditLog).values({
+        actorId: admin.id,
+        action: "limit_change",
+        subject: "daily",
+        detail: String(dailyTotalLimitMmk),
+        at,
+      });
     }
 
     if (matchId != null) {
       // betLimitMmk may be null (to clear the limit) or a positive integer
       const limitValue =
         betLimitMmk === undefined ? null : (betLimitMmk as number | null);
-      db.update(schema.matches)
+      await db
+        .update(schema.matches)
         .set({ betLimitMmk: limitValue })
-        .where(eq(schema.matches.id, matchId))
-        .run();
-      db.insert(schema.auditLog)
-        .values({
-          actorId: admin.id,
-          action: "limit_change",
-          subject: `match:${matchId}`,
-          detail: String(limitValue),
-          at,
-        })
-        .run();
+        .where(eq(schema.matches.id, matchId));
+      await db.insert(schema.auditLog).values({
+        actorId: admin.id,
+        action: "limit_change",
+        subject: `match:${matchId}`,
+        detail: String(limitValue),
+        at,
+      });
     }
 
     if (commissionPct != null || discountPct != null) {
       const feeUpdate: Record<string, number> = {};
       if (commissionPct != null) feeUpdate.commissionPct = commissionPct;
       if (discountPct != null) feeUpdate.discountPct = discountPct;
-      db.update(schema.settings)
+      await db
+        .update(schema.settings)
         .set(feeUpdate)
-        .where(eq(schema.settings.id, 1))
-        .run();
-      db.insert(schema.auditLog)
-        .values({
-          actorId: admin.id,
-          action: "fee_change",
-          subject: "settings",
-          detail: JSON.stringify(feeUpdate),
-          at,
-        })
-        .run();
+        .where(eq(schema.settings.id, 1));
+      await db.insert(schema.auditLog).values({
+        actorId: admin.id,
+        action: "fee_change",
+        subject: "settings",
+        detail: JSON.stringify(feeUpdate),
+        at,
+      });
     }
 
     return ok({});

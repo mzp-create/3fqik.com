@@ -1,15 +1,22 @@
 import {
-  sqliteTable,
+  pgTable,
   text,
   integer,
+  bigint,
+  boolean,
   unique,
   uniqueIndex,
-  type AnySQLiteColumn,
-} from "drizzle-orm/sqlite-core";
+  type AnyPgColumn,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-export const players = sqliteTable("players", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+// Money columns are bigint(mode: 'number'): integer MMK, values well within the
+// 2^53 exact-integer range, so arithmetic stays in plain JS numbers. Counts,
+// scores, version, ball_q, price_c and *_pct stay integer. Timestamps are ISO
+// strings stored as text, exactly as before the Postgres migration.
+
+export const players = pgTable("players", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   phone: text("phone").notNull().unique(),
   pinHash: text("pin_hash").notNull(),
   displayName: text("display_name").notNull(),
@@ -21,20 +28,16 @@ export const players = sqliteTable("players", {
     .default("en"),
   failedPinAttempts: integer("failed_pin_attempts").notNull().default(0),
   lockedUntil: text("locked_until"),
-  mustChangePin: integer("must_change_pin", { mode: "boolean" })
-    .notNull()
-    .default(false),
+  mustChangePin: boolean("must_change_pin").notNull().default(false),
   sessionEpoch: integer("session_epoch").notNull().default(0), // bump to kill sessions
   createdAt: text("created_at").notNull(),
-  referredBy: integer("referred_by").references(
-    (): AnySQLiteColumn => players.id,
-  ),
+  referredBy: integer("referred_by").references((): AnyPgColumn => players.id),
 });
 
-export const inviteCodes = sqliteTable(
+export const inviteCodes = pgTable(
   "invite_codes",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     code: text("code").notNull().unique(),
     maxUses: integer("max_uses").notNull(),
     usedCount: integer("used_count").notNull().default(0),
@@ -53,8 +56,8 @@ export const inviteCodes = sqliteTable(
   ],
 );
 
-export const matches = sqliteTable("matches", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const matches = pgTable("matches", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   stage: text("stage").notNull(), // "Group A" | "R32" | ...
   homeTeam: text("home_team").notNull(), // "BRA" or "Winner A" placeholder
   awayTeam: text("away_team").notNull(),
@@ -67,14 +70,14 @@ export const matches = sqliteTable("matches", {
   homeScore: integer("home_score"),
   awayScore: integer("away_score"),
   scoreConfirmedAt: text("score_confirmed_at"),
-  betLimitMmk: integer("bet_limit_mmk"), // null = no carve-out, uses daily pool
+  betLimitMmk: bigint("bet_limit_mmk", { mode: "number" }), // null = no carve-out, uses daily pool
   externalApiId: text("external_api_id"),
 });
 
-export const lines = sqliteTable(
+export const lines = pgTable(
   "lines",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     matchId: integer("match_id")
       .notNull()
       .references(() => matches.id),
@@ -96,8 +99,8 @@ export const lines = sqliteTable(
   (t) => [unique().on(t.matchId, t.market, t.version)],
 );
 
-export const matchDays = sqliteTable("match_days", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const matchDays = pgTable("match_days", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   date: text("date").notNull().unique(), // YYYY-MM-DD MMT
   status: text("status", { enum: ["open", "closed", "settled"] })
     .notNull()
@@ -105,10 +108,10 @@ export const matchDays = sqliteTable("match_days", {
   closedAt: text("closed_at"),
 });
 
-export const settlements = sqliteTable(
+export const settlements = pgTable(
   "settlements",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     ref: text("ref").notNull().unique(), // S-MMDD-NN (system ref)
     matchDayId: integer("match_day_id")
       .notNull()
@@ -116,7 +119,7 @@ export const settlements = sqliteTable(
     playerId: integer("player_id")
       .notNull()
       .references(() => players.id),
-    netMmk: integer("net_mmk").notNull(),
+    netMmk: bigint("net_mmk", { mode: "number" }).notNull(),
     markedBy: integer("marked_by")
       .notNull()
       .references(() => players.id),
@@ -128,8 +131,8 @@ export const settlements = sqliteTable(
   (t) => [unique().on(t.matchDayId, t.playerId)],
 );
 
-export const bets = sqliteTable("bets", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const bets = pgTable("bets", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   ticketNo: text("ticket_no").notNull().unique(),
   playerId: integer("player_id")
     .notNull()
@@ -141,7 +144,7 @@ export const bets = sqliteTable("bets", {
     .notNull()
     .references(() => lines.id),
   side: text("side", { enum: ["fav", "dog", "over", "under"] }).notNull(),
-  stakeMmk: integer("stake_mmk").notNull(),
+  stakeMmk: bigint("stake_mmk", { mode: "number" }).notNull(),
   scoreHomeAtBet: integer("score_home_at_bet").notNull(),
   scoreAwayAtBet: integer("score_away_at_bet").notNull(),
   placedAt: text("placed_at").notNull(),
@@ -150,27 +153,31 @@ export const bets = sqliteTable("bets", {
   })
     .notNull()
     .default("pending"),
-  netMmk: integer("net_mmk"),
-  feeMmk: integer("fee_mmk"),
+  netMmk: bigint("net_mmk", { mode: "number" }),
+  feeMmk: bigint("fee_mmk", { mode: "number" }),
   settledAt: text("settled_at"),
   settlementId: integer("settlement_id").references(() => settlements.id),
   voidedBy: integer("voided_by").references(() => players.id),
   voidReason: text("void_reason"),
 });
 
-export const settings = sqliteTable("settings", {
+export const settings = pgTable("settings", {
   id: integer("id").primaryKey(), // always 1
-  dailyTotalLimitMmk: integer("daily_total_limit_mmk").notNull().default(0), // 0 = unlimited
+  dailyTotalLimitMmk: bigint("daily_total_limit_mmk", { mode: "number" })
+    .notNull()
+    .default(0), // 0 = unlimited
   defaultPersonalInviteUses: integer("default_personal_invite_uses")
     .notNull()
     .default(10),
-  referralBonusMmk: integer("referral_bonus_mmk").notNull().default(0),
+  referralBonusMmk: bigint("referral_bonus_mmk", { mode: "number" })
+    .notNull()
+    .default(0),
   commissionPct: integer("commission_pct").notNull().default(3),
   discountPct: integer("discount_pct").notNull().default(2),
 });
 
-export const auditLog = sqliteTable("audit_log", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const auditLog = pgTable("audit_log", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   actorId: integer("actor_id").notNull(),
   action: text("action").notNull(), // pin_reset | void | score_correction | limit_change | unlock | grant_admin
   subject: text("subject").notNull(),

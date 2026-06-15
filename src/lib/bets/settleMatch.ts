@@ -21,7 +21,7 @@ function err(message: string, httpStatus = 400, code = "error") {
  * so grading can never throw on stake size. We do NOT add defensive wrapping here;
  * if gradeBet throws (e.g. corrupted data) the transaction rolls back cleanly.
  */
-function gradeMatchTickets(
+async function gradeMatchTickets(
   tx: Db,
   matchId: number,
   home: number,
@@ -29,30 +29,29 @@ function gradeMatchTickets(
   at: string,
 ) {
   // Read fee rates from settings (row id=1 always exists; defaults 3/2 apply)
-  const settings = tx
+  const [settingsRow] = await tx
     .select({
       commissionPct: schema.settings.commissionPct,
       discountPct: schema.settings.discountPct,
     })
     .from(schema.settings)
-    .where(eq(schema.settings.id, 1))
-    .get() ?? { commissionPct: 3, discountPct: 2 };
+    .where(eq(schema.settings.id, 1));
+  const settings = settingsRow ?? { commissionPct: 3, discountPct: 2 };
 
   const lines = new Map(
-    tx
-      .select()
-      .from(schema.lines)
-      .where(eq(schema.lines.matchId, matchId))
-      .all()
-      .map((l) => [l.id, l]),
+    (
+      await tx
+        .select()
+        .from(schema.lines)
+        .where(eq(schema.lines.matchId, matchId))
+    ).map((l) => [l.id, l]),
   );
-  const tickets = tx
+  const tickets = await tx
     .select()
     .from(schema.bets)
     .where(
       and(eq(schema.bets.matchId, matchId), ne(schema.bets.status, "void")),
-    )
-    .all();
+    );
   for (const t of tickets) {
     const line = lines.get(t.lineId);
     if (!line) throw err("bet/line match mismatch", 500, "data_integrity");
@@ -82,10 +81,10 @@ function gradeMatchTickets(
       settings.commissionPct,
       settings.discountPct,
     );
-    tx.update(schema.bets)
+    await tx
+      .update(schema.bets)
       .set({ status: r.status, netMmk: r.netMmk, feeMmk: fee, settledAt: at })
-      .where(eq(schema.bets.id, t.id))
-      .run();
+      .where(eq(schema.bets.id, t.id));
   }
 }
 
@@ -94,8 +93,12 @@ function gradeMatchTickets(
  * Idempotent: will not re-close an already-closed or settled day.
  * Returns true if the day transitioned to 'closed' in this call, false otherwise.
  */
-function maybeCloseDay(tx: Db, matchDay: string, at: string): boolean {
-  const unfinished = tx
+async function maybeCloseDay(
+  tx: Db,
+  matchDay: string,
+  at: string,
+): Promise<boolean> {
+  const unfinished = await tx
     .select()
     .from(schema.matches)
     .where(
@@ -103,25 +106,22 @@ function maybeCloseDay(tx: Db, matchDay: string, at: string): boolean {
         eq(schema.matches.matchDay, matchDay),
         ne(schema.matches.status, "finished"),
       ),
-    )
-    .all();
+    );
   if (unfinished.length > 0) return false;
-  let day = tx
+  let [day] = await tx
     .select()
     .from(schema.matchDays)
-    .where(eq(schema.matchDays.date, matchDay))
-    .get();
+    .where(eq(schema.matchDays.date, matchDay));
   if (!day)
-    day = tx
+    [day] = await tx
       .insert(schema.matchDays)
       .values({ date: matchDay })
-      .returning()
-      .get();
+      .returning();
   if (day.status === "open") {
-    tx.update(schema.matchDays)
+    await tx
+      .update(schema.matchDays)
       .set({ status: "closed", closedAt: at })
-      .where(eq(schema.matchDays.id, day.id))
-      .run();
+      .where(eq(schema.matchDays.id, day.id));
     return true;
   }
   return false;
@@ -140,7 +140,7 @@ function maybeCloseDay(tx: Db, matchDay: string, at: string): boolean {
  *   'match_final'  — always
  *   'day_closed'   — only when this call transitions the day to closed
  */
-export function confirmFinalScore(
+export async function confirmFinalScore(
   db: Db,
   adminId: number,
   matchId: number,
@@ -160,12 +160,11 @@ export function confirmFinalScore(
   }
   let dayClosed = false;
   let matchDay = "";
-  db.transaction((tx) => {
-    const m = tx
+  await db.transaction(async (tx) => {
+    const [m] = await tx
       .select()
       .from(schema.matches)
-      .where(eq(schema.matches.id, matchId))
-      .get();
+      .where(eq(schema.matches.id, matchId));
     if (!m) throw err("match not found", 404, "not_found");
     if (m.status === "finished")
       throw err(
@@ -174,17 +173,17 @@ export function confirmFinalScore(
         "already_finished",
       );
     matchDay = m.matchDay;
-    tx.update(schema.matches)
+    await tx
+      .update(schema.matches)
       .set({
         status: "finished",
         homeScore: home,
         awayScore: away,
         scoreConfirmedAt: at,
       })
-      .where(eq(schema.matches.id, matchId))
-      .run();
+      .where(eq(schema.matches.id, matchId));
     // Close any open or suspended lines
-    const openLines = tx
+    const openLines = await tx
       .select()
       .from(schema.lines)
       .where(
@@ -192,24 +191,21 @@ export function confirmFinalScore(
           eq(schema.lines.matchId, matchId),
           ne(schema.lines.status, "closed"),
         ),
-      )
-      .all();
+      );
     for (const l of openLines)
-      tx.update(schema.lines)
+      await tx
+        .update(schema.lines)
         .set({ status: "closed" })
-        .where(eq(schema.lines.id, l.id))
-        .run();
-    gradeMatchTickets(tx as unknown as Db, matchId, home, away, at);
-    dayClosed = maybeCloseDay(tx as unknown as Db, m.matchDay, at);
-    tx.insert(schema.auditLog)
-      .values({
-        actorId: adminId,
-        action: "final_score",
-        subject: `match:${matchId}`,
-        detail: `${home}-${away}`,
-        at,
-      })
-      .run();
+        .where(eq(schema.lines.id, l.id));
+    await gradeMatchTickets(tx as unknown as Db, matchId, home, away, at);
+    dayClosed = await maybeCloseDay(tx as unknown as Db, m.matchDay, at);
+    await tx.insert(schema.auditLog).values({
+      actorId: adminId,
+      action: "final_score",
+      subject: `match:${matchId}`,
+      detail: `${home}-${away}`,
+      at,
+    });
   });
   // Broadcast outside the transaction (consistent with postLine convention)
   sseHub.broadcast("match_final", {
@@ -237,7 +233,7 @@ export function confirmFinalScore(
  *
  * SSE broadcast ('match_final') fires after the transaction commits.
  */
-export function correctScore(
+export async function correctScore(
   db: Db,
   adminId: number,
   matchId: number,
@@ -255,19 +251,17 @@ export function correctScore(
   ) {
     throw err("invalid score: must be integers in 0–99", 400, "bad_score");
   }
-  db.transaction((tx) => {
-    const m = tx
+  await db.transaction(async (tx) => {
+    const [m] = await tx
       .select()
       .from(schema.matches)
-      .where(eq(schema.matches.id, matchId))
-      .get();
+      .where(eq(schema.matches.id, matchId));
     if (!m || m.status !== "finished")
       throw err("match is not finished", 400, "not_finished");
-    const day = tx
+    const [day] = await tx
       .select()
       .from(schema.matchDays)
-      .where(eq(schema.matchDays.date, m.matchDay))
-      .get();
+      .where(eq(schema.matchDays.date, m.matchDay));
     if (day?.status === "settled")
       throw err(
         "match day already settled — correction blocked",
@@ -276,7 +270,7 @@ export function correctScore(
       );
     // Reject if any non-void ticket on this match has already been paid out.
     // This closes the partial-payout window before Task 17 lands.
-    const paidTickets = tx
+    const paidTickets = await tx
       .select()
       .from(schema.bets)
       .where(
@@ -285,28 +279,25 @@ export function correctScore(
           ne(schema.bets.status, "void"),
           isNotNull(schema.bets.settlementId),
         ),
-      )
-      .all();
+      );
     if (paidTickets.length > 0)
       throw err(
         "tickets already settled — correction blocked",
         409,
         "tickets_settled",
       );
-    tx.update(schema.matches)
+    await tx
+      .update(schema.matches)
       .set({ homeScore: home, awayScore: away })
-      .where(eq(schema.matches.id, matchId))
-      .run();
-    gradeMatchTickets(tx as unknown as Db, matchId, home, away, at);
-    tx.insert(schema.auditLog)
-      .values({
-        actorId: adminId,
-        action: "score_correction",
-        subject: `match:${matchId}`,
-        detail: `${home}-${away}`,
-        at,
-      })
-      .run();
+      .where(eq(schema.matches.id, matchId));
+    await gradeMatchTickets(tx as unknown as Db, matchId, home, away, at);
+    await tx.insert(schema.auditLog).values({
+      actorId: adminId,
+      action: "score_correction",
+      subject: `match:${matchId}`,
+      detail: `${home}-${away}`,
+      at,
+    });
   });
   // Broadcast outside the transaction (consistent with postLine convention)
   sseHub.broadcast("match_final", {

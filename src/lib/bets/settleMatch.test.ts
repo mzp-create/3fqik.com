@@ -10,50 +10,46 @@ import { sseHub } from "@/lib/sse";
 let db: Db;
 const NOW = "2026-06-12T10:00:00Z";
 
-beforeEach(() => {
-  db = createTestDb();
-  db.insert(schema.players)
-    .values([
-      {
-        phone: "09700000001",
-        pinHash: hashPin("111111"),
-        displayName: "Admin",
-        role: "admin",
-        createdAt: NOW,
-      },
-      {
-        phone: "09700000002",
-        pinHash: hashPin("222222"),
-        displayName: "Zaw",
-        createdAt: NOW,
-      },
-    ])
-    .run();
-  db.insert(schema.settings).values({ id: 1, dailyTotalLimitMmk: 0 }).run();
-  db.insert(schema.matches)
-    .values([
-      {
-        stage: "Group C",
-        homeTeam: "BRA",
-        awayTeam: "MEX",
-        kickoffUtc: "2026-06-12T02:00:00Z",
-        venue: "X",
-        matchDay: "2026-06-12",
-      },
-      {
-        stage: "Group D",
-        homeTeam: "USA",
-        awayTeam: "JPN",
-        kickoffUtc: "2026-06-12T05:00:00Z",
-        venue: "Y",
-        matchDay: "2026-06-12",
-      },
-    ])
-    .run();
+beforeEach(async () => {
+  db = await createTestDb();
+  await db.insert(schema.players).values([
+    {
+      phone: "09700000001",
+      pinHash: hashPin("111111"),
+      displayName: "Admin",
+      role: "admin",
+      createdAt: NOW,
+    },
+    {
+      phone: "09700000002",
+      pinHash: hashPin("222222"),
+      displayName: "Zaw",
+      createdAt: NOW,
+    },
+  ]);
+  await db.insert(schema.settings).values({ id: 1, dailyTotalLimitMmk: 0 });
+  await db.insert(schema.matches).values([
+    {
+      stage: "Group C",
+      homeTeam: "BRA",
+      awayTeam: "MEX",
+      kickoffUtc: "2026-06-12T02:00:00Z",
+      venue: "X",
+      matchDay: "2026-06-12",
+    },
+    {
+      stage: "Group D",
+      homeTeam: "USA",
+      awayTeam: "JPN",
+      kickoffUtc: "2026-06-12T05:00:00Z",
+      venue: "Y",
+      matchDay: "2026-06-12",
+    },
+  ]);
 });
 
-function bet(matchId: number, side: "fav" | "dog", stake: number) {
-  const line = postLine(
+async function bet(matchId: number, side: "fav" | "dog", stake: number) {
+  const line = await postLine(
     db,
     1,
     { matchId, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
@@ -67,194 +63,185 @@ function bet(matchId: number, side: "fav" | "dog", stake: number) {
   );
 }
 
-it("grades all pending tickets; closes the day when last match graded", () => {
-  const b1 = bet(1, "fav", 100_000); // BRA -0.75 @0.92
-  const b2 = bet(2, "dog", 200_000); // JPN +0.75 @0.92
+it("grades all pending tickets; closes the day when last match graded", async () => {
+  const b1 = await bet(1, "fav", 100_000); // BRA -0.75 @0.92
+  const b2 = await bet(2, "dog", 200_000); // JPN +0.75 @0.92
   // A3: BRA 2-1 → effFav=2,effDog=1 → d=(2-1)-0.75=0.25>0 → full win +100,000
-  confirmFinalScore(db, 1, 1, 2, 1, NOW);
-  let day = db.select().from(schema.matchDays).all()[0];
+  await confirmFinalScore(db, 1, 1, 2, 1, NOW);
+  let day = (await db.select().from(schema.matchDays))[0];
   expect(day.status).toBe("open"); // match 2 not graded yet
-  const g1 = db
+  const [g1] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, b1.id))
-    .get()!;
+    .where(eq(schema.bets.id, b1.id));
   expect(g1.status).toBe("won");
   expect(g1.netMmk).toBe(100_000);
 
   // A3: draw 0-0 → dog effDog=0,effFav=0 → d=(0-0)+0.75=0.75>0 → full win +200,000
-  confirmFinalScore(db, 1, 2, 0, 0, NOW);
-  const g2 = db
+  await confirmFinalScore(db, 1, 2, 0, 0, NOW);
+  const [g2] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, b2.id))
-    .get()!;
+    .where(eq(schema.bets.id, b2.id));
   expect(g2.status).toBe("won");
   expect(g2.netMmk).toBe(200_000);
-  day = db.select().from(schema.matchDays).all()[0];
+  day = (await db.select().from(schema.matchDays))[0];
   expect(day.status).toBe("closed");
 });
 
-it("live bets grade on effective score", () => {
-  db.update(schema.matches)
+it("live bets grade on effective score", async () => {
+  await db
+    .update(schema.matches)
     .set({ status: "live", homeScore: 1, awayScore: 0 })
-    .where(eq(schema.matches.id, 1))
-    .run();
-  const b = bet(1, "dog", 100_000); // MEX +0.75 at 1-0
+    .where(eq(schema.matches.id, 1));
+  const b = await bet(1, "dog", 100_000); // MEX +0.75 at 1-0
   // A3: eff 1-1 → dog d=(1-1)+0.75=0.75>0 → full win +100,000
-  confirmFinalScore(db, 1, 1, 2, 1, NOW);
-  const g = db
+  await confirmFinalScore(db, 1, 1, 2, 1, NOW);
+  const [g] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, b.id))
-    .get()!;
+    .where(eq(schema.bets.id, b.id));
   expect(g.status).toBe("won");
   expect(g.netMmk).toBe(100_000);
 });
 
-it("correction re-grades while unsettled, blocked once settled, voids excluded", () => {
-  const b = bet(1, "fav", 100_000);
-  confirmFinalScore(db, 1, 1, 2, 1, NOW);
+it("correction re-grades while unsettled, blocked once settled, voids excluded", async () => {
+  const b = await bet(1, "fav", 100_000);
+  await confirmFinalScore(db, 1, 1, 2, 1, NOW);
   // A3: BRA 3-1 → effFav=3,effDog=1 → d=(3-1)-0.75=1.25>0 → full win +100,000
-  correctScore(db, 1, 1, 3, 1, NOW);
-  const g = db
+  await correctScore(db, 1, 1, 3, 1, NOW);
+  const [g] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, b.id))
-    .get()!;
+    .where(eq(schema.bets.id, b.id));
   expect(g.status).toBe("won");
   expect(g.netMmk).toBe(100_000);
   expect(
-    db
-      .select()
-      .from(schema.auditLog)
-      .all()
-      .some((a) => a.action === "score_correction"),
+    (await db.select().from(schema.auditLog)).some(
+      (a) => a.action === "score_correction",
+    ),
   ).toBe(true);
 
-  db.update(schema.matchDays).set({ status: "settled" }).run();
-  expect(() => correctScore(db, 1, 1, 1, 1, NOW)).toThrow(/settled/);
+  await db.update(schema.matchDays).set({ status: "settled" });
+  await expect(correctScore(db, 1, 1, 1, 1, NOW)).rejects.toThrow(/settled/);
 });
 
 // ─── NEW TESTS ────────────────────────────────────────────────────────────────
 
-it("void exclusion: voided bet stays void after grading and after correctScore", () => {
-  const b = bet(1, "fav", 100_000);
+it("void exclusion: voided bet stays void after grading and after correctScore", async () => {
+  const b = await bet(1, "fav", 100_000);
   // void the bet before confirming
-  db.update(schema.bets)
+  await db
+    .update(schema.bets)
     .set({ status: "void", netMmk: null })
-    .where(eq(schema.bets.id, b.id))
-    .run();
+    .where(eq(schema.bets.id, b.id));
 
-  confirmFinalScore(db, 1, 1, 2, 1, NOW);
+  await confirmFinalScore(db, 1, 1, 2, 1, NOW);
 
-  const afterConfirm = db
+  const [afterConfirm] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, b.id))
-    .get()!;
+    .where(eq(schema.bets.id, b.id));
   expect(afterConfirm.status).toBe("void");
   expect(afterConfirm.netMmk).toBeNull();
 
   // also after correctScore
-  correctScore(db, 1, 1, 3, 1, NOW);
+  await correctScore(db, 1, 1, 3, 1, NOW);
 
-  const afterCorrect = db
+  const [afterCorrect] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, b.id))
-    .get()!;
+    .where(eq(schema.bets.id, b.id));
   expect(afterCorrect.status).toBe("void");
   expect(afterCorrect.netMmk).toBeNull();
 });
 
-it("double confirm: second confirmFinalScore throws /already finished/", () => {
-  bet(1, "fav", 100_000);
-  confirmFinalScore(db, 1, 1, 2, 1, NOW);
-  expect(() => confirmFinalScore(db, 1, 1, 2, 1, NOW)).toThrow(
+it("double confirm: second confirmFinalScore throws /already finished/", async () => {
+  await bet(1, "fav", 100_000);
+  await confirmFinalScore(db, 1, 1, 2, 1, NOW);
+  await expect(confirmFinalScore(db, 1, 1, 2, 1, NOW)).rejects.toThrow(
     /already finished/,
   );
 });
 
-it("VAR clamp: live bet at 2-1, final 0-0 → graded as effective 0-0", () => {
+it("VAR clamp: live bet at 2-1, final 0-0 → graded as effective 0-0", async () => {
   // Set match live with score 2-1
-  db.update(schema.matches)
+  await db
+    .update(schema.matches)
     .set({ status: "live", homeScore: 2, awayScore: 1 })
-    .where(eq(schema.matches.id, 1))
-    .run();
+    .where(eq(schema.matches.id, 1));
 
   // Place a dog (MEX) bet at 2-1 — line is BRA home fav, ballQ=3 (0.75 balls), priceC=92
-  const b = bet(1, "dog", 100_000);
+  const b = await bet(1, "dog", 100_000);
 
   // Final score 0-0 → VAR reversal scenario
   // effHome = 0 - 2 = -2, clamped to 0
   // effAway = 0 - 1 = -1, clamped to 0
   // dog eff score: effFav=0, effDog=0
   // A3: dog d = (effDog - effFav) + L = (0-0) + 0.75 = 0.75 > 0 → full win +100,000
-  confirmFinalScore(db, 1, 1, 0, 0, NOW);
+  await confirmFinalScore(db, 1, 1, 0, 0, NOW);
 
-  const g = db
+  const [g] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, b.id))
-    .get()!;
+    .where(eq(schema.bets.id, b.id));
   expect(g.status).toBe("won");
   expect(g.netMmk).toBe(100_000);
 });
 
-it("invalid scores: home 100 or fractional → /invalid score/", () => {
-  expect(() => confirmFinalScore(db, 1, 1, 100, 0, NOW)).toThrow(
+it("invalid scores: home 100 or fractional → /invalid score/", async () => {
+  await expect(confirmFinalScore(db, 1, 1, 100, 0, NOW)).rejects.toThrow(
     /invalid score/,
   );
-  expect(() => confirmFinalScore(db, 1, 1, 1.5, 0, NOW)).toThrow(
+  await expect(confirmFinalScore(db, 1, 1, 1.5, 0, NOW)).rejects.toThrow(
     /invalid score/,
   );
 });
 
-it("correctScore on scheduled match → /not finished/", () => {
+it("correctScore on scheduled match → /not finished/", async () => {
   // match 1 is scheduled (default), not finished
-  expect(() => correctScore(db, 1, 1, 2, 1, NOW)).toThrow(/not finished/);
+  await expect(correctScore(db, 1, 1, 2, 1, NOW)).rejects.toThrow(
+    /not finished/,
+  );
 });
 
-it("correction on closed-not-settled day succeeds, day stays closed", () => {
-  bet(1, "fav", 100_000);
+it("correction on closed-not-settled day succeeds, day stays closed", async () => {
+  await bet(1, "fav", 100_000);
   // Confirm both matches so day closes
-  confirmFinalScore(db, 1, 1, 2, 1, NOW);
-  confirmFinalScore(db, 1, 2, 0, 0, NOW);
+  await confirmFinalScore(db, 1, 1, 2, 1, NOW);
+  await confirmFinalScore(db, 1, 2, 0, 0, NOW);
 
   // Day should be closed
-  const dayBefore = db.select().from(schema.matchDays).all()[0];
+  const dayBefore = (await db.select().from(schema.matchDays))[0];
   expect(dayBefore.status).toBe("closed");
 
   // correctScore should succeed on a closed (non-settled) day
-  correctScore(db, 1, 1, 3, 1, NOW);
+  await correctScore(db, 1, 1, 3, 1, NOW);
 
-  const dayAfter = db.select().from(schema.matchDays).all()[0];
+  const dayAfter = (await db.select().from(schema.matchDays))[0];
   expect(dayAfter.status).toBe("closed"); // still closed, not reverted
 });
 
-it("paid-ticket guard: correctScore throws /settled/ when ticket has settlementId", () => {
-  const b = bet(1, "fav", 100_000);
-  confirmFinalScore(db, 1, 1, 2, 1, NOW);
+it("paid-ticket guard: correctScore throws /settled/ when ticket has settlementId", async () => {
+  const b = await bet(1, "fav", 100_000);
+  await confirmFinalScore(db, 1, 1, 2, 1, NOW);
 
   // Create a matchDays row (already exists from confirmFinalScore closing the day via bet(2) or we need both matches done)
   // Actually match 2 hasn't been confirmed, so day is still open. Let's get or create the day.
   // The matchDays row might not exist yet — let's insert or get it
-  let dayRow = db
+  let [dayRow] = await db
     .select()
     .from(schema.matchDays)
-    .where(eq(schema.matchDays.date, "2026-06-12"))
-    .get();
+    .where(eq(schema.matchDays.date, "2026-06-12"));
   if (!dayRow) {
-    dayRow = db
+    [dayRow] = await db
       .insert(schema.matchDays)
       .values({ date: "2026-06-12" })
-      .returning()
-      .get();
+      .returning();
   }
 
   // Insert a settlement row (FK requires matchDayId + playerId)
-  const settlement = db
+  const [settlement] = await db
     .insert(schema.settlements)
     .values({
       ref: "S-0612-01",
@@ -264,19 +251,18 @@ it("paid-ticket guard: correctScore throws /settled/ when ticket has settlementI
       markedBy: 1,
       markedAt: NOW,
     })
-    .returning()
-    .get();
+    .returning();
 
   // Stamp the ticket with the settlementId
-  db.update(schema.bets)
+  await db
+    .update(schema.bets)
     .set({ settlementId: settlement.id })
-    .where(eq(schema.bets.id, b.id))
-    .run();
+    .where(eq(schema.bets.id, b.id));
 
-  expect(() => correctScore(db, 1, 1, 3, 1, NOW)).toThrow(/settled/);
+  await expect(correctScore(db, 1, 1, 3, 1, NOW)).rejects.toThrow(/settled/);
 });
 
-it("day_closed broadcast: fires exactly once with correct date when last match graded", () => {
+it("day_closed broadcast: fires exactly once with correct date when last match graded", async () => {
   const chunks: string[] = [];
   const unsub = sseHub.subscribe((chunk) => chunks.push(chunk));
 
@@ -287,9 +273,9 @@ it("day_closed broadcast: fires exactly once with correct date when last match g
     // then confirm match 1 and check the broadcast.
     // Better: use a fresh db with only one match on the day.
     // We can't easily re-seed here, so let's just confirm both and watch the second call.
-    confirmFinalScore(db, 1, 1, 2, 1, NOW); // day still open (match 2 pending)
+    await confirmFinalScore(db, 1, 1, 2, 1, NOW); // day still open (match 2 pending)
     const beforeSecond = chunks.length;
-    confirmFinalScore(db, 1, 2, 0, 0, NOW); // this should close the day
+    await confirmFinalScore(db, 1, 2, 0, 0, NOW); // this should close the day
 
     const newChunks = chunks.slice(beforeSecond);
     const dayClosedChunks = newChunks.filter((c) => c.includes("day_closed"));
@@ -302,7 +288,7 @@ it("day_closed broadcast: fires exactly once with correct date when last match g
 
 // ── O2 NEW TESTS ─────────────────────────────────────────────────────────────
 
-it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", () => {
+it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async () => {
   /*
    * Setup:
    *   Match 1 (BRA vs MEX), matchDay 2026-06-12
@@ -338,7 +324,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", () =>
    */
 
   // Post AH line pre-match
-  const ahLine = postLine(
+  const ahLine = await postLine(
     db,
     1,
     { matchId: 1, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
@@ -346,7 +332,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", () =>
   );
 
   // Post OU line pre-match (ballQ=10 = 2.5 goals × 4)
-  const ouLine = postLine(
+  const ouLine = await postLine(
     db,
     1,
     { matchId: 1, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
@@ -354,7 +340,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", () =>
   );
 
   // Bet A: ah fav pre-match (score 0-0)
-  const betA = placeBet(
+  const betA = await placeBet(
     db,
     2,
     {
@@ -370,7 +356,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", () =>
   expect(betA.scoreAwayAtBet).toBe(0);
 
   // Bet C: ou under pre-match (score 0-0) — placed before going live
-  const betC = placeBet(
+  const betC = await placeBet(
     db,
     2,
     {
@@ -386,13 +372,13 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", () =>
   expect(betC.scoreAwayAtBet).toBe(0);
 
   // Set match live at 1-0 before placing Bet B
-  db.update(schema.matches)
+  await db
+    .update(schema.matches)
     .set({ status: "live", homeScore: 1, awayScore: 0 })
-    .where(eq(schema.matches.id, 1))
-    .run();
+    .where(eq(schema.matches.id, 1));
 
   // Bet B: ou over placed live at 1-0 (score snapshot 1-0)
-  const betB = placeBet(
+  const betB = await placeBet(
     db,
     2,
     {
@@ -408,23 +394,20 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", () =>
   expect(betB.scoreAwayAtBet).toBe(0);
 
   // Confirm final: BRA 2 – 1 MEX
-  confirmFinalScore(db, 1, 1, 2, 1, NOW);
+  await confirmFinalScore(db, 1, 1, 2, 1, NOW);
 
-  const gA = db
+  const [gA] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, betA.id))
-    .get()!;
-  const gB = db
+    .where(eq(schema.bets.id, betA.id));
+  const [gB] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, betB.id))
-    .get()!;
-  const gC = db
+    .where(eq(schema.bets.id, betB.id));
+  const [gC] = await db
     .select()
     .from(schema.bets)
-    .where(eq(schema.bets.id, betC.id))
-    .get()!;
+    .where(eq(schema.bets.id, betC.id));
 
   // Bet A: AH fav pre-match → A3: d=0.25>0 → full win +100,000
   expect(gA.status).toBe("won");

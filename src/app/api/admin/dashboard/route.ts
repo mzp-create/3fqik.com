@@ -7,6 +7,6 @@ import { ok, handle } from "@/lib/api";
 export async function GET() {
   return handle(async () => {
     await requireAdmin();
-    return ok(dashboard(getDb(), matchDayOf(nowIso())));
+    return ok(await dashboard(getDb(), matchDayOf(nowIso())));
   });
 }

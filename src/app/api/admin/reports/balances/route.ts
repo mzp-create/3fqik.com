@@ -9,11 +9,14 @@ export async function GET() {
     const db = getDb();
 
     // Per-player unsettled graded non-void bets (effective net)
-    const unsettledRows = db
+    const unsettledRows = await db
       .select({
         playerId: schema.bets.playerId,
         playerName: schema.players.displayName,
-        unsettledNet: sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`,
+        unsettledNet:
+          sql<number>`sum(${schema.bets.netMmk} + coalesce(${schema.bets.feeMmk}, 0))`.mapWith(
+            Number,
+          ),
       })
       .from(schema.bets)
       .innerJoin(
@@ -27,18 +30,18 @@ export async function GET() {
           isNull(schema.bets.settlementId),
         ),
       )
-      .groupBy(schema.bets.playerId)
-      .all();
+      .groupBy(schema.bets.playerId, schema.players.displayName);
 
     // Per-player settled total (sum of settlements.net_mmk)
-    const settledRows = db
+    const settledRows = await db
       .select({
         playerId: schema.settlements.playerId,
-        settledNet: sql<number>`sum(${schema.settlements.netMmk})`,
+        settledNet: sql<number>`sum(${schema.settlements.netMmk})`.mapWith(
+          Number,
+        ),
       })
       .from(schema.settlements)
-      .groupBy(schema.settlements.playerId)
-      .all();
+      .groupBy(schema.settlements.playerId);
 
     const settledMap = new Map<number, number>();
     for (const r of settledRows) {
@@ -69,11 +72,10 @@ export async function GET() {
     for (const r of settledRows) {
       if (!rowMap.has(r.playerId)) {
         // Need the player name — fetch it
-        const player = db
+        const [player] = await db
           .select({ displayName: schema.players.displayName })
           .from(schema.players)
-          .where(sql`${schema.players.id} = ${r.playerId}`)
-          .get();
+          .where(sql`${schema.players.id} = ${r.playerId}`);
         if (player) {
           rowMap.set(r.playerId, {
             playerId: r.playerId,

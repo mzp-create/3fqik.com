@@ -1,47 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1781159975327,
-      "tag": "0000_optimal_triton",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1781208189343,
-      "tag": "0001_swift_blue_shield",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1781242385483,
-      "tag": "0002_cold_loners",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1781243324105,
-      "tag": "0003_add_personal_invite_uq",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1781424841449,
-      "tag": "0004_past_kingpin",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1781426846996,
-      "tag": "0005_petite_omega_red",
+      "version": "7",
+      "when": 1781513913788,
+      "tag": "0000_init_pg",
       "breakpoints": true
     }
   ]

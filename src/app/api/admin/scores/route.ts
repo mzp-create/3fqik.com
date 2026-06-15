@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const db = getDb();
 
     if (action === "live") {
-      setMatchLive(db, matchId);
+      await setMatchLive(db, matchId);
       return ok({});
     }
 
@@ -51,11 +51,11 @@ export async function POST(req: Request) {
         return fail("bad_score", "home and away must be integers in 0–99");
       }
       if (action === "score") {
-        updateLiveScore(db, matchId, home, away);
+        await updateLiveScore(db, matchId, home, away);
       } else if (action === "final") {
-        confirmFinalScore(db, admin.id, matchId, home, away, nowIso());
+        await confirmFinalScore(db, admin.id, matchId, home, away, nowIso());
       } else {
-        correctScore(db, admin.id, matchId, home, away, nowIso());
+        await correctScore(db, admin.id, matchId, home, away, nowIso());
       }
       return ok({});
     }

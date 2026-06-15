@@ -1,32 +1,37 @@
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
-import * as schema from './schema'
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { Pool } from "pg";
+import * as schema from "./schema";
 
-const globalForDb = globalThis as unknown as { __db?: ReturnType<typeof create> }
+/** Single DB type the whole app is written against. The PGlite test instance is
+ *  API-compatible and cast to this type in createTestDb(). */
+export type Db = NodePgDatabase<typeof schema>;
 
-function create(path = process.env.DATABASE_PATH ?? './worldbet.db') {
-  const sqlite = new Database(path)
-  sqlite.pragma('journal_mode = WAL')
-  sqlite.pragma('foreign_keys = ON')
-  return drizzle(sqlite, { schema })
+const globalForDb = globalThis as unknown as { __db?: Db; __pool?: Pool };
+
+export function getDb(): Db {
+  if (!globalForDb.__db) {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    globalForDb.__pool = pool;
+    globalForDb.__db = drizzle(pool, { schema });
+  }
+  return globalForDb.__db;
 }
 
-export function getDb() {
-  if (!globalForDb.__db) globalForDb.__db = create()
-  return globalForDb.__db
+export async function applyMigrations(db: Db) {
+  await migrate(db, { migrationsFolder: "./drizzle" });
 }
 
-/** Tests: fresh in-memory db with schema applied. */
-export function createTestDb() {
-  const db = create(':memory:')
-  applyMigrations(db)
-  return db
+/** Tests: fresh in-process Postgres (PGlite) with schema applied. */
+export async function createTestDb(): Promise<Db> {
+  const { PGlite } = await import("@electric-sql/pglite");
+  const { drizzle: drizzlePglite } = await import("drizzle-orm/pglite");
+  const { migrate: migratePglite } =
+    await import("drizzle-orm/pglite/migrator");
+  const client = new PGlite();
+  const db = drizzlePglite(client, { schema });
+  await migratePglite(db, { migrationsFolder: "./drizzle" });
+  return db as unknown as Db;
 }
 
-export function applyMigrations(db: ReturnType<typeof create>) {
-  migrate(db, { migrationsFolder: './drizzle' })
-}
-
-export { schema }
-export type Db = ReturnType<typeof create>
+export { schema };

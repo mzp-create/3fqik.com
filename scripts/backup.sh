@@ -1,11 +1,27 @@
 #!/usr/bin/env bash
-# Nightly SQLite backup with 14-day retention.
-# Uses better-sqlite3 node one-liner (sqlite3 CLI not required on this host).
+# Nightly PostgreSQL backup with 14-day retention.
+# Dumps the database named in DATABASE_URL via pg_dump (custom format, compressed).
+# DATABASE_URL is read from .env.local unless passed/exported.
 set -euo pipefail
-DB="${1:-/mnt/hermes-data/mmzphyo/Projects/WorldBet2026/worldbet.db}"
-DEST="${2:-$HOME/worldbet-backups}"
+
+PROJECT_DIR="/mnt/hermes-data/mmzphyo/Projects/WorldBet2026"
+# Load DATABASE_URL from .env.local if not already in the environment.
+if [ -z "${DATABASE_URL:-}" ] && [ -f "$PROJECT_DIR/.env.local" ]; then
+  DATABASE_URL=$(grep -E '^DATABASE_URL=' "$PROJECT_DIR/.env.local" | head -1 | cut -d= -f2-)
+fi
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "backup: DATABASE_URL not set and not found in .env.local" >&2
+  exit 1
+fi
+
+DEST="${1:-$HOME/worldbet-backups}"
 mkdir -p "$DEST"
 STAMP=$(date +%Y%m%d-%H%M)
-node -e "require('better-sqlite3')(process.argv[1]).backup(process.argv[2])" "$DB" "$DEST/worldbet-$STAMP.db"
-find "$DEST" -name 'worldbet-*.db' -mtime +14 -delete
-echo "Backup complete: $DEST/worldbet-$STAMP.db"
+OUT="$DEST/worldbet-$STAMP.dump"
+
+# -Fc = custom format (compressed, restore with pg_restore). --no-owner keeps it
+# portable across roles. Connection string drives host/db/credentials.
+pg_dump --no-owner --format=custom --dbname="$DATABASE_URL" --file="$OUT"
+
+find "$DEST" -name 'worldbet-*.dump' -mtime +14 -delete
+echo "Backup complete: $OUT"

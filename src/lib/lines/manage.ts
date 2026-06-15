@@ -7,35 +7,32 @@ function err(message: string, httpStatus = 400, code = "error") {
 }
 
 /** Returns the latest active line for a (match, market), or null if none. */
-export function activeLine(db: Db, matchId: number, market: "ah" | "ou") {
-  const latest = db
+export async function activeLine(db: Db, matchId: number, market: "ah" | "ou") {
+  const [latest] = await db
     .select()
     .from(schema.lines)
     .where(
       and(eq(schema.lines.matchId, matchId), eq(schema.lines.market, market)),
     )
     .orderBy(desc(schema.lines.version))
-    .limit(1)
-    .get();
+    .limit(1);
   return latest && latest.status === "active" ? latest : null;
 }
 
 /** Returns the latest line for a (match, market) (any status), or null if none. */
-export function latestLine(db: Db, matchId: number, market: "ah" | "ou") {
-  return (
-    db
-      .select()
-      .from(schema.lines)
-      .where(
-        and(eq(schema.lines.matchId, matchId), eq(schema.lines.market, market)),
-      )
-      .orderBy(desc(schema.lines.version))
-      .limit(1)
-      .get() ?? null
-  );
+export async function latestLine(db: Db, matchId: number, market: "ah" | "ou") {
+  const [latest] = await db
+    .select()
+    .from(schema.lines)
+    .where(
+      and(eq(schema.lines.matchId, matchId), eq(schema.lines.market, market)),
+    )
+    .orderBy(desc(schema.lines.version))
+    .limit(1);
+  return latest ?? null;
 }
 
-export function postLine(
+export async function postLine(
   db: Db,
   adminId: number,
   input: {
@@ -65,38 +62,37 @@ export function postLine(
 
   // Wrap close-prev + insert in a transaction to protect the read-modify-write
   // against the UNIQUE(matchId, market, version) constraint race.
-  const line = db.transaction((tx) => {
-    const match = tx
+  const line = await db.transaction(async (tx) => {
+    const [match] = await tx
       .select()
       .from(schema.matches)
-      .where(eq(schema.matches.id, input.matchId))
-      .get();
+      .where(eq(schema.matches.id, input.matchId));
     if (!match) throw err("match not found", 404, "not_found");
     if (match.status === "finished")
       throw err("match is finished", 400, "match_finished");
 
-    // Only look at lines for this market
-    const prev =
-      tx
-        .select()
-        .from(schema.lines)
-        .where(
-          and(
-            eq(schema.lines.matchId, input.matchId),
-            eq(schema.lines.market, input.market),
-          ),
-        )
-        .orderBy(desc(schema.lines.version))
-        .limit(1)
-        .get() ?? null;
+    // Only look at lines for this market. Lock the latest row so a concurrent
+    // post can't pick the same next version (UNIQUE guard backstops it anyway).
+    const [prev] = await tx
+      .select()
+      .from(schema.lines)
+      .where(
+        and(
+          eq(schema.lines.matchId, input.matchId),
+          eq(schema.lines.market, input.market),
+        ),
+      )
+      .orderBy(desc(schema.lines.version))
+      .limit(1)
+      .for("update");
 
     if (prev && prev.status !== "closed")
-      tx.update(schema.lines)
+      await tx
+        .update(schema.lines)
         .set({ status: "closed" })
-        .where(eq(schema.lines.id, prev.id))
-        .run();
+        .where(eq(schema.lines.id, prev.id));
 
-    return tx
+    const [inserted] = await tx
       .insert(schema.lines)
       .values({
         matchId: input.matchId,
@@ -109,8 +105,8 @@ export function postLine(
         postedBy: adminId,
         postedAt: at,
       })
-      .returning()
-      .get();
+      .returning();
+    return inserted;
   });
 
   sseHub.broadcast("line_update", {
@@ -121,21 +117,20 @@ export function postLine(
   return line;
 }
 
-export function setLineStatus(
+export async function setLineStatus(
   db: Db,
   matchId: number,
   market: "ah" | "ou",
   status: "active" | "suspended" | "closed",
 ) {
-  // single-process assumption: synchronous better-sqlite3 means no interleaving
-  const latest = latestLine(db, matchId, market);
+  const latest = await latestLine(db, matchId, market);
   if (!latest) throw err("no line for this match", 404, "no_line");
   if (latest.status === "closed" && status !== "closed")
     throw err("line is closed and cannot be reopened", 400, "line_closed");
-  db.update(schema.lines)
+  await db
+    .update(schema.lines)
     .set({ status })
-    .where(eq(schema.lines.id, latest.id))
-    .run();
+    .where(eq(schema.lines.id, latest.id));
   const updated = { ...latest, status };
   sseHub.broadcast("line_update", { matchId, market, line: updated });
   return updated;

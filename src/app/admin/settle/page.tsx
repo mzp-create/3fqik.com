@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { mmk, signedMmk, ball, price, todayMmt } from "@/lib/client/format";
+import { teamName } from "@/lib/client/flags";
 import { gradeDetail } from "@/lib/engine/grade";
 import type { GradeInput } from "@/lib/engine/grade";
 
@@ -330,6 +331,12 @@ export default function SettlePage() {
                           t.favSide === "home" ? t.homeTeam : t.awayTeam;
                         const dog =
                           t.favSide === "home" ? t.awayTeam : t.homeTeam;
+                        const pickedTeam =
+                          t.market === "ah"
+                            ? t.side === "fav"
+                              ? fav
+                              : dog
+                            : null;
                         const label =
                           t.market === "ou"
                             ? t.side === "over"
@@ -484,7 +491,28 @@ export default function SettlePage() {
                               <div className="font-mono text-xs text-gray-500">
                                 {t.ticketNo}
                               </div>
-                              <div>{label}</div>
+                              <div className="text-sm">
+                                <span
+                                  className={
+                                    pickedTeam === t.homeTeam
+                                      ? "font-semibold"
+                                      : ""
+                                  }
+                                >
+                                  {teamName(t.homeTeam)}
+                                </span>
+                                <span className="text-gray-400"> v </span>
+                                <span
+                                  className={
+                                    pickedTeam === t.awayTeam
+                                      ? "font-semibold"
+                                      : ""
+                                  }
+                                >
+                                  {teamName(t.awayTeam)}
+                                </span>
+                              </div>
+                              <div className="text-gray-600">{label}</div>
                               <div className="text-xs text-gray-500">
                                 Stake: {mmk(t.stakeMmk)} · Net:{" "}
                                 {t.netMmk != null

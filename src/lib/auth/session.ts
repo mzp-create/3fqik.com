@@ -50,7 +50,10 @@ export async function verifySessionToken(tok: string): Promise<Session | null> {
 export async function setSessionCookie(s: Session) {
   (await cookies()).set(COOKIE, await createSessionToken(s), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // Secure iff actually served over HTTPS. Gating on the origin protocol (not
+    // NODE_ENV) keeps prod (https://3fqik.com) secure while letting an http
+    // staging instance set a usable cookie.
+    secure: (process.env.APP_ORIGIN ?? "").startsWith("https"),
     sameSite: "lax",
     maxAge: THIRTY_DAYS,
     path: "/",

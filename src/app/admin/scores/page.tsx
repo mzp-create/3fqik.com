@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
 import { todayMmt } from "@/lib/client/format";
+import { teamLabel, teamName } from "@/lib/client/flags";
 
 type MatchRow = {
   id: number;
@@ -153,7 +154,7 @@ export default function ScoresPage() {
           <div key={m.id} className="mb-5 rounded border p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="font-semibold">
-                {m.homeTeam} vs {m.awayTeam}
+                {teamLabel(m.homeTeam)} vs {teamLabel(m.awayTeam)}
               </span>
               <span
                 className={`text-xs px-1 rounded ${
@@ -183,7 +184,7 @@ export default function ScoresPage() {
             {m.status === "live" && (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="w-20 truncate">{m.homeTeam}</span>
+                  <span className="w-28 truncate">{teamName(m.homeTeam)}</span>
                   <button
                     className="border rounded px-2 py-0.5"
                     onClick={() => adjustScore(m.id, "home", -1)}
@@ -208,7 +209,7 @@ export default function ScoresPage() {
                   </button>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="w-20 truncate">{m.awayTeam}</span>
+                  <span className="w-28 truncate">{teamName(m.awayTeam)}</span>
                   <button
                     className="border rounded px-2 py-0.5"
                     onClick={() => adjustScore(m.id, "away", -1)}
@@ -242,7 +243,7 @@ export default function ScoresPage() {
                   Official: {m.homeScore ?? "?"} – {m.awayScore ?? "?"}
                 </div>
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="w-20 truncate">{m.homeTeam}</span>
+                  <span className="w-28 truncate">{teamName(m.homeTeam)}</span>
                   <button
                     className="border rounded px-2 py-0.5"
                     onClick={() => adjustScore(m.id, "home", -1)}
@@ -258,7 +259,7 @@ export default function ScoresPage() {
                   </button>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="w-20 truncate">{m.awayTeam}</span>
+                  <span className="w-28 truncate">{teamName(m.awayTeam)}</span>
                   <button
                     className="border rounded px-2 py-0.5"
                     onClick={() => adjustScore(m.id, "away", -1)}

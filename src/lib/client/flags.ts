@@ -65,3 +65,67 @@ export function flag(code: string): string {
     .map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65))
     .join("");
 }
+
+// FIFA 3-letter code → full country name, for the 48 WC2026 finalists.
+// Knockout placeholders ("1H", "W73", "3rd-best") have no entry.
+const FIFA_NAME: Record<string, string> = {
+  MEX: "Mexico",
+  RSA: "South Africa",
+  KOR: "South Korea",
+  CZE: "Czechia",
+  CAN: "Canada",
+  BIH: "Bosnia & Herzegovina",
+  QAT: "Qatar",
+  SUI: "Switzerland",
+  BRA: "Brazil",
+  MAR: "Morocco",
+  HAI: "Haiti",
+  USA: "United States",
+  PAR: "Paraguay",
+  AUS: "Australia",
+  TUR: "Türkiye",
+  GER: "Germany",
+  CUW: "Curaçao",
+  CIV: "Côte d'Ivoire",
+  ECU: "Ecuador",
+  NED: "Netherlands",
+  JPN: "Japan",
+  SWE: "Sweden",
+  TUN: "Tunisia",
+  BEL: "Belgium",
+  EGY: "Egypt",
+  IRN: "Iran",
+  NZL: "New Zealand",
+  ESP: "Spain",
+  CPV: "Cape Verde",
+  KSA: "Saudi Arabia",
+  URU: "Uruguay",
+  FRA: "France",
+  SEN: "Senegal",
+  IRQ: "Iraq",
+  NOR: "Norway",
+  ARG: "Argentina",
+  ALG: "Algeria",
+  AUT: "Austria",
+  JOR: "Jordan",
+  POR: "Portugal",
+  COD: "DR Congo",
+  UZB: "Uzbekistan",
+  COL: "Colombia",
+  CRO: "Croatia",
+  GHA: "Ghana",
+  PAN: "Panama",
+  ENG: "England",
+  SCO: "Scotland",
+};
+
+/** Full country name for a FIFA code, or the code itself for placeholders. */
+export function teamName(code: string): string {
+  return FIFA_NAME[code] ?? code;
+}
+
+/** "Germany (GER)" for known finalists; bare code for placeholders ("1H"). */
+export function teamLabel(code: string): string {
+  const name = FIFA_NAME[code];
+  return name ? `${name} (${code})` : code;
+}

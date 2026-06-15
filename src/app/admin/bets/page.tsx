@@ -321,12 +321,12 @@ export default function BetsPage() {
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase tracking-wide text-gray-500">
+                    <th className="py-2 pr-3">Ticket</th>
                     <th className="py-2 pr-3">Match</th>
                     <th className="py-2 pr-3">Pick</th>
                     <th className="py-2 pr-3 text-right">Stake</th>
                     <th className="py-2 pr-3">Status</th>
                     <th className="py-2 pr-3 text-right">Net</th>
-                    <th className="py-2 pr-3">Ticket</th>
                     <th className="py-2 w-6" aria-label="expand" />
                   </tr>
                 </thead>
@@ -401,6 +401,9 @@ export default function BetsPage() {
                               className="border-b cursor-pointer hover:bg-gray-50 align-top"
                               onClick={() => toggleExpand(t.ticketNo)}
                             >
+                              <td className="py-2 pr-3 font-mono text-xs text-gray-500 whitespace-nowrap">
+                                {t.ticketNo}
+                              </td>
                               {/* Match — bold the picked team so "which team" is obvious */}
                               <td className="py-2 pr-3 whitespace-nowrap">
                                 <span
@@ -450,9 +453,6 @@ export default function BetsPage() {
                                     {signedMmk(fee)}
                                   </div>
                                 )}
-                              </td>
-                              <td className="py-2 pr-3 font-mono text-xs text-gray-500 whitespace-nowrap">
-                                {t.ticketNo}
                               </td>
                               <td className="py-2 text-gray-400 text-xs">
                                 {isExpanded ? "▲" : "▼"}

@@ -262,9 +262,23 @@ export default function BetsPage() {
     setExpanded((prev) => ({ ...prev, [ticketNo]: !prev[ticketNo] }));
   }
 
+  // Group rows by player name (alphabetical); keep each player's bets in the
+  // server order (most recent first). Effective net = net + fee on graded bets.
+  const groups = (() => {
+    const map = new Map<string, BetRow[]>();
+    for (const r of data?.rows ?? []) {
+      const list = map.get(r.playerName) ?? [];
+      list.push(r);
+      map.set(r.playerName, list);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  })();
+
+  const COLS = 7;
+
   return (
     <main>
-      <h1 className="mb-3 text-lg font-bold">Bets</h1>
+      <h1 className="mb-3 text-lg font-bold">Bets by player</h1>
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-2 items-center mb-4">
@@ -301,109 +315,193 @@ export default function BetsPage() {
           {data.rows.length === 0 && (
             <p className="text-gray-500 text-sm">No bets found.</p>
           )}
-          <div className="space-y-2">
-            {data.rows.map((t) => {
-              const isExpanded = expanded[t.ticketNo] ?? false;
-              const label = pickLabel(
-                {
-                  favSide: t.favSide,
-                  ballQ: t.ballQ,
-                  priceC: t.priceC,
-                  market: t.market,
-                },
-                { homeTeam: t.homeTeam, awayTeam: t.awayTeam },
-                t.side,
-              );
-              const voidKey = `void-${t.ticketNo}`;
-              const canVoid =
-                t.status !== "void" &&
-                t.settlementId == null &&
-                t.matchStatus === "finished";
-              const voidDisabledReason =
-                t.status === "void"
-                  ? "voided"
-                  : t.settlementId != null
-                    ? "settled"
-                    : null;
 
-              return (
-                <div key={t.ticketNo} className="rounded border">
-                  {/* Row header */}
-                  <div
-                    className="flex items-center justify-between p-3 cursor-pointer gap-2"
-                    onClick={() => toggleExpand(t.ticketNo)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs text-gray-500">
-                          {t.ticketNo}
-                        </span>
-                        <span className="font-semibold text-sm">
-                          {t.playerName}
-                        </span>
-                        <StatusBadge status={t.status} />
-                      </div>
-                      <div className="text-sm mt-0.5">{label}</div>
-                      <div className="text-xs text-gray-500">
-                        Stake: {mmk(t.stakeMmk)} MMK
-                        {t.netMmk != null &&
-                          (() => {
-                            const fee = t.feeMmk ?? 0;
-                            const effectiveNet = t.netMmk + fee;
-                            return (
-                              <span
-                                className={
-                                  effectiveNet >= 0
-                                    ? " text-green-700 font-semibold"
-                                    : " text-red-600 font-semibold"
-                                }
-                              >
-                                {" "}
-                                · Net: {signedMmk(effectiveNet)}
-                                {fee !== 0 && (
-                                  <span className="text-gray-400 font-normal">
-                                    {" "}
-                                    ({fee < 0 ? "Commission" : "Discount"})
-                                  </span>
-                                )}
-                              </span>
-                            );
-                          })()}
-                      </div>
-                    </div>
-                    <span className="text-gray-400 text-sm shrink-0">
-                      {isExpanded ? "▲" : "▼"}
-                    </span>
-                  </div>
-
-                  {/* Expanded breakdown */}
-                  {isExpanded && (
-                    <div className="border-t px-3 pb-3 pt-2">
-                      <div className="text-xs text-gray-500 mb-2">
-                        {t.homeTeam} vs {t.awayTeam} · {t.stage} ·{" "}
-                        {t.matchStatus}
-                      </div>
-                      <GradeBreakdown t={t} />
-                      <div className="mt-3">
-                        <button
-                          disabled={busy[voidKey] || !canVoid}
-                          onClick={() => handleVoid(t.ticketNo)}
-                          title={voidDisabledReason ?? undefined}
-                          className="border border-red-300 text-red-600 text-xs px-2 py-0.5 rounded disabled:opacity-40"
+          {groups.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs uppercase tracking-wide text-gray-500">
+                    <th className="py-2 pr-3">Match</th>
+                    <th className="py-2 pr-3">Pick</th>
+                    <th className="py-2 pr-3 text-right">Stake</th>
+                    <th className="py-2 pr-3">Status</th>
+                    <th className="py-2 pr-3 text-right">Net</th>
+                    <th className="py-2 pr-3">Ticket</th>
+                    <th className="py-2 w-6" aria-label="expand" />
+                  </tr>
+                </thead>
+                {groups.map(([playerName, rows]) => {
+                  const subtotal = rows.reduce(
+                    (s, r) =>
+                      r.netMmk != null ? s + r.netMmk + (r.feeMmk ?? 0) : s,
+                    0,
+                  );
+                  return (
+                    <tbody key={playerName}>
+                      {/* Player group header */}
+                      <tr className="bg-gray-50 border-y">
+                        <td
+                          colSpan={COLS - 2}
+                          className="py-2 pr-3 font-semibold"
                         >
-                          {voidDisabledReason
-                            ? `Void (${voidDisabledReason})`
-                            : "Void"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                          {playerName}
+                          <span className="ml-2 text-xs font-normal text-gray-500">
+                            ({rows.length} {rows.length === 1 ? "bet" : "bets"})
+                          </span>
+                        </td>
+                        <td
+                          colSpan={2}
+                          className={`py-2 pr-3 text-right font-semibold ${
+                            subtotal >= 0 ? "text-green-700" : "text-red-600"
+                          }`}
+                        >
+                          {signedMmk(subtotal)}
+                        </td>
+                      </tr>
+
+                      {rows.map((t) => {
+                        const isExpanded = expanded[t.ticketNo] ?? false;
+                        const pickedTeam =
+                          t.market === "ah"
+                            ? t.side === "fav"
+                              ? t.favSide === "home"
+                                ? t.homeTeam
+                                : t.awayTeam
+                              : t.favSide === "home"
+                                ? t.awayTeam
+                                : t.homeTeam
+                            : null;
+                        const label = pickLabel(
+                          {
+                            favSide: t.favSide,
+                            ballQ: t.ballQ,
+                            priceC: t.priceC,
+                            market: t.market,
+                          },
+                          { homeTeam: t.homeTeam, awayTeam: t.awayTeam },
+                          t.side,
+                        );
+                        const voidKey = `void-${t.ticketNo}`;
+                        const canVoid =
+                          t.status !== "void" &&
+                          t.settlementId == null &&
+                          t.matchStatus === "finished";
+                        const voidDisabledReason =
+                          t.status === "void"
+                            ? "voided"
+                            : t.settlementId != null
+                              ? "settled"
+                              : null;
+                        const fee = t.feeMmk ?? 0;
+                        const effNet = t.netMmk != null ? t.netMmk + fee : null;
+
+                        return (
+                          <FragmentRow key={t.ticketNo}>
+                            <tr
+                              className="border-b cursor-pointer hover:bg-gray-50 align-top"
+                              onClick={() => toggleExpand(t.ticketNo)}
+                            >
+                              {/* Match — bold the picked team so "which team" is obvious */}
+                              <td className="py-2 pr-3 whitespace-nowrap">
+                                <span
+                                  className={
+                                    pickedTeam === t.homeTeam
+                                      ? "font-semibold"
+                                      : ""
+                                  }
+                                >
+                                  {t.homeTeam}
+                                </span>
+                                <span className="text-gray-400"> v </span>
+                                <span
+                                  className={
+                                    pickedTeam === t.awayTeam
+                                      ? "font-semibold"
+                                      : ""
+                                  }
+                                >
+                                  {t.awayTeam}
+                                </span>
+                                <div className="text-xs text-gray-400">
+                                  {t.stage}
+                                </div>
+                              </td>
+                              {/* Pick — names the team (AH) or Over/Under (O/U) */}
+                              <td className="py-2 pr-3">{label}</td>
+                              <td className="py-2 pr-3 text-right whitespace-nowrap">
+                                {mmk(t.stakeMmk)}
+                              </td>
+                              <td className="py-2 pr-3">
+                                <StatusBadge status={t.status} />
+                              </td>
+                              <td
+                                className={`py-2 pr-3 text-right whitespace-nowrap ${
+                                  effNet == null
+                                    ? "text-gray-400"
+                                    : effNet >= 0
+                                      ? "text-green-700 font-semibold"
+                                      : "text-red-600 font-semibold"
+                                }`}
+                              >
+                                {effNet == null ? "—" : signedMmk(effNet)}
+                                {fee !== 0 && effNet != null && (
+                                  <div className="text-[10px] font-normal text-gray-400">
+                                    {fee < 0 ? "comm." : "disc."}{" "}
+                                    {signedMmk(fee)}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-2 pr-3 font-mono text-xs text-gray-500 whitespace-nowrap">
+                                {t.ticketNo}
+                              </td>
+                              <td className="py-2 text-gray-400 text-xs">
+                                {isExpanded ? "▲" : "▼"}
+                              </td>
+                            </tr>
+
+                            {isExpanded && (
+                              <tr className="border-b bg-gray-50/60">
+                                <td colSpan={COLS} className="px-3 pb-3 pt-1">
+                                  <div className="text-xs text-gray-500 mb-1">
+                                    {t.homeTeam} vs {t.awayTeam} · {t.stage} ·{" "}
+                                    {t.matchStatus}
+                                  </div>
+                                  <GradeBreakdown t={t} />
+                                  <div className="mt-2">
+                                    <button
+                                      disabled={busy[voidKey] || !canVoid}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleVoid(t.ticketNo);
+                                      }}
+                                      title={voidDisabledReason ?? undefined}
+                                      className="border border-red-300 text-red-600 text-xs px-2 py-0.5 rounded disabled:opacity-40"
+                                    >
+                                      {voidDisabledReason
+                                        ? `Void (${voidDisabledReason})`
+                                        : "Void"}
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </FragmentRow>
+                        );
+                      })}
+                    </tbody>
+                  );
+                })}
+              </table>
+            </div>
+          )}
         </>
       )}
     </main>
   );
+}
+
+// Groups a bet row and its (optional) expanded detail row without adding DOM
+// nodes that would break <tbody> table structure.
+function FragmentRow({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }

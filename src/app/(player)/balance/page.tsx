@@ -4,7 +4,8 @@ import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 import { errMsg } from "@/lib/client/errMsg";
 import { statusKey } from "@/lib/client/status";
-import { signedMmk, mmk, ball, price } from "@/lib/client/format";
+import { signedMmk, mmk, pickLabel } from "@/lib/client/format";
+import { teamName } from "@/lib/client/flags";
 
 type BalanceItem = {
   id: number;
@@ -137,20 +138,17 @@ export default function BalancePage() {
 
             <ul className="mt-2 divide-y divide-ink/5">
               {day.items.map((item) => {
-                let pickStr: string;
-                if (item.market === "ou") {
-                  const word = item.side === "over" ? t.over : t.under;
-                  pickStr = `${word} ${ball(item.ballQ)} @ ${price(item.priceC)}`;
-                } else {
-                  const fav =
-                    item.favSide === "home" ? item.homeTeam : item.awayTeam;
-                  const dog =
-                    item.favSide === "home" ? item.awayTeam : item.homeTeam;
-                  pickStr =
-                    item.side === "fav"
-                      ? `${fav} −${ball(item.ballQ)} @ ${price(item.priceC)}`
-                      : `${dog} +${ball(item.ballQ)} @ ${price(item.priceC)}`;
-                }
+                const pickStr = pickLabel(
+                  {
+                    favSide: item.favSide,
+                    ballQ: item.ballQ,
+                    priceC: item.priceC,
+                    market: item.market,
+                  },
+                  { homeTeam: item.homeTeam, awayTeam: item.awayTeam },
+                  item.side,
+                  { over: t.over, under: t.under },
+                );
                 const fee = item.feeMmk ?? 0;
                 const effectiveNet = (item.netMmk ?? 0) + fee;
                 return (
@@ -162,6 +160,9 @@ export default function BalancePage() {
                       <span className="text-sm font-bold uppercase text-ink/60">
                         {t[statusKey(item.status)]}
                       </span>
+                    </div>
+                    <div className="text-sm font-medium text-ink/70">
+                      {teamName(item.homeTeam)} vs {teamName(item.awayTeam)}
                     </div>
                     <div className="text-base text-ink/80">{pickStr}</div>
                     <div className="flex justify-between text-sm text-ink/50">

@@ -16,7 +16,13 @@ export type TicketRow = {
   netMmk: number | null;
   feeMmk: number | null;
   qrUrl: string;
-  match: { homeTeam: string; awayTeam: string; stage: string };
+  cancelWindowSeconds?: number;
+  match: {
+    homeTeam: string;
+    awayTeam: string;
+    stage: string;
+    status?: "scheduled" | "live" | "finished";
+  };
   line: {
     favSide: "home" | "away";
     ballQ: number;

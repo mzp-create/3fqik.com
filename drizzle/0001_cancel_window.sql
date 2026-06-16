@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ADD COLUMN "cancel_window_seconds" integer DEFAULT 180 NOT NULL;

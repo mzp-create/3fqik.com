@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { requirePlayer } from "@/lib/auth/session";
 import { placeBet, MAX_STAKE, MIN_STAKE } from "@/lib/bets/place";
+import { cancelOwnBet } from "@/lib/bets/cancel";
 import { ticketUrl } from "@/lib/ticket/sign";
 import { ok, fail, handle } from "@/lib/api";
 import { nowIso } from "@/lib/time";
@@ -12,6 +13,22 @@ export async function POST(req: Request) {
     const body = await req.json();
     if (typeof body !== "object" || body === null)
       return fail("bad_request", "invalid body");
+
+    // Self-service cancel of the player's own bet (guards enforced in cancelOwnBet)
+    if (body.action === "cancel") {
+      if (typeof body.ticketNo !== "string" || !body.ticketNo)
+        return fail("bad_request", "ticketNo (string) required");
+      const db = getDb();
+      const [cfg] = await db.select().from(schema.settings);
+      const result = await cancelOwnBet(
+        db,
+        me.id,
+        body.ticketNo,
+        nowIso(),
+        cfg?.cancelWindowSeconds ?? 180,
+      );
+      return ok(result);
+    }
 
     // Body validation: matchId integer, market 'ah'|'ou', lineVersion integer,
     // side widened to fav/dog/over/under (pairing validated in placeBet), stakeMmk integer
@@ -52,6 +69,8 @@ export async function GET() {
   return handle(async () => {
     const me = await requirePlayer();
     const db = getDb();
+    const [cfg] = await db.select().from(schema.settings);
+    const cancelWindowSeconds = cfg?.cancelWindowSeconds ?? 180;
 
     // Join bets → lines → matches to provide rich row context for Task 22's UI needs.
     // Returns each bet with: match {homeTeam, awayTeam, stage}, line {favSide, ballQ, priceC, market},
@@ -79,6 +98,7 @@ export async function GET() {
           homeTeam: schema.matches.homeTeam,
           awayTeam: schema.matches.awayTeam,
           stage: schema.matches.stage,
+          status: schema.matches.status,
         },
         line: {
           favSide: schema.lines.favSide,
@@ -98,6 +118,7 @@ export async function GET() {
         ...row,
         playerName: me.displayName,
         qrUrl: ticketUrl(row.ticketNo),
+        cancelWindowSeconds,
       })),
     );
   });

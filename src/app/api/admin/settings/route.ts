@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       betLimitMmk,
       commissionPct,
       discountPct,
+      cancelWindowSeconds,
     } = await req.json();
 
     // Validate dailyTotalLimitMmk if present
@@ -67,6 +68,20 @@ export async function POST(req: Request) {
         discountPct > 100
       ) {
         return fail("bad_request", "discountPct must be an integer 0–100");
+      }
+    }
+
+    // Validate cancelWindowSeconds if present (0 disables self-cancel; cap 1h)
+    if (cancelWindowSeconds != null) {
+      if (
+        !Number.isInteger(cancelWindowSeconds) ||
+        cancelWindowSeconds < 0 ||
+        cancelWindowSeconds > 3600
+      ) {
+        return fail(
+          "bad_request",
+          "cancelWindowSeconds must be an integer 0–3600",
+        );
       }
     }
 
@@ -117,6 +132,20 @@ export async function POST(req: Request) {
         action: "fee_change",
         subject: "settings",
         detail: JSON.stringify(feeUpdate),
+        at,
+      });
+    }
+
+    if (cancelWindowSeconds != null) {
+      await db
+        .update(schema.settings)
+        .set({ cancelWindowSeconds })
+        .where(eq(schema.settings.id, 1));
+      await db.insert(schema.auditLog).values({
+        actorId: admin.id,
+        action: "settings_change",
+        subject: "cancel_window",
+        detail: String(cancelWindowSeconds),
         at,
       });
     }

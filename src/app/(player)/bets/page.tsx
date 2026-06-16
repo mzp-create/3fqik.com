@@ -21,14 +21,44 @@ export default function BetsPage() {
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [selected, setSelected] = useState<TicketRow | null>(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
+  const reload = () =>
     api<TicketRow[]>("/api/bets")
       .then(setTickets)
       .catch((e) => {
         if (!redirectIfPinChange(e)) setError(errMsg(t, e));
       });
-  }, []);
+
+  useEffect(() => {
+    reload();
+  }, []); // run once on mount
+
+  // Offer Cancel while the bet is plausibly still cancellable: pending and the
+  // match hasn't kicked off. The server enforces the real guards (within the
+  // window, line unchanged) and returns a clear message if it's too late.
+  function canCancel(b: TicketRow): boolean {
+    return (
+      b.status === "pending" &&
+      b.match.status === "scheduled" &&
+      (b.cancelWindowSeconds ?? 0) > 0
+    );
+  }
+
+  async function cancelBet(b: TicketRow) {
+    if (!window.confirm(t.cancelConfirm)) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api("/api/bets", { action: "cancel", ticketNo: b.ticketNo });
+      setSelected(null);
+      await reload();
+    } catch (e) {
+      setError(errMsg(t, e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <main className="p-3">
@@ -85,6 +115,15 @@ export default function BetsPage() {
               ✕ {t.close}
             </button>
             <TicketCard ticket={selected} />
+            {canCancel(selected) && (
+              <button
+                disabled={busy}
+                onClick={() => cancelBet(selected)}
+                className="mt-4 w-full rounded-xl border-2 border-ca py-3 text-base font-bold text-ca focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ca disabled:opacity-50"
+              >
+                {busy ? "…" : t.cancelBet}
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -86,6 +86,12 @@ export const en = {
   installBtn: "Install",
   installIos: "Tap Share, then 'Add to Home Screen'",
   dismiss: "Not now",
+  cancelBet: "Cancel bet",
+  cancelConfirm: "Cancel this bet? Your stake will be returned.",
+  cancelled: "Bet cancelled",
+  cancelTooLate: "Too late to cancel — ask the banker to void it",
+  cancelMatchStarted: "Match has started — ask the banker to void it",
+  cancelNotAllowed: "This bet can no longer be cancelled",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

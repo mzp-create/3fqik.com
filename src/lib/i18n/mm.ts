@@ -92,6 +92,12 @@ export const mm: Dict = {
   installBtn: "ထည့်သွင်းမည်",
   installIos: "Share နှိပ်ပြီး 'Add to Home Screen' ရွေးပါ",
   dismiss: "နောက်မှ",
+  cancelBet: "လောင်းကြေး ပယ်ဖျက်ရန်",
+  cancelConfirm: "ဤလောင်းကြေးကို ပယ်ဖျက်မလား။ ထိုးငွေ ပြန်အမ်းပါမည်။",
+  cancelled: "လောင်းကြေး ပယ်ဖျက်ပြီး",
+  cancelTooLate: "ပယ်ဖျက်ရန် နောက်ကျသွားပြီ — ဘဏ်ကို void လုပ်ခိုင်းပါ",
+  cancelMatchStarted: "ပွဲစတင်သွားပြီ — ဘဏ်ကို void လုပ်ခိုင်းပါ",
+  cancelNotAllowed: "ဤလောင်းကြေးကို ပယ်ဖျက်၍မရတော့ပါ",
 } as const;
 
 /*

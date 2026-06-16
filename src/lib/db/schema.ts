@@ -174,6 +174,8 @@ export const settings = pgTable("settings", {
     .default(0),
   commissionPct: integer("commission_pct").notNull().default(3),
   discountPct: integer("discount_pct").notNull().default(2),
+  // Self-service bet-cancel window (seconds after placement). 0 disables it.
+  cancelWindowSeconds: integer("cancel_window_seconds").notNull().default(180),
 });
 
 export const auditLog = pgTable("audit_log", {

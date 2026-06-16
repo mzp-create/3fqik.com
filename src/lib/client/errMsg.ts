@@ -7,6 +7,9 @@ const CODE_KEYS: Record<string, keyof Dict> = {
   line_moved: "lineMoved",
   match_finished: "errMatchFinished",
   betting_closed: "errBettingClosed",
+  window_passed: "cancelTooLate",
+  match_started: "cancelMatchStarted",
+  not_cancellable: "cancelNotAllowed",
 };
 
 export function errMsg(t: Dict, e: unknown): string {

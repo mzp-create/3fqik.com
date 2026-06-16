@@ -8,6 +8,7 @@ type Settings = {
   dailyTotalLimitMmk: number;
   commissionPct: number;
   discountPct: number;
+  cancelWindowSeconds: number;
 };
 
 export default function SettingsPage() {
@@ -15,6 +16,7 @@ export default function SettingsPage() {
   const [limitInput, setLimitInput] = useState("");
   const [commissionInput, setCommissionInput] = useState("");
   const [discountInput, setDiscountInput] = useState("");
+  const [cancelWindowInput, setCancelWindowInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -26,6 +28,7 @@ export default function SettingsPage() {
         setLimitInput(String(s.dailyTotalLimitMmk));
         setCommissionInput(String(s.commissionPct));
         setDiscountInput(String(s.discountPct));
+        setCancelWindowInput(String(s.cancelWindowSeconds));
       })
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Failed to load"),
@@ -74,6 +77,26 @@ export default function SettingsPage() {
         commissionPct: commission,
         discountPct: discount,
       });
+      setSaved(true);
+      reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveCancelWindow() {
+    const val = parseInt(cancelWindowInput, 10);
+    if (!Number.isInteger(val) || val < 0 || val > 3600) {
+      setError("Cancel window must be an integer 0–3600 seconds (0 = off)");
+      return;
+    }
+    setError("");
+    setSaved(false);
+    setBusy(true);
+    try {
+      await api("/api/admin/settings", { cancelWindowSeconds: val });
       setSaved(true);
       reload();
     } catch (e) {
@@ -186,6 +209,46 @@ export default function SettingsPage() {
               Save Fee Rates
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded border p-4 mt-4">
+        <h2 className="font-semibold mb-3">Bet Cancellation Window</h2>
+        <p className="text-sm text-gray-500 mb-3">
+          How long after placing a bet a player may self-cancel it — only while
+          the match hasn&apos;t kicked off and the line hasn&apos;t moved. Set
+          to 0 to disable self-cancel (players must ask you to void).
+        </p>
+        <div className="flex gap-2 items-center">
+          <label className="text-sm w-32 text-gray-600">Window (seconds)</label>
+          <input
+            type="number"
+            min="0"
+            max="3600"
+            step="30"
+            className="border rounded px-2 py-1 text-sm w-24"
+            placeholder="180"
+            value={cancelWindowInput}
+            onChange={(e) => {
+              setCancelWindowInput(e.target.value);
+              setSaved(false);
+            }}
+          />
+          <span className="text-sm text-gray-500">
+            {settings != null &&
+              `(current: ${settings.cancelWindowSeconds}s${
+                settings.cancelWindowSeconds === 0 ? " — off" : ""
+              })`}
+          </span>
+        </div>
+        <div className="mt-3">
+          <button
+            disabled={busy}
+            onClick={saveCancelWindow}
+            className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+          >
+            Save Cancel Window
+          </button>
         </div>
       </div>
     </main>

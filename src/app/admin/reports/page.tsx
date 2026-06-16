@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { mmk, signedMmk, todayMmt, ball, price } from "@/lib/client/format";
+import { mmk, signedMmk, todayMmt, pickLabel } from "@/lib/client/format";
 import { api } from "@/lib/client/api";
 
 // ─── CSV helper ─────────────────────────────────────────────────────────────
@@ -35,9 +35,9 @@ type BetRow = {
   matchDay: string;
   homeTeam: string;
   awayTeam: string;
-  market: string;
-  side: string;
-  favSide: string;
+  market: "ah" | "ou";
+  side: "fav" | "dog" | "over" | "under";
+  favSide: "home" | "away";
   ballQ: number;
   priceC: number;
   stakeMmk: number;
@@ -141,16 +141,16 @@ function defaultFrom() {
 }
 
 function betLabel(b: BetRow) {
-  const fav = b.favSide === "home" ? b.homeTeam : b.awayTeam;
-  const dog = b.favSide === "home" ? b.awayTeam : b.homeTeam;
-  if (b.market === "ou") {
-    return b.side === "over"
-      ? `Over ${ball(b.ballQ)} @ ${price(b.priceC)}`
-      : `Under ${ball(b.ballQ)} @ ${price(b.priceC)}`;
-  }
-  return b.side === "fav"
-    ? `${fav} −${ball(b.ballQ)} @ ${price(b.priceC)}`
-    : `${dog} +${ball(b.ballQ)} @ ${price(b.priceC)}`;
+  return pickLabel(
+    {
+      favSide: b.favSide,
+      ballQ: b.ballQ,
+      priceC: b.priceC,
+      market: b.market,
+    },
+    { homeTeam: b.homeTeam, awayTeam: b.awayTeam },
+    b.side,
+  );
 }
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────

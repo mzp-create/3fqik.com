@@ -4,6 +4,8 @@ import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 import { errMsg } from "@/lib/client/errMsg";
 import { statusKey } from "@/lib/client/status";
+import { pickLabel } from "@/lib/client/format";
+import { teamName } from "@/lib/client/flags";
 import { TicketCard, type TicketRow } from "@/components/TicketCard";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -82,15 +84,14 @@ export default function BetsPage() {
               {t[statusKey(b.status)]}
             </span>
           </div>
-          <div className="mt-1 text-base text-ink/60">
-            {b.match.homeTeam} vs {b.match.awayTeam} ·{" "}
-            {b.side === "fav"
-              ? t.sideFav
-              : b.side === "dog"
-                ? t.sideDog
-                : b.side === "over"
-                  ? t.over
-                  : t.under}
+          <div className="mt-1 text-base font-medium text-ink/70">
+            {teamName(b.match.homeTeam)} vs {teamName(b.match.awayTeam)}
+          </div>
+          <div className="text-base text-ink/60">
+            {pickLabel(b.line, b.match, b.side, {
+              over: t.over,
+              under: t.under,
+            })}
           </div>
           <div className="text-base text-ink/50">
             {t.stake}: {b.stakeMmk.toLocaleString("en-US")} MMK

@@ -92,6 +92,16 @@ export const en = {
   cancelTooLate: "Too late to cancel — ask the banker to void it",
   cancelMatchStarted: "Match has started — ask the banker to void it",
   cancelNotAllowed: "This bet can no longer be cancelled",
+  byDay: "By day",
+  byGroup: "By group",
+  today: "Today",
+  tomorrow: "Tomorrow",
+  roundOf32: "Round of 32",
+  roundOf16: "Round of 16",
+  quarterFinals: "Quarter-finals",
+  semiFinals: "Semi-finals",
+  finalRound: "Final",
+  thirdPlace: "Third place",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

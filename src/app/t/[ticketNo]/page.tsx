@@ -5,13 +5,7 @@ import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { verifyTicketSig } from "@/lib/ticket/sign";
 import { formatMmt } from "@/lib/time";
-
-function ballLabel(ballQ: number) {
-  return (ballQ / 4).toString();
-}
-function priceLabel(priceC: number) {
-  return (priceC / 100).toFixed(2);
-}
+import { pickLabel } from "@/lib/client/format";
 
 export default async function VerifyTicket({
   params,
@@ -65,18 +59,10 @@ export default async function VerifyTicket({
           .from(schema.settlements)
           .where(eq(schema.settlements.id, bet.settlementId))
       : [undefined];
-  const fav = line.favSide === "home" ? match.homeTeam : match.awayTeam;
-  const dog = line.favSide === "home" ? match.awayTeam : match.homeTeam;
-  let pick: string;
-  if (line.market === "ou") {
-    const word = bet.side === "over" ? "Over" : "Under";
-    pick = `${word} ${ballLabel(line.ballQ)}`;
-  } else {
-    pick =
-      bet.side === "fav"
-        ? `${fav} −${ballLabel(line.ballQ)}`
-        : `${dog} +${ballLabel(line.ballQ)}`;
-  }
+  const pick = pickLabel(line, match, bet.side, {
+    over: "Over",
+    under: "Under",
+  });
 
   return (
     <main className="mx-auto w-full max-w-sm p-6">
@@ -90,7 +76,7 @@ export default async function VerifyTicket({
           k="Match"
           v={`${match.homeTeam} vs ${match.awayTeam} (${match.stage})`}
         />
-        <Row k="Pick" v={`${pick} @ ${priceLabel(line.priceC)}`} />
+        <Row k="Pick" v={pick} />
         <Row k="Stake" v={`${bet.stakeMmk.toLocaleString()} MMK`} />
         <Row
           k="Score at bet"

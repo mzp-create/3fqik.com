@@ -24,6 +24,7 @@ export type MatchRow = {
   homeTeam: string;
   awayTeam: string;
   kickoffUtc: string;
+  matchDay: string;
   status: "scheduled" | "live" | "finished";
   homeScore: number | null;
   awayScore: number | null;

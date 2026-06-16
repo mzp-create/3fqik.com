@@ -98,6 +98,16 @@ export const mm: Dict = {
   cancelTooLate: "ပယ်ဖျက်ရန် နောက်ကျသွားပြီ — ဘဏ်ကို void လုပ်ခိုင်းပါ",
   cancelMatchStarted: "ပွဲစတင်သွားပြီ — ဘဏ်ကို void လုပ်ခိုင်းပါ",
   cancelNotAllowed: "ဤလောင်းကြေးကို ပယ်ဖျက်၍မရတော့ပါ",
+  byDay: "နေ့အလိုက်",
+  byGroup: "အုပ်စုအလိုက်",
+  today: "ယနေ့",
+  tomorrow: "မနက်ဖြန်",
+  roundOf32: "Round of 32",
+  roundOf16: "Round of 16",
+  quarterFinals: "ကွာတားဖိုင်နယ်",
+  semiFinals: "ဆီမီးဖိုင်နယ်",
+  finalRound: "ဖိုင်နယ်",
+  thirdPlace: "တတိယနေရာ",
 } as const;
 
 /*

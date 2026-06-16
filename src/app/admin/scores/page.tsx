@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
-import { todayMmt } from "@/lib/client/format";
+import { todayMmt, tomorrowMmt, dayLabel } from "@/lib/client/format";
 import { teamLabel, teamName } from "@/lib/client/flags";
 
 type MatchRow = {
@@ -122,6 +122,7 @@ export default function ScoresPage() {
   if (loading) return <p className="text-gray-500">Loading…</p>;
 
   const today = todayMmt();
+  const tomorrow = tomorrowMmt();
   const visible = showAll
     ? matches
     : matches.filter(
@@ -130,6 +131,17 @@ export default function ScoresPage() {
           m.status === "finished" ||
           (m.status === "scheduled" && m.matchDay === today),
       );
+
+  // Group the visible matches by match day, ascending.
+  const dayGroups = (() => {
+    const map = new Map<string, MatchRow[]>();
+    for (const m of visible) {
+      const list = map.get(m.matchDay) ?? [];
+      list.push(m);
+      map.set(m.matchDay, list);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  })();
 
   return (
     <main>
@@ -145,147 +157,186 @@ export default function ScoresPage() {
           {showAll ? "Show relevant" : "Show all"}
         </button>
       </div>
-      {visible.map((m) => {
-        const s = scores[m.id] ?? { home: 0, away: 0 };
-        const isBusy = busy[m.id] ?? false;
-        const err = errors[m.id] ?? "";
-
+      {dayGroups.map(([day, dayMatches]) => {
+        const dl = dayLabel(day, today, tomorrow);
         return (
-          <div key={m.id} className="mb-5 rounded border p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold">
-                {teamLabel(m.homeTeam)} vs {teamLabel(m.awayTeam)}
-              </span>
-              <span
-                className={`text-xs px-1 rounded ${
-                  m.status === "live"
-                    ? "bg-green-100 text-green-700"
-                    : m.status === "finished"
-                      ? "bg-gray-200 text-gray-600"
-                      : "bg-blue-50 text-blue-600"
-                }`}
-              >
-                {m.status}
+          <section key={day} className="mb-6">
+            <div className="sticky top-0 z-10 -mx-1 mb-3 flex items-center gap-2 border-b bg-white/95 px-1 py-1.5 backdrop-blur">
+              <h2 className="text-base font-bold">{dl.formatted}</h2>
+              {dl.tag && (
+                <span
+                  className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
+                    dl.tag === "Overdue"
+                      ? "bg-red-100 text-red-700"
+                      : dl.tag === "Today"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {dl.tag}
+                </span>
+              )}
+              <span className="ml-auto text-xs text-gray-400">
+                {dayMatches.length}{" "}
+                {dayMatches.length === 1 ? "match" : "matches"}
               </span>
             </div>
+            {dayMatches.map((m) => {
+              const s = scores[m.id] ?? { home: 0, away: 0 };
+              const isBusy = busy[m.id] ?? false;
+              const err = errors[m.id] ?? "";
 
-            {/* Kick off button for scheduled matches */}
-            {m.status === "scheduled" && (
-              <button
-                disabled={isBusy}
-                onClick={() => doAction(m.id, "live")}
-                className="mb-2 bg-green-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
-              >
-                Kick Off
-              </button>
-            )}
+              return (
+                <div key={m.id} className="mb-5 rounded border p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold">
+                      {teamLabel(m.homeTeam)} vs {teamLabel(m.awayTeam)}
+                    </span>
+                    <span
+                      className={`text-xs px-1 rounded ${
+                        m.status === "live"
+                          ? "bg-green-100 text-green-700"
+                          : m.status === "finished"
+                            ? "bg-gray-200 text-gray-600"
+                            : "bg-blue-50 text-blue-600"
+                      }`}
+                    >
+                      {m.status}
+                    </span>
+                  </div>
 
-            {/* Score steppers for live matches */}
-            {m.status === "live" && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="w-28 truncate">{teamName(m.homeTeam)}</span>
-                  <button
-                    className="border rounded px-2 py-0.5"
-                    onClick={() => adjustScore(m.id, "home", -1)}
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center font-bold text-lg">
-                    {s.home}
-                  </span>
-                  <button
-                    className="border rounded px-2 py-0.5"
-                    onClick={() => adjustScore(m.id, "home", 1)}
-                  >
-                    +
-                  </button>
-                  <button
-                    disabled={isBusy}
-                    onClick={() => doAction(m.id, "score")}
-                    className="ml-auto text-xs border px-2 py-1 rounded disabled:opacity-50"
-                  >
-                    Update
-                  </button>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="w-28 truncate">{teamName(m.awayTeam)}</span>
-                  <button
-                    className="border rounded px-2 py-0.5"
-                    onClick={() => adjustScore(m.id, "away", -1)}
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center font-bold text-lg">
-                    {s.away}
-                  </span>
-                  <button
-                    className="border rounded px-2 py-0.5"
-                    onClick={() => adjustScore(m.id, "away", 1)}
-                  >
-                    +
-                  </button>
-                </div>
-                <button
-                  disabled={isBusy}
-                  onClick={() => doAction(m.id, "final")}
-                  className="bg-red-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
-                >
-                  Confirm Final
-                </button>
-              </div>
-            )}
+                  {/* Kick off button for scheduled matches */}
+                  {m.status === "scheduled" && (
+                    <button
+                      disabled={isBusy}
+                      onClick={() => doAction(m.id, "live")}
+                      className="mb-2 bg-green-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                    >
+                      Kick Off
+                    </button>
+                  )}
 
-            {/* Correct score for finished matches */}
-            {m.status === "finished" && (
-              <div className="space-y-2">
-                <div className="text-sm text-gray-600 mb-1">
-                  Official: {m.homeScore ?? "?"} – {m.awayScore ?? "?"}
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="w-28 truncate">{teamName(m.homeTeam)}</span>
-                  <button
-                    className="border rounded px-2 py-0.5"
-                    onClick={() => adjustScore(m.id, "home", -1)}
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center font-bold">{s.home}</span>
-                  <button
-                    className="border rounded px-2 py-0.5"
-                    onClick={() => adjustScore(m.id, "home", 1)}
-                  >
-                    +
-                  </button>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="w-28 truncate">{teamName(m.awayTeam)}</span>
-                  <button
-                    className="border rounded px-2 py-0.5"
-                    onClick={() => adjustScore(m.id, "away", -1)}
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center font-bold">{s.away}</span>
-                  <button
-                    className="border rounded px-2 py-0.5"
-                    onClick={() => adjustScore(m.id, "away", 1)}
-                  >
-                    +
-                  </button>
-                </div>
-                <button
-                  disabled={isBusy}
-                  onClick={() => doAction(m.id, "correct")}
-                  className="border border-orange-400 text-orange-700 text-sm px-3 py-1 rounded disabled:opacity-50"
-                >
-                  Correct Score
-                </button>
-              </div>
-            )}
+                  {/* Score steppers for live matches */}
+                  {m.status === "live" && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="w-28 truncate">
+                          {teamName(m.homeTeam)}
+                        </span>
+                        <button
+                          className="border rounded px-2 py-0.5"
+                          onClick={() => adjustScore(m.id, "home", -1)}
+                        >
+                          −
+                        </button>
+                        <span className="w-8 text-center font-bold text-lg">
+                          {s.home}
+                        </span>
+                        <button
+                          className="border rounded px-2 py-0.5"
+                          onClick={() => adjustScore(m.id, "home", 1)}
+                        >
+                          +
+                        </button>
+                        <button
+                          disabled={isBusy}
+                          onClick={() => doAction(m.id, "score")}
+                          className="ml-auto text-xs border px-2 py-1 rounded disabled:opacity-50"
+                        >
+                          Update
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="w-28 truncate">
+                          {teamName(m.awayTeam)}
+                        </span>
+                        <button
+                          className="border rounded px-2 py-0.5"
+                          onClick={() => adjustScore(m.id, "away", -1)}
+                        >
+                          −
+                        </button>
+                        <span className="w-8 text-center font-bold text-lg">
+                          {s.away}
+                        </span>
+                        <button
+                          className="border rounded px-2 py-0.5"
+                          onClick={() => adjustScore(m.id, "away", 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button
+                        disabled={isBusy}
+                        onClick={() => doAction(m.id, "final")}
+                        className="bg-red-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                      >
+                        Confirm Final
+                      </button>
+                    </div>
+                  )}
 
-            {err && <p className="text-red-600 text-sm mt-2">{err}</p>}
-          </div>
+                  {/* Correct score for finished matches */}
+                  {m.status === "finished" && (
+                    <div className="space-y-2">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Official: {m.homeScore ?? "?"} – {m.awayScore ?? "?"}
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="w-28 truncate">
+                          {teamName(m.homeTeam)}
+                        </span>
+                        <button
+                          className="border rounded px-2 py-0.5"
+                          onClick={() => adjustScore(m.id, "home", -1)}
+                        >
+                          −
+                        </button>
+                        <span className="w-8 text-center font-bold">
+                          {s.home}
+                        </span>
+                        <button
+                          className="border rounded px-2 py-0.5"
+                          onClick={() => adjustScore(m.id, "home", 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="w-28 truncate">
+                          {teamName(m.awayTeam)}
+                        </span>
+                        <button
+                          className="border rounded px-2 py-0.5"
+                          onClick={() => adjustScore(m.id, "away", -1)}
+                        >
+                          −
+                        </button>
+                        <span className="w-8 text-center font-bold">
+                          {s.away}
+                        </span>
+                        <button
+                          className="border rounded px-2 py-0.5"
+                          onClick={() => adjustScore(m.id, "away", 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button
+                        disabled={isBusy}
+                        onClick={() => doAction(m.id, "correct")}
+                        className="border border-orange-400 text-orange-700 text-sm px-3 py-1 rounded disabled:opacity-50"
+                      >
+                        Correct Score
+                      </button>
+                    </div>
+                  )}
+
+                  {err && <p className="text-red-600 text-sm mt-2">{err}</p>}
+                </div>
+              );
+            })}
+          </section>
         );
       })}
     </main>

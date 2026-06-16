@@ -1,7 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
-import { mmk, signedMmk, ball, price, todayMmt } from "@/lib/client/format";
+import {
+  mmk,
+  signedMmk,
+  ball,
+  price,
+  todayMmt,
+  pickLabel,
+} from "@/lib/client/format";
 import { teamName } from "@/lib/client/flags";
 import { gradeDetail } from "@/lib/engine/grade";
 import type { GradeInput } from "@/lib/engine/grade";
@@ -337,14 +344,16 @@ export default function SettlePage() {
                               ? fav
                               : dog
                             : null;
-                        const label =
-                          t.market === "ou"
-                            ? t.side === "over"
-                              ? `Over ${ball(t.ballQ)} @ ${price(t.priceC)}`
-                              : `Under ${ball(t.ballQ)} @ ${price(t.priceC)}`
-                            : t.side === "fav"
-                              ? `${fav} −${ball(t.ballQ)} @ ${price(t.priceC)}`
-                              : `${dog} +${ball(t.ballQ)} @ ${price(t.priceC)}`;
+                        const label = pickLabel(
+                          {
+                            favSide: t.favSide,
+                            ballQ: t.ballQ,
+                            priceC: t.priceC,
+                            market: t.market,
+                          },
+                          { homeTeam: t.homeTeam, awayTeam: t.awayTeam },
+                          t.side,
+                        );
                         const voidKey = `void-${t.ticketNo}`;
 
                         // Compute breakdown using gradeDetail (same engine as grading)

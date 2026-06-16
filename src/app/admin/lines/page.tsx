@@ -2,41 +2,14 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
-import { ball, price, mmk, todayMmt } from "@/lib/client/format";
-
-/** Pure helper — reads the clock once at module load so render stays idempotent. */
-function tomorrowMmt(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Yangon",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(Date.now() + 86400000));
-}
-
-/** Friendly heading for a match day (YYYY-MM-DD) plus a relative tag. */
-function dayLabel(
-  day: string,
-  today: string,
-  tomorrow: string,
-): { formatted: string; tag: "Today" | "Tomorrow" | "Overdue" | null } {
-  const [y, mo, d] = day.split("-").map(Number);
-  const formatted = new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(y, mo - 1, d)));
-  const tag =
-    day === today
-      ? "Today"
-      : day === tomorrow
-        ? "Tomorrow"
-        : day < today
-          ? "Overdue"
-          : null;
-  return { formatted, tag };
-}
+import {
+  ball,
+  price,
+  mmk,
+  todayMmt,
+  tomorrowMmt,
+  dayLabel,
+} from "@/lib/client/format";
 
 type Line = {
   id: number;

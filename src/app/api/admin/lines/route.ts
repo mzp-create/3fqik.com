@@ -4,55 +4,111 @@ import { postLine, setLineStatus } from "@/lib/lines/manage";
 import { ok, fail, handle } from "@/lib/api";
 import { nowIso } from "@/lib/time";
 
+type LineSpec = {
+  matchId: number;
+  market: "ah" | "ou";
+  favSide?: "home" | "away";
+  ballQ: number;
+  priceC: number;
+};
+
+/** Validate one line spec; returns an error message or null. Shared by the
+ *  single 'post' action and the bulk 'post_bulk' action. */
+function validateLine(s: Partial<LineSpec>): string | null {
+  if (typeof s.matchId !== "number") return "matchId must be a number";
+  if (s.market !== "ah" && s.market !== "ou")
+    return "market must be 'ah' or 'ou'";
+  const minBallQ = s.market === "ou" ? 1 : 0;
+  if (
+    !Number.isInteger(s.ballQ) ||
+    (s.ballQ as number) < minBallQ ||
+    (s.ballQ as number) > 40
+  )
+    return s.market === "ou"
+      ? "O/U goals line must be 0.25–10 (a multiple of 0.25)"
+      : "handicap must be 0–10 (a multiple of 0.25)";
+  if (
+    !Number.isInteger(s.priceC) ||
+    (s.priceC as number) < 1 ||
+    (s.priceC as number) > 100
+  )
+    return "price must be between 0.01 and 1.00";
+  if (s.market === "ah" && s.favSide !== "home" && s.favSide !== "away")
+    return "favSide must be 'home' or 'away'";
+  return null;
+}
+
+// ou favSide is a stored dummy (grading ignores it); default to 'home'.
+const favOf = (s: LineSpec): "home" | "away" =>
+  s.market === "ou" ? "home" : (s.favSide as "home" | "away");
+
 export async function POST(req: Request) {
   return handle(async () => {
     const admin = await requireAdmin();
     const body = await req.json();
     const db = getDb();
 
-    // Validate: action must be a string
     if (typeof body.action !== "string")
       return fail("bad_request", "action must be a string");
-    // Validate: matchId must be a number
+
+    // Bulk post: { action:'post_bulk', lines:[{matchId,market,favSide,ballQ,priceC}] }
+    // Posts each line independently; returns per-line results so partial
+    // failures (e.g. a closed/finished match) don't block the rest.
+    if (body.action === "post_bulk") {
+      if (!Array.isArray(body.lines))
+        return fail("bad_request", "lines must be an array");
+      const results: Array<{
+        matchId: number;
+        market: string;
+        ok: boolean;
+        error?: string;
+      }> = [];
+      for (const s of body.lines as LineSpec[]) {
+        const err = validateLine(s);
+        if (err) {
+          results.push({
+            matchId: s?.matchId,
+            market: s?.market,
+            ok: false,
+            error: err,
+          });
+          continue;
+        }
+        try {
+          await postLine(
+            db,
+            admin.id,
+            {
+              matchId: s.matchId,
+              market: s.market,
+              favSide: favOf(s),
+              ballQ: s.ballQ,
+              priceC: s.priceC,
+            },
+            nowIso(),
+          );
+          results.push({ matchId: s.matchId, market: s.market, ok: true });
+        } catch (e) {
+          results.push({
+            matchId: s.matchId,
+            market: s.market,
+            ok: false,
+            error: e instanceof Error ? e.message : "error",
+          });
+        }
+      }
+      return ok({ results });
+    }
+
+    // Single-line actions below require top-level matchId + market.
     if (typeof body.matchId !== "number")
       return fail("bad_request", "matchId must be a number");
-    // Validate: market must be 'ah' or 'ou'
     if (body.market !== "ah" && body.market !== "ou")
       return fail("bad_request", "market must be 'ah' or 'ou'");
 
     if (body.action === "post") {
-      // For 'ou' market, favSide is semantically meaningless (grading ignores it);
-      // we default to 'home' as a stored dummy. For 'ah', favSide is required.
-      const favSide: "home" | "away" =
-        body.market === "ou"
-          ? "home"
-          : body.favSide === "home" || body.favSide === "away"
-            ? body.favSide
-            : null!;
-      if (body.market === "ah" && favSide === null)
-        return fail("bad_request", "favSide must be 'home' or 'away'");
-      // ou ballQ ≥ 1 (no O 0.0 lines); ah ballQ ≥ 0
-      const minBallQ = body.market === "ou" ? 1 : 0;
-      if (
-        !Number.isInteger(body.ballQ) ||
-        body.ballQ < minBallQ ||
-        body.ballQ > 40
-      )
-        return fail(
-          "bad_request",
-          body.market === "ou"
-            ? "ballQ must be an integer 1–40 for ou market (minimum O/U 0.25)"
-            : "ballQ must be an integer 0–40",
-        );
-      if (
-        !Number.isInteger(body.priceC) ||
-        body.priceC < 1 ||
-        body.priceC > 100
-      )
-        return fail(
-          "bad_request",
-          "priceC must be a positive integer in [1, 100]",
-        );
+      const err = validateLine(body);
+      if (err) return fail("bad_request", err);
       return ok(
         await postLine(
           db,
@@ -60,7 +116,7 @@ export async function POST(req: Request) {
           {
             matchId: body.matchId,
             market: body.market,
-            favSide,
+            favSide: favOf(body),
             ballQ: body.ballQ,
             priceC: body.priceC,
           },

@@ -102,6 +102,17 @@ export const en = {
   semiFinals: "Semi-finals",
   finalRound: "Final",
   thirdPlace: "Third place",
+  betBacking: "You're backing",
+  priceWord: "Price",
+  yourStake: "Your stake",
+  goalsWord: "goals",
+  ifWin: "If you win",
+  ifPush: "If exact — stake back",
+  ifLose: "If you lose",
+  placeBtn: "Place {n} MMK",
+  placeConfirm: "Tap again to place {n} MMK",
+  placeReview: "Confirm: {pick}",
+  minStakeNote: "Enter at least 10,000 MMK",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

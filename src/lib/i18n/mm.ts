@@ -108,6 +108,17 @@ export const mm: Dict = {
   semiFinals: "ဆီမီးဖိုင်နယ်",
   finalRound: "ဖိုင်နယ်",
   thirdPlace: "တတိယနေရာ",
+  betBacking: "သင်လောင်းမည့်ဘက်",
+  priceWord: "စျေး",
+  yourStake: "သင့်ထိုးငွေ",
+  goalsWord: "ဂိုး",
+  ifWin: "နိုင်လျှင်",
+  ifPush: "ညီမျှလျှင် — ထိုးငွေပြန်ရ",
+  ifLose: "ရှုံးလျှင်",
+  placeBtn: "{n} MMK ထိုးမည်",
+  placeConfirm: "{n} MMK ထိုးရန် ထပ်နှိပ်ပါ",
+  placeReview: "အတည်ပြု — {pick}",
+  minStakeNote: "အနည်းဆုံး ၁၀,၀၀၀ MMK ထည့်ပါ",
 } as const;
 
 /*

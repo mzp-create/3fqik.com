@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
-import { mmk, signedMmk, pickLabel } from "@/lib/client/format";
+import { mmk, ball, priceSigned } from "@/lib/client/format";
+import { flag, teamName } from "@/lib/client/flags";
 import { errMsg } from "@/lib/client/errMsg";
 import type { MatchRow, LineRow } from "./MatchCard";
 
@@ -41,9 +42,41 @@ export function BetSlip({
   const [stake, setStake] = useState(100_000);
   const [error, setError] = useState("");
   const [line, setLine] = useState(slip.line);
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const armTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const p = preview(stake, line.priceC, line.ballQ);
 
+  const m = slip.match;
+  const fav = line.favSide === "home" ? m.homeTeam : m.awayTeam;
+  const dog = line.favSide === "home" ? m.awayTeam : m.homeTeam;
+  // Plain-language pick: which team / over-under + the handicap or goals line.
+  const pick =
+    slip.market === "ah"
+      ? slip.side === "fav"
+        ? `${teamName(fav)} −${ball(line.ballQ)}`
+        : `${teamName(dog)} +${ball(line.ballQ)}`
+      : `${slip.side === "over" ? t.over : t.under} ${ball(line.ballQ)} ${t.goalsWord}`;
+
+  // Reset the armed (2-tap) state whenever the stake changes.
+  function changeStake(v: number) {
+    setStake(v);
+    setArmed(false);
+  }
+
+  function onButton() {
+    if (busy) return;
+    if (!armed) {
+      setArmed(true);
+      if (armTimer.current) clearTimeout(armTimer.current);
+      armTimer.current = setTimeout(() => setArmed(false), 4000);
+      return;
+    }
+    void confirm();
+  }
+
   async function confirm() {
+    setBusy(true);
     try {
       const ticket = await api("/api/bets", {
         matchId: slip.match.id,
@@ -55,6 +88,8 @@ export function BetSlip({
       onPlaced(ticket);
       window.location.href = "/bets";
     } catch (e) {
+      setBusy(false);
+      setArmed(false);
       if (redirectIfPinChange(e)) return;
       const ex = e as Error & { extra?: { currentLine?: LineRow } };
       if (ex.extra?.currentLine) {
@@ -64,7 +99,7 @@ export function BetSlip({
     }
   }
 
-  const ouLabels = { over: t.over, under: t.under };
+  const valid = stake >= 10_000;
 
   return (
     <div className="fixed inset-0 z-10 bg-ink/40" onClick={onClose}>
@@ -78,81 +113,102 @@ export function BetSlip({
         </div>
 
         <div className="p-4 pb-8">
-          {/* Pick title */}
-          <h2 className="font-display text-xl text-ink">
-            {pickLabel(
-              { ...line, market: slip.market },
-              slip.match,
-              slip.side,
-              ouLabels,
+          {/* Match — make "which match" unmissable */}
+          <div className="rounded-lg bg-canvas px-3 py-2 text-center">
+            <div className="text-lg font-semibold text-ink">
+              {flag(m.homeTeam)} {teamName(m.homeTeam)} vs{" "}
+              {teamName(m.awayTeam)} {flag(m.awayTeam)}
+            </div>
+            <div className="text-sm text-ink/50">{m.stage}</div>
+            {m.status === "live" && (
+              <div className="text-sm font-semibold text-ca">
+                {t.scoreNow}: {m.homeScore}–{m.awayScore} · {t.liveNote}
+              </div>
             )}
-          </h2>
-          {slip.match.status === "live" && (
-            <p className="text-base text-ca">
-              {t.scoreNow}: {slip.match.homeScore}–{slip.match.awayScore} ·{" "}
-              {t.liveNote}
-            </p>
-          )}
+          </div>
 
-          {/* Stake input */}
+          {/* Your pick — plain language; price is a small detail */}
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-base text-ink/50">{t.betBacking}</span>
+            <span className="font-display text-2xl text-ink">{pick}</span>
+          </div>
+          <div className="text-right text-sm text-ink/40">
+            {t.priceWord} {priceSigned(line.priceC)}
+          </div>
+
+          {/* Stake */}
+          <label className="mt-3 block text-base text-ink/50">
+            {t.yourStake}
+          </label>
           <input
-            className="font-display my-3 w-full rounded-lg border border-ink/20 bg-white p-5 text-3xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+            className="font-display mt-1 w-full rounded-lg border border-ink/20 bg-white p-4 text-3xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
             inputMode="numeric"
             value={mmk(stake)}
             onChange={(e) =>
-              setStake(Number(e.target.value.replace(/\D/g, "")) || 0)
+              changeStake(Number(e.target.value.replace(/\D/g, "")) || 0)
             }
           />
-
-          {/* Chips */}
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             {CHIPS.map((c) => (
               <button
                 key={c}
                 className="rounded-full border border-ink/20 px-4 py-3 text-base font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-                onClick={() => setStake(c)}
+                onClick={() => changeStake(c)}
               >
                 {c >= 1_000_000 ? `${c / 1_000_000}M` : `${c / 1_000}k`}
               </button>
             ))}
           </div>
 
-          {/* Outcome preview — Malay signed-price model */}
-          <div className="my-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-canvas p-3 text-base leading-relaxed">
-            {/* Win row */}
-            <span className="text-ink/50">{t.outWin}</span>
-            <span className="font-semibold text-mx">{signedMmk(p.winNet)}</span>
-
-            {/* Push row — only whole-number lines can land exactly on the line */}
+          {/* Plain-MMK payout — lead with the amounts, not the price jargon */}
+          <div className="my-3 space-y-1.5 rounded-lg bg-canvas p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-base text-ink/60">{t.ifWin}</span>
+              <span className="font-display text-xl text-mx">
+                +{mmk(p.winNet)}
+              </span>
+            </div>
             {p.showPush && (
-              <>
-                <span className="text-ink/50">
-                  {t.outPush} ({line.ballQ / 4})
+              <div className="flex items-center justify-between">
+                <span className="text-base text-ink/60">{t.ifPush}</span>
+                <span className="text-base font-semibold text-ink/50">
+                  {mmk(stake)}
                 </span>
-                <span className="font-semibold text-ink/60">
-                  {signedMmk(0)}
-                </span>
-              </>
+              </div>
             )}
-
-            {/* Lose row */}
-            <span className="text-ink/50">{t.outLose}</span>
-            <span className="font-semibold text-ca">
-              {signedMmk(p.loseNet)}
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-base text-ink/60">{t.ifLose}</span>
+              <span className="font-display text-xl text-ca">
+                −{mmk(Math.abs(p.loseNet))}
+              </span>
+            </div>
           </div>
 
           {error && (
             <p className="mb-2 text-center text-base text-ca">{error}</p>
           )}
 
-          {/* CONFIRM — bg-mx (placing money = green) */}
+          {/* Deliberate 2-tap confirm; the amount is on the button */}
           <button
-            className="w-full rounded-lg bg-mx p-5 text-xl font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-            onClick={confirm}
+            disabled={!valid || busy}
+            className={`w-full rounded-lg p-5 text-xl font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us disabled:opacity-40 ${
+              armed ? "bg-ca" : "bg-mx"
+            }`}
+            onClick={onButton}
           >
-            {t.confirmBet}
+            {busy
+              ? "…"
+              : !valid
+                ? t.minStakeNote
+                : armed
+                  ? t.placeConfirm.replace("{n}", mmk(stake))
+                  : t.placeBtn.replace("{n}", mmk(stake))}
           </button>
+          {armed && !busy && (
+            <p className="mt-2 text-center text-sm text-ink/50">
+              {t.placeReview.replace("{pick}", pick)}
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -25,6 +25,10 @@ export default function ScoresPage() {
   const [busy, setBusy] = useState<Record<number, boolean>>({});
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [globalError, setGlobalError] = useState("");
+  // Wikipedia-fetched candidate scores (matchId -> score), pending admin confirm.
+  const [fetched, setFetched] = useState<Record<number, ScoreLocal>>({});
+  const [fetching, setFetching] = useState(false);
+  const [fetchMsg, setFetchMsg] = useState("");
 
   const reload = () =>
     api<MatchRow[]>("/api/matches")
@@ -67,6 +71,38 @@ export default function ScoresPage() {
   }
   function setBusyFor(matchId: number, val: boolean) {
     setBusy((prev) => ({ ...prev, [matchId]: val }));
+  }
+
+  type Candidate = {
+    matchId: number;
+    homeTeam: string;
+    awayTeam: string;
+    home: number;
+    away: number;
+  };
+  async function fetchResults() {
+    setFetching(true);
+    setFetchMsg("");
+    try {
+      const r = await api<{
+        candidates: Candidate[];
+        found: number;
+        checked: number;
+      }>("/api/admin/scores/fetch");
+      const map: Record<number, ScoreLocal> = {};
+      for (const c of r.candidates)
+        map[c.matchId] = { home: c.home, away: c.away };
+      setFetched(map);
+      // Pre-fill the editable scores so Confirm uses the fetched numbers.
+      setScores((prev) => ({ ...prev, ...map }));
+      setFetchMsg(
+        `Fetched ${r.found} of ${r.checked} match${r.checked === 1 ? "" : "es"} from Wikipedia. Review each and tap “Confirm”.`,
+      );
+    } catch (e) {
+      setFetchMsg(e instanceof Error ? e.message : "fetch failed");
+    } finally {
+      setFetching(false);
+    }
   }
 
   async function doAction(
@@ -146,10 +182,14 @@ export default function ScoresPage() {
   return (
     <main>
       <h1 className="mb-4 text-lg font-bold">Scores</h1>
-      <div className="flex items-center justify-between mb-3">
-        {visible.length === 0 && !showAll && (
-          <p className="text-gray-500 text-sm">No matches today.</p>
-        )}
+      <div className="flex items-center gap-2 mb-1">
+        <button
+          onClick={fetchResults}
+          disabled={fetching}
+          className="rounded bg-blue-600 px-3 py-1 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {fetching ? "Fetching…" : "Fetch results (Wikipedia)"}
+        </button>
         <button
           onClick={() => setShowAll((v) => !v)}
           className="ml-auto text-xs border px-2 py-1 rounded text-gray-600"
@@ -157,6 +197,10 @@ export default function ScoresPage() {
           {showAll ? "Show relevant" : "Show all"}
         </button>
       </div>
+      {fetchMsg && <p className="mb-3 text-sm text-blue-700">{fetchMsg}</p>}
+      {visible.length === 0 && !showAll && (
+        <p className="text-gray-500 text-sm mb-3">No matches today.</p>
+      )}
       {dayGroups.map(([day, dayMatches]) => {
         const dl = dayLabel(day, today, tomorrow);
         return (
@@ -204,6 +248,26 @@ export default function ScoresPage() {
                       {m.status}
                     </span>
                   </div>
+
+                  {/* Wikipedia-fetched score awaiting confirmation */}
+                  {fetched[m.id] && m.status !== "finished" && (
+                    <div className="mb-2 flex items-center gap-2 rounded border border-blue-200 bg-blue-50 px-2 py-1.5 text-sm">
+                      <span className="text-blue-800">
+                        Wikipedia:{" "}
+                        <b>
+                          {m.homeTeam} {fetched[m.id].home}–{fetched[m.id].away}{" "}
+                          {m.awayTeam}
+                        </b>
+                      </span>
+                      <button
+                        disabled={isBusy}
+                        onClick={() => doAction(m.id, "final")}
+                        className="ml-auto rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                      >
+                        Confirm &amp; grade
+                      </button>
+                    </div>
+                  )}
 
                   {/* Kick off button for scheduled matches */}
                   {m.status === "scheduled" && (

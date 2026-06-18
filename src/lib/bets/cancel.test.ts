@@ -43,7 +43,14 @@ async function setup() {
   const line = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     PLACED,
   );
   // player id 2 places a bet
@@ -111,7 +118,14 @@ describe("cancelOwnBet", () => {
     await postLine(
       db,
       1,
-      { matchId: m.id, market: "ah", favSide: "home", ballQ: 4, priceC: 90 },
+      {
+        matchId: m.id,
+        market: "ah",
+        favSide: "home",
+        offeredSide: "fav",
+        ballQ: 4,
+        priceC: 90,
+      },
       "2026-06-12T10:00:30Z",
     );
     await expect(

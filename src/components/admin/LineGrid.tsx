@@ -9,6 +9,7 @@ type Line = {
   priceC: number;
   status: "active" | "suspended" | "closed";
   market: "ah" | "ou";
+  offeredSide: "fav" | "dog" | "over" | "under";
 };
 export type GridMatch = {
   id: number;
@@ -20,22 +21,38 @@ export type GridMatch = {
   ouLine: Line | null;
 };
 
-type AhInput = { favSide: "home" | "away"; ball: string; price: string };
-type OuInput = { goals: string; price: string };
+type AhInput = {
+  favSide: "home" | "away";
+  offeredSide: "fav" | "dog";
+  ball: string;
+  price: string;
+};
+type OuInput = { offeredSide: "over" | "under"; goals: string; price: string };
 
 function seedAh(line: Line | null): AhInput {
   return line
     ? {
         favSide: line.favSide,
+        offeredSide:
+          line.offeredSide === "dog" || line.offeredSide === "fav"
+            ? line.offeredSide
+            : "fav",
         ball: ball(line.ballQ),
         price: price(line.priceC),
       }
-    : { favSide: "home", ball: "", price: "" };
+    : { favSide: "home", offeredSide: "fav", ball: "", price: "" };
 }
 function seedOu(line: Line | null): OuInput {
   return line
-    ? { goals: ball(line.ballQ), price: price(line.priceC) }
-    : { goals: "", price: "" };
+    ? {
+        offeredSide:
+          line.offeredSide === "under" || line.offeredSide === "over"
+            ? line.offeredSide
+            : "over",
+        goals: ball(line.ballQ),
+        price: price(line.priceC),
+      }
+    : { offeredSide: "over", goals: "", price: "" };
 }
 
 /** Parse a ball/goals string to ballQ (×4); null if invalid or out of range. */
@@ -107,6 +124,7 @@ export function LineGrid({
       matchId: number;
       market: "ah";
       favSide: "home" | "away";
+      offeredSide: "fav" | "dog";
       ballQ: number;
       priceC: number;
     }> = [];
@@ -132,12 +150,14 @@ export function LineGrid({
           !cur ||
           cur.ballQ !== ballQ ||
           cur.priceC !== priceC ||
-          cur.favSide !== f.favSide;
+          cur.favSide !== f.favSide ||
+          cur.offeredSide !== f.offeredSide;
         if (dirty)
           lines.push({
             matchId: m.id,
             market: "ah",
             favSide: f.favSide,
+            offeredSide: f.offeredSide,
             ballQ,
             priceC,
           });
@@ -157,6 +177,7 @@ export function LineGrid({
     const lines: Array<{
       matchId: number;
       market: "ou";
+      offeredSide: "over" | "under";
       ballQ: number;
       priceC: number;
     }> = [];
@@ -178,8 +199,19 @@ export function LineGrid({
         bad.push(`${m.homeTeam} v ${m.awayTeam}: invalid price "${f.price}"`);
       else {
         const cur = m.ouLine;
-        const dirty = !cur || cur.ballQ !== ballQ || cur.priceC !== priceC;
-        if (dirty) lines.push({ matchId: m.id, market: "ou", ballQ, priceC });
+        const dirty =
+          !cur ||
+          cur.ballQ !== ballQ ||
+          cur.priceC !== priceC ||
+          cur.offeredSide !== f.offeredSide;
+        if (dirty)
+          lines.push({
+            matchId: m.id,
+            market: "ou",
+            offeredSide: f.offeredSide,
+            ballQ,
+            priceC,
+          });
       }
     }
     if (bad.length) return setErr(bad.join(" · "));
@@ -286,6 +318,7 @@ export function LineGrid({
             <tr className="border-b text-left text-xs uppercase text-gray-500">
               <th className="py-1 pr-2">Match</th>
               <th className="py-1 pr-2">Fav</th>
+              <th className="py-1 pr-2">Offer</th>
               <th className="py-1 pr-2 text-right">Ball</th>
               <th className="py-1 pr-2 text-right">Price</th>
               <th className="py-1 pr-2">Current</th>
@@ -313,6 +346,30 @@ export function LineGrid({
                   >
                     <option value="home">{m.homeTeam}</option>
                     <option value="away">{m.awayTeam}</option>
+                  </select>
+                </td>
+                <td className="py-1 pr-2">
+                  <select
+                    className="border rounded px-1 py-1 text-sm"
+                    value={ahOf(m).offeredSide}
+                    onChange={(e) =>
+                      setAh((p) => ({
+                        ...p,
+                        [m.id]: {
+                          ...(p[m.id] ?? seedAh(m.line)),
+                          offeredSide: e.target.value as "fav" | "dog",
+                        },
+                      }))
+                    }
+                  >
+                    <option value="fav">
+                      fav (
+                      {ahOf(m).favSide === "home" ? m.homeTeam : m.awayTeam})
+                    </option>
+                    <option value="dog">
+                      dog (
+                      {ahOf(m).favSide === "home" ? m.awayTeam : m.homeTeam})
+                    </option>
                   </select>
                 </td>
                 <td className="py-1 pr-2 text-right">
@@ -354,7 +411,7 @@ export function LineGrid({
                 </td>
               </tr>
             ),
-            5,
+            6,
           )}
         </table>
       </div>
@@ -377,6 +434,7 @@ export function LineGrid({
           <thead>
             <tr className="border-b text-left text-xs uppercase text-gray-500">
               <th className="py-1 pr-2">Match</th>
+              <th className="py-1 pr-2">Offer</th>
               <th className="py-1 pr-2 text-right">Goals</th>
               <th className="py-1 pr-2 text-right">Price</th>
               <th className="py-1 pr-2">Current</th>
@@ -387,6 +445,24 @@ export function LineGrid({
               <tr className="border-b">
                 <td className="py-1 pr-2 whitespace-nowrap">
                   {m.homeTeam} v {m.awayTeam}
+                </td>
+                <td className="py-1 pr-2">
+                  <select
+                    className="border rounded px-1 py-1 text-sm"
+                    value={ouOf(m).offeredSide}
+                    onChange={(e) =>
+                      setOu((p) => ({
+                        ...p,
+                        [m.id]: {
+                          ...(p[m.id] ?? seedOu(m.ouLine)),
+                          offeredSide: e.target.value as "over" | "under",
+                        },
+                      }))
+                    }
+                  >
+                    <option value="over">over</option>
+                    <option value="under">under</option>
+                  </select>
                 </td>
                 <td className="py-1 pr-2 text-right">
                   <input
@@ -427,7 +503,7 @@ export function LineGrid({
                 </td>
               </tr>
             ),
-            4,
+            5,
           )}
         </table>
       </div>

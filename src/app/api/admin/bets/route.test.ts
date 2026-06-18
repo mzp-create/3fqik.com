@@ -39,7 +39,14 @@ beforeEach(async () => {
   const line = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 90,
+    },
     NOW,
   );
   await placeBet(

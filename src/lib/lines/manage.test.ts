@@ -31,14 +31,28 @@ it("posting closes the previous line and increments version", async () => {
   const l1 = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   expect(l1.version).toBe(1);
   const l2 = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 4, priceC: 95 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 4,
+      priceC: 95,
+    },
     NOW,
   );
   expect(l2.version).toBe(2);
@@ -51,7 +65,14 @@ it("suspend/resume toggles; closed lines cannot resume; bad prices rejected", as
   const l = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 85 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 85,
+    },
     NOW,
   );
   await setLineStatus(db, 1, "ah", "suspended");
@@ -64,7 +85,14 @@ it("suspend/resume toggles; closed lines cannot resume; bad prices rejected", as
     postLine(
       db,
       1,
-      { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 0 },
+      {
+        matchId: 1,
+        market: "ah",
+        favSide: "home",
+        offeredSide: "fav",
+        ballQ: 2,
+        priceC: 0,
+      },
       NOW,
     ),
   ).rejects.toThrow();
@@ -72,7 +100,14 @@ it("suspend/resume toggles; closed lines cannot resume; bad prices rejected", as
     postLine(
       db,
       1,
-      { matchId: 1, market: "ah", favSide: "home", ballQ: -1, priceC: 90 },
+      {
+        matchId: 1,
+        market: "ah",
+        favSide: "home",
+        offeredSide: "fav",
+        ballQ: -1,
+        priceC: 90,
+      },
       NOW,
     ),
   ).rejects.toThrow();
@@ -85,7 +120,14 @@ it("err codes: not_found for missing match, match_finished for done match, bad_l
       await postLine(
         db,
         1,
-        { matchId: 999, market: "ah", favSide: "home", ballQ: 2, priceC: 85 },
+        {
+          matchId: 999,
+          market: "ah",
+          favSide: "home",
+          offeredSide: "fav",
+          ballQ: 2,
+          priceC: 85,
+        },
         NOW,
       );
       return null;
@@ -117,6 +159,7 @@ it("err codes: not_found for missing match, match_finished for done match, bad_l
           matchId: finishedId,
           market: "ah",
           favSide: "home",
+          offeredSide: "fav",
           ballQ: 2,
           priceC: 85,
         },
@@ -135,7 +178,14 @@ it("err codes: not_found for missing match, match_finished for done match, bad_l
       await postLine(
         db,
         1,
-        { matchId: 1, market: "ah", favSide: "home", ballQ: -1, priceC: 85 },
+        {
+          matchId: 1,
+          market: "ah",
+          favSide: "home",
+          offeredSide: "fav",
+          ballQ: -1,
+          priceC: 85,
+        },
         NOW,
       );
       return null;
@@ -151,7 +201,14 @@ it("err codes: not_found for missing match, match_finished for done match, bad_l
       await postLine(
         db,
         1,
-        { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 0 },
+        {
+          matchId: 1,
+          market: "ah",
+          favSide: "home",
+          offeredSide: "fav",
+          ballQ: 2,
+          priceC: 0,
+        },
         NOW,
       );
       return null;
@@ -179,7 +236,14 @@ it("setLineStatus errors: no_line for missing matchId, line_closed for closed li
   await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 85 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 85,
+    },
     NOW,
   );
   await setLineStatus(db, 1, "ah", "closed");
@@ -204,13 +268,27 @@ it("sequential posts increment versions", async () => {
   const l1 = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 85 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 85,
+    },
     NOW,
   );
   const l2 = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "away", ballQ: 4, priceC: 95 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "away",
+      offeredSide: "fav",
+      ballQ: 4,
+      priceC: 95,
+    },
     NOW,
   );
   expect(l1.version).not.toBe(l2.version);
@@ -221,7 +299,14 @@ it("raw duplicate insert throws UNIQUE constraint error", async () => {
   await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 85 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 85,
+    },
     NOW,
   );
   // version 1 for (matchId=1, market='ah') now exists — raw insert must fail
@@ -245,7 +330,14 @@ it("postLine against a finished match throws /finished/ and leaves row count unc
   await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 85 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 85,
+    },
     NOW,
   );
   const countBefore = (await db.select().from(schema.lines)).length;
@@ -260,7 +352,14 @@ it("postLine against a finished match throws /finished/ and leaves row count unc
     postLine(
       db,
       1,
-      { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 85 },
+      {
+        matchId: 1,
+        market: "ah",
+        favSide: "home",
+        offeredSide: "fav",
+        ballQ: 2,
+        priceC: 85,
+      },
       NOW,
     ),
   ).rejects.toThrow(/finished/);
@@ -277,7 +376,14 @@ it("broadcast: successful postLine pushes exactly one line_update chunk; failed 
     await postLine(
       db,
       1,
-      { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 85 },
+      {
+        matchId: 1,
+        market: "ah",
+        favSide: "home",
+        offeredSide: "fav",
+        ballQ: 2,
+        priceC: 85,
+      },
       NOW,
     );
     expect(events).toHaveLength(1);
@@ -293,7 +399,14 @@ it("broadcast: successful postLine pushes exactly one line_update chunk; failed 
       postLine(
         db,
         1,
-        { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 85 },
+        {
+          matchId: 1,
+          market: "ah",
+          favSide: "home",
+          offeredSide: "fav",
+          ballQ: 2,
+          priceC: 85,
+        },
         NOW,
       ),
     ).rejects.toThrow();
@@ -309,7 +422,14 @@ it("per-market version independence: ah v1, ou v1, ah v2 → ou still v1 active"
   const ahV1 = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   expect(ahV1.version).toBe(1);
@@ -317,7 +437,14 @@ it("per-market version independence: ah v1, ou v1, ah v2 → ou still v1 active"
   const ouV1 = await postLine(
     db,
     1,
-    { matchId: 1, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: 1,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
   expect(ouV1.version).toBe(1);
@@ -326,7 +453,14 @@ it("per-market version independence: ah v1, ou v1, ah v2 → ou still v1 active"
   const ahV2 = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 4, priceC: 95 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 4,
+      priceC: 95,
+    },
     NOW,
   );
   expect(ahV2.version).toBe(2);
@@ -349,13 +483,27 @@ it("suspending ou does not affect ah line", async () => {
   await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   await postLine(
     db,
     1,
-    { matchId: 1, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: 1,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
 
@@ -374,7 +522,14 @@ it("ou ballQ 0 is rejected with bad_line (no O 0.0 lines)", async () => {
       await postLine(
         db,
         1,
-        { matchId: 1, market: "ou", favSide: "home", ballQ: 0, priceC: 90 },
+        {
+          matchId: 1,
+          market: "ou",
+          favSide: "home",
+          offeredSide: "over",
+          ballQ: 0,
+          priceC: 90,
+        },
         NOW,
       );
       return null;
@@ -393,7 +548,14 @@ it("SSE line_update payload includes market field", async () => {
     await postLine(
       db,
       1,
-      { matchId: 1, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+      {
+        matchId: 1,
+        market: "ou",
+        favSide: "home",
+        offeredSide: "over",
+        ballQ: 10,
+        priceC: 90,
+      },
       NOW,
     );
     expect(events).toHaveLength(1);
@@ -408,7 +570,14 @@ it("setLineStatus SSE payload includes market field", async () => {
   await postLine(
     db,
     1,
-    { matchId: 1, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: 1,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
   const events: string[] = [];

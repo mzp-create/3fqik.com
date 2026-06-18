@@ -39,12 +39,25 @@ export async function postLine(
     matchId: number;
     market: "ah" | "ou";
     favSide: "home" | "away";
+    offeredSide: "fav" | "dog" | "over" | "under";
     ballQ: number;
     priceC: number;
   },
   at: string,
 ) {
   // Validate inputs first (before entering the transaction)
+  const okSides =
+    input.market === "ah"
+      ? input.offeredSide === "fav" || input.offeredSide === "dog"
+      : input.offeredSide === "over" || input.offeredSide === "under";
+  if (!okSides)
+    throw err(
+      input.market === "ah"
+        ? "offeredSide must be 'fav' or 'dog'"
+        : "offeredSide must be 'over' or 'under'",
+      400,
+      "bad_line",
+    );
   // ou market: ballQ must be ≥ 1 (no O 0.0 lines); ah keeps ≥ 0
   const minBallQ = input.market === "ou" ? 1 : 0;
   if (
@@ -104,6 +117,7 @@ export async function postLine(
         market: input.market,
         version: (prev?.version ?? 0) + 1,
         favSide: input.favSide,
+        offeredSide: input.offeredSide,
         ballQ: input.ballQ,
         priceC: input.priceC,
         status: "active",

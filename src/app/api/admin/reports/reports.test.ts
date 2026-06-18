@@ -71,7 +71,14 @@ async function seedGradedBet(
   const line = await postLine(
     db,
     1,
-    { matchId: match.id, market: "ah", favSide: "home", ballQ: 4, priceC: 92 },
+    {
+      matchId: match.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 4,
+      priceC: 92,
+    },
     NOW,
   );
   const bet = await placeBet(
@@ -194,6 +201,7 @@ describe("P&L report query", () => {
         matchId: match.id,
         market: "ah",
         favSide: "home",
+        offeredSide: "fav",
         ballQ: 4,
         priceC: 92,
       },

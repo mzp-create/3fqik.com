@@ -8,6 +8,7 @@ type LineSpec = {
   matchId: number;
   market: "ah" | "ou";
   favSide?: "home" | "away";
+  offeredSide?: "fav" | "dog" | "over" | "under";
   ballQ: number;
   priceC: number;
 };
@@ -36,6 +37,14 @@ function validateLine(s: Partial<LineSpec>): string | null {
     return "price must be a signed value −1.00…+1.00 (not 0)";
   if (s.market === "ah" && s.favSide !== "home" && s.favSide !== "away")
     return "favSide must be 'home' or 'away'";
+  const offerOk =
+    s.market === "ah"
+      ? s.offeredSide === "fav" || s.offeredSide === "dog"
+      : s.offeredSide === "over" || s.offeredSide === "under";
+  if (!offerOk)
+    return s.market === "ah"
+      ? "offeredSide must be 'fav' or 'dog'"
+      : "offeredSide must be 'over' or 'under'";
   return null;
 }
 
@@ -83,6 +92,7 @@ export async function POST(req: Request) {
               matchId: s.matchId,
               market: s.market,
               favSide: favOf(s),
+              offeredSide: s.offeredSide!,
               ballQ: s.ballQ,
               priceC: s.priceC,
             },
@@ -118,6 +128,7 @@ export async function POST(req: Request) {
             matchId: body.matchId,
             market: body.market,
             favSide: favOf(body),
+            offeredSide: body.offeredSide,
             ballQ: body.ballQ,
             priceC: body.priceC,
           },

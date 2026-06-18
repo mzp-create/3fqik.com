@@ -52,7 +52,14 @@ async function bet(matchId: number, side: "fav" | "dog", stake: number) {
   const line = await postLine(
     db,
     1,
-    { matchId, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId,
+      market: "ah",
+      favSide: "home",
+      offeredSide: side,
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   return placeBet(
@@ -331,15 +338,29 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
   const ahLine = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
 
-  // Post OU line pre-match (ballQ=10 = 2.5 goals × 4)
-  const ouLine = await postLine(
+  // Post OU line pre-match (ballQ=10 = 2.5 goals × 4), offering under for Bet C
+  const ouLineUnder = await postLine(
     db,
     1,
-    { matchId: 1, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: 1,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "under",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
 
@@ -366,7 +387,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
     {
       matchId: 1,
       market: "ou",
-      lineVersion: ouLine.version,
+      lineVersion: ouLineUnder.version,
       side: "under",
       stakeMmk: 150_000,
     },
@@ -374,6 +395,21 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
   );
   expect(betC.scoreHomeAtBet).toBe(0);
   expect(betC.scoreAwayAtBet).toBe(0);
+
+  // Re-post the OU line offering over for Bet B (same ballQ/priceC → same grading)
+  const ouLineOver = await postLine(
+    db,
+    1,
+    {
+      matchId: 1,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
+    NOW,
+  );
 
   // Set match live at 1-0 before placing Bet B
   await db
@@ -388,7 +424,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
     {
       matchId: 1,
       market: "ou",
-      lineVersion: ouLine.version,
+      lineVersion: ouLineOver.version,
       side: "over",
       stakeMmk: 200_000,
     },

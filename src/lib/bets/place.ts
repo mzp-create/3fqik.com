@@ -75,6 +75,13 @@ export async function placeBet(
       throw err("line moved — confirm the new price", 409, "line_moved", {
         currentLine: line,
       });
+    // Malay one-sided lines: only the offered side is bettable.
+    if (input.side !== line.offeredSide)
+      throw err(
+        "this side is not offered for this line",
+        400,
+        "side_not_offered",
+      );
 
     // ensure match_day row exists and is open (cheaper check — correct precedence:
     // closed day → 'betting_closed' before limit errors). Lock the row so the

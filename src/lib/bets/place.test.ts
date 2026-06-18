@@ -52,7 +52,14 @@ it("places a bet locking line version and snapshotting score", async () => {
   const line = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   const bet = await placeBet(
@@ -78,13 +85,27 @@ it("rejects: stale version, suspended line, finished match, sub-floor stake", as
   await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   const l2 = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 4, priceC: 95 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 4,
+      priceC: 95,
+    },
     NOW,
   );
   await expect(
@@ -143,13 +164,27 @@ it("enforces the daily pool and per-match carve-out", async () => {
   const la = await postLine(
     db,
     1,
-    { matchId: a.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
+    {
+      matchId: a.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 90,
+    },
     NOW,
   );
   const lb = await postLine(
     db,
     1,
-    { matchId: b.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
+    {
+      matchId: b.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 90,
+    },
     NOW,
   );
   await db.update(schema.settings).set({ dailyTotalLimitMmk: 300_000 });
@@ -167,6 +202,20 @@ it("enforces the daily pool and per-match carve-out", async () => {
     },
     NOW,
   );
+  // re-post offering dog so the next (rejected-on-limit) bet uses the offered side
+  const lbDog = await postLine(
+    db,
+    1,
+    {
+      matchId: b.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "dog",
+      ballQ: 2,
+      priceC: 90,
+    },
+    NOW,
+  );
   await expect(
     placeBet(
       db,
@@ -174,7 +223,7 @@ it("enforces the daily pool and per-match carve-out", async () => {
       {
         matchId: b.id,
         market: "ah",
-        lineVersion: lb.version,
+        lineVersion: lbDog.version,
         side: "dog",
         stakeMmk: 60_000,
       },
@@ -194,6 +243,20 @@ it("enforces the daily pool and per-match carve-out", async () => {
     },
     NOW,
   );
+  // re-post offering dog so the next (rejected-on-limit) bet uses the offered side
+  const laDog = await postLine(
+    db,
+    1,
+    {
+      matchId: a.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "dog",
+      ballQ: 2,
+      priceC: 90,
+    },
+    NOW,
+  );
   await expect(
     placeBet(
       db,
@@ -201,7 +264,7 @@ it("enforces the daily pool and per-match carve-out", async () => {
       {
         matchId: a.id,
         market: "ah",
-        lineVersion: la.version,
+        lineVersion: laDog.version,
         side: "dog",
         stakeMmk: 20_000,
       },
@@ -215,7 +278,14 @@ it("rejects a bet on a finished match", async () => {
   const line = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   // mark finished after line is posted
@@ -244,7 +314,14 @@ it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/
   const line = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 90,
+    },
     NOW,
   );
   // exactly 150k should be accepted
@@ -260,6 +337,20 @@ it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/
     },
     NOW,
   );
+  // re-post offering dog so the next (rejected-on-limit) bet uses the offered side
+  const lineDog = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "dog",
+      ballQ: 2,
+      priceC: 90,
+    },
+    NOW,
+  );
   // second bet of 10k should be rejected — headroom is 0
   await expect(
     placeBet(
@@ -268,7 +359,7 @@ it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/
       {
         matchId: m.id,
         market: "ah",
-        lineVersion: line.version,
+        lineVersion: lineDog.version,
         side: "dog",
         stakeMmk: 10_000,
       },
@@ -282,7 +373,14 @@ it("rejects betting when match day is closed", async () => {
   const line = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 90,
+    },
     NOW,
   );
   // insert a closed matchDays row for this date
@@ -310,7 +408,14 @@ it("void restores headroom: voided bet stake does not count toward carve-out", a
   const line = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 90,
+    },
     NOW,
   );
   const bet = await placeBet(
@@ -350,7 +455,14 @@ it("MAX_STAKE: stake 1_000_000_001 and 2_000_000_000_000 are both rejected", asy
   const line = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 90,
+    },
     NOW,
   );
   await expect(
@@ -390,7 +502,14 @@ it("ou bet happy path: snapshot, ticket, linked to ou line", async () => {
   const ouLine = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
   const bet = await placeBet(
@@ -417,14 +536,28 @@ it("stale ou version returns 409 with currentLine.market = 'ou'", async () => {
   await postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
   // post a second ou line → v1 is now stale
   await postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 11, priceC: 92 },
+    {
+      matchId: m.id,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 11,
+      priceC: 92,
+    },
     NOW,
   );
   let caught:
@@ -459,20 +592,41 @@ it("ah line stale check is unaffected by ou posts: ah v1 still valid after posti
   const ahLine = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   // post two ou lines — should not bump the ah version
   await postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
   await postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 11, priceC: 92 },
+    {
+      matchId: m.id,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 11,
+      priceC: 92,
+    },
     NOW,
   );
   // placing an ah bet with v1 should still succeed
@@ -496,13 +650,27 @@ it("side-market mismatch is rejected with bad_side: over on ah, fav on ou", asyn
   const ahLine = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   const ouLine = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
 
@@ -553,13 +721,27 @@ it("limits count ah+ou stakes together against one match cap", async () => {
   const ahLine = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ah", favSide: "home", ballQ: 3, priceC: 92 },
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+    },
     NOW,
   );
   const ouLine = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
 
@@ -591,6 +773,21 @@ it("limits count ah+ou stakes together against one match cap", async () => {
     NOW,
   );
 
+  // re-post ou offering under so the next (rejected-on-limit) bet uses the offered side
+  const ouLineUnder = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "under",
+      ballQ: 10,
+      priceC: 90,
+    },
+    NOW,
+  );
+
   // try to bet 30k more (would take total to 210k) → should fail with ~20k headroom
   await expect(
     placeBet(
@@ -599,7 +796,7 @@ it("limits count ah+ou stakes together against one match cap", async () => {
       {
         matchId: m.id,
         market: "ou",
-        lineVersion: ouLine.version,
+        lineVersion: ouLineUnder.version,
         side: "under",
         stakeMmk: 30_000,
       },
@@ -613,7 +810,14 @@ it("suspended ou line rejects placement with line_suspended code", async () => {
   const ouLine = await postLine(
     db,
     1,
-    { matchId: m.id, market: "ou", favSide: "home", ballQ: 10, priceC: 90 },
+    {
+      matchId: m.id,
+      market: "ou",
+      favSide: "home",
+      offeredSide: "over",
+      ballQ: 10,
+      priceC: 90,
+    },
     NOW,
   );
   await setLineStatus(db, m.id, "ou", "suspended");

@@ -21,6 +21,7 @@ type Line = {
   priceC: number;
   status: "active" | "suspended" | "closed";
   market: "ah" | "ou";
+  offeredSide: "fav" | "dog" | "over" | "under";
 };
 
 type MatchRow = {
@@ -36,12 +37,14 @@ type MatchRow = {
 
 type AhFormState = {
   favSide: "home" | "away";
+  offeredSide: "fav" | "dog";
   ballQ: number; // stored as quarter units (×4)
   priceC: number; // stored ×100
   priceCInput: string; // raw string for the price input
 };
 
 type OuFormState = {
+  offeredSide: "over" | "under";
   ballQ: number; // stored as quarter units (×4), min 1 (=0.25)
   priceC: number;
   priceCInput: string;
@@ -51,24 +54,38 @@ function initAhForm(line?: Line | null): AhFormState {
   if (line) {
     return {
       favSide: line.favSide,
+      offeredSide:
+        line.offeredSide === "dog" || line.offeredSide === "fav"
+          ? line.offeredSide
+          : "fav",
       ballQ: line.ballQ,
       priceC: line.priceC,
       priceCInput: (line.priceC / 100).toFixed(2),
     };
   }
-  return { favSide: "home", ballQ: 4, priceC: 92, priceCInput: "0.92" };
+  return {
+    favSide: "home",
+    offeredSide: "fav",
+    ballQ: 4,
+    priceC: 92,
+    priceCInput: "0.92",
+  };
 }
 
 function initOuForm(line?: Line | null): OuFormState {
   if (line) {
     return {
+      offeredSide:
+        line.offeredSide === "under" || line.offeredSide === "over"
+          ? line.offeredSide
+          : "over",
       ballQ: line.ballQ,
       priceC: line.priceC,
       priceCInput: (line.priceC / 100).toFixed(2),
     };
   }
   // default 2.5 goals = ballQ 10
-  return { ballQ: 10, priceC: 90, priceCInput: "0.90" };
+  return { offeredSide: "over", ballQ: 10, priceC: 90, priceCInput: "0.90" };
 }
 
 export default function LinesPage() {
@@ -163,6 +180,7 @@ export default function LinesPage() {
         matchId,
         market: "ah",
         favSide: f.favSide,
+        offeredSide: f.offeredSide,
         ballQ: f.ballQ,
         priceC,
       });
@@ -204,6 +222,7 @@ export default function LinesPage() {
         matchId,
         market: "ou",
         favSide: "home",
+        offeredSide: f.offeredSide,
         ballQ: f.ballQ,
         priceC,
       });
@@ -437,6 +456,29 @@ export default function LinesPage() {
                           </select>
                         </div>
                         <div className="flex gap-2 items-center text-sm">
+                          <label className="w-16 text-gray-600">Offer</label>
+                          <select
+                            className="border rounded px-1 py-0.5 text-sm"
+                            value={ahF.offeredSide}
+                            onChange={(e) =>
+                              updateAhForm(m.id, {
+                                offeredSide: e.target.value as "fav" | "dog",
+                              })
+                            }
+                          >
+                            <option value="fav">
+                              Favourite (
+                              {ahF.favSide === "home" ? m.homeTeam : m.awayTeam}
+                              )
+                            </option>
+                            <option value="dog">
+                              Underdog (
+                              {ahF.favSide === "home" ? m.awayTeam : m.homeTeam}
+                              )
+                            </option>
+                          </select>
+                        </div>
+                        <div className="flex gap-2 items-center text-sm">
                           <label className="w-16 text-gray-600">Ball</label>
                           <button
                             className="border rounded px-2 py-0.5"
@@ -555,6 +597,21 @@ export default function LinesPage() {
 
                       {/* O/U Post / move form */}
                       <div className="space-y-2 mb-3">
+                        <div className="flex gap-2 items-center text-sm">
+                          <label className="w-16 text-gray-600">Offer</label>
+                          <select
+                            className="border rounded px-1 py-0.5 text-sm"
+                            value={ouF.offeredSide}
+                            onChange={(e) =>
+                              updateOuForm(m.id, {
+                                offeredSide: e.target.value as "over" | "under",
+                              })
+                            }
+                          >
+                            <option value="over">Over</option>
+                            <option value="under">Under</option>
+                          </select>
+                        </div>
                         <div className="flex gap-2 items-center text-sm">
                           <label className="w-16 text-gray-600">Goals</label>
                           <button

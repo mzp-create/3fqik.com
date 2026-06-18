@@ -43,10 +43,17 @@ beforeEach(async () => {
     venue: "X",
     matchDay: "2026-06-12",
   });
-  const line = await postLine(
+  const favLine = await postLine(
     db,
     1,
-    { matchId: 1, market: "ah", favSide: "home", ballQ: 2, priceC: 90 },
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 2,
+      priceC: 90,
+    },
     NOW,
   );
   await placeBet(
@@ -55,19 +62,33 @@ beforeEach(async () => {
     {
       matchId: 1,
       market: "ah",
-      lineVersion: line.version,
+      lineVersion: favLine.version,
       side: "fav",
       stakeMmk: 100_000,
     },
     NOW,
   ); // Zaw fav
+  // re-post offering dog (same ballQ/priceC → same grading) for Thiri's dog bet
+  const dogLine = await postLine(
+    db,
+    1,
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      offeredSide: "dog",
+      ballQ: 2,
+      priceC: 90,
+    },
+    NOW,
+  );
   await placeBet(
     db,
     3,
     {
       matchId: 1,
       market: "ah",
-      lineVersion: line.version,
+      lineVersion: dogLine.version,
       side: "dog",
       stakeMmk: 200_000,
     },
@@ -260,6 +281,7 @@ describe("outstandingSettlements", () => {
         matchId: match2.id,
         market: "ah",
         favSide: "home",
+        offeredSide: "fav",
         ballQ: 4,
         priceC: 90,
       },
@@ -312,6 +334,7 @@ describe("outstandingSettlements", () => {
         matchId: match2.id,
         market: "ah",
         favSide: "home",
+        offeredSide: "dog",
         ballQ: 4,
         priceC: 90,
       },

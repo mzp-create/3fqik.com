@@ -50,6 +50,14 @@ type OuFormState = {
   priceCInput: string;
 };
 
+/** Flip the sign of a price string (the mobile numeric keypad has no minus). */
+function flipSign(s: string): string {
+  const t = s.trim();
+  return t.startsWith("-") ? t.slice(1) : "-" + t;
+}
+const isNeg = (s: string) => s.trim().startsWith("-");
+const magOf = (s: string) => s.replace(/^-/, "");
+
 function initAhForm(line?: Line | null): AhFormState {
   if (line) {
     return {
@@ -506,18 +514,37 @@ export default function LinesPage() {
                         </div>
                         <div className="flex gap-2 items-center text-sm">
                           <label className="w-16 text-gray-600">Price</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="-1.00"
-                            max="1.00"
-                            className="border rounded px-2 py-0.5 w-24 text-sm"
-                            value={ahF.priceCInput}
-                            onChange={(e) =>
+                          <button
+                            type="button"
+                            className={`border rounded w-9 py-0.5 font-bold ${
+                              isNeg(ahF.priceCInput)
+                                ? "bg-red-50 text-red-600 border-red-300"
+                                : "bg-green-50 text-green-700 border-green-300"
+                            }`}
+                            onClick={() =>
                               updateAhForm(m.id, {
-                                priceCInput: e.target.value,
+                                priceCInput: flipSign(ahF.priceCInput),
                               })
                             }
+                          >
+                            {isNeg(ahF.priceCInput) ? "−" : "+"}
+                          </button>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0.90"
+                            className="border rounded px-2 py-0.5 w-20 text-sm"
+                            value={magOf(ahF.priceCInput)}
+                            onChange={(e) => {
+                              const mag = e.target.value.replace(
+                                /[^0-9.]/g,
+                                "",
+                              );
+                              updateAhForm(m.id, {
+                                priceCInput:
+                                  (isNeg(ahF.priceCInput) ? "-" : "") + mag,
+                              });
+                            }}
                           />
                         </div>
                         <button
@@ -640,18 +667,37 @@ export default function LinesPage() {
                         </div>
                         <div className="flex gap-2 items-center text-sm">
                           <label className="w-16 text-gray-600">Price</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="-1.00"
-                            max="1.00"
-                            className="border rounded px-2 py-0.5 w-24 text-sm"
-                            value={ouF.priceCInput}
-                            onChange={(e) =>
+                          <button
+                            type="button"
+                            className={`border rounded w-9 py-0.5 font-bold ${
+                              isNeg(ouF.priceCInput)
+                                ? "bg-red-50 text-red-600 border-red-300"
+                                : "bg-green-50 text-green-700 border-green-300"
+                            }`}
+                            onClick={() =>
                               updateOuForm(m.id, {
-                                priceCInput: e.target.value,
+                                priceCInput: flipSign(ouF.priceCInput),
                               })
                             }
+                          >
+                            {isNeg(ouF.priceCInput) ? "−" : "+"}
+                          </button>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0.90"
+                            className="border rounded px-2 py-0.5 w-20 text-sm"
+                            value={magOf(ouF.priceCInput)}
+                            onChange={(e) => {
+                              const mag = e.target.value.replace(
+                                /[^0-9.]/g,
+                                "",
+                              );
+                              updateOuForm(m.id, {
+                                priceCInput:
+                                  (isNeg(ouF.priceCInput) ? "-" : "") + mag,
+                              });
+                            }}
                           />
                         </div>
                         <button

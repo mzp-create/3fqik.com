@@ -72,6 +72,15 @@ function parsePrice(v: string): number | null {
   return c !== 0 && c >= -100 && c <= 100 ? c : null;
 }
 
+// Sign helpers — the mobile numeric keypad has no minus key, so a +/− toggle
+// manages the sign while the input takes the magnitude.
+const isNeg = (s: string) => s.trim().startsWith("-");
+const magOf = (s: string) => s.replace(/^-/, "");
+const withSign = (neg: boolean, mag: string) =>
+  (neg ? "-" : "") + mag.replace(/[^0-9.]/g, "");
+const flipSign = (s: string) =>
+  s.trim().startsWith("-") ? s.trim().slice(1) : "-" + s.trim();
+
 type Result = { matchId: number; market: string; ok: boolean; error?: string };
 
 export function LineGrid({
@@ -390,21 +399,48 @@ export function LineGrid({
                   />
                 </td>
                 <td className="py-1 pr-2 text-right">
-                  <input
-                    inputMode="decimal"
-                    className={inputCls}
-                    placeholder="—"
-                    value={ahOf(m).price}
-                    onChange={(e) =>
-                      setAh((p) => ({
-                        ...p,
-                        [m.id]: {
-                          ...(p[m.id] ?? seedAh(m.line)),
-                          price: e.target.value,
-                        },
-                      }))
-                    }
-                  />
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      className={`w-6 rounded border text-sm font-bold ${
+                        isNeg(ahOf(m).price)
+                          ? "border-red-300 bg-red-50 text-red-600"
+                          : "border-green-300 bg-green-50 text-green-700"
+                      }`}
+                      onClick={() =>
+                        setAh((p) => {
+                          const cur0 = p[m.id] ?? seedAh(m.line);
+                          return {
+                            ...p,
+                            [m.id]: { ...cur0, price: flipSign(cur0.price) },
+                          };
+                        })
+                      }
+                    >
+                      {isNeg(ahOf(m).price) ? "−" : "+"}
+                    </button>
+                    <input
+                      inputMode="decimal"
+                      className="w-14 rounded border px-2 py-1 text-right text-sm tabular-nums"
+                      placeholder="—"
+                      value={magOf(ahOf(m).price)}
+                      onChange={(e) =>
+                        setAh((p) => {
+                          const cur0 = p[m.id] ?? seedAh(m.line);
+                          return {
+                            ...p,
+                            [m.id]: {
+                              ...cur0,
+                              price: withSign(
+                                isNeg(cur0.price),
+                                e.target.value,
+                              ),
+                            },
+                          };
+                        })
+                      }
+                    />
+                  </div>
                 </td>
                 <td className="py-1 pr-2 whitespace-nowrap text-xs text-gray-500">
                   {cur(m.line)}
@@ -482,21 +518,48 @@ export function LineGrid({
                   />
                 </td>
                 <td className="py-1 pr-2 text-right">
-                  <input
-                    inputMode="decimal"
-                    className={inputCls}
-                    placeholder="—"
-                    value={ouOf(m).price}
-                    onChange={(e) =>
-                      setOu((p) => ({
-                        ...p,
-                        [m.id]: {
-                          ...(p[m.id] ?? seedOu(m.ouLine)),
-                          price: e.target.value,
-                        },
-                      }))
-                    }
-                  />
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      className={`w-6 rounded border text-sm font-bold ${
+                        isNeg(ouOf(m).price)
+                          ? "border-red-300 bg-red-50 text-red-600"
+                          : "border-green-300 bg-green-50 text-green-700"
+                      }`}
+                      onClick={() =>
+                        setOu((p) => {
+                          const cur0 = p[m.id] ?? seedOu(m.ouLine);
+                          return {
+                            ...p,
+                            [m.id]: { ...cur0, price: flipSign(cur0.price) },
+                          };
+                        })
+                      }
+                    >
+                      {isNeg(ouOf(m).price) ? "−" : "+"}
+                    </button>
+                    <input
+                      inputMode="decimal"
+                      className="w-14 rounded border px-2 py-1 text-right text-sm tabular-nums"
+                      placeholder="—"
+                      value={magOf(ouOf(m).price)}
+                      onChange={(e) =>
+                        setOu((p) => {
+                          const cur0 = p[m.id] ?? seedOu(m.ouLine);
+                          return {
+                            ...p,
+                            [m.id]: {
+                              ...cur0,
+                              price: withSign(
+                                isNeg(cur0.price),
+                                e.target.value,
+                              ),
+                            },
+                          };
+                        })
+                      }
+                    />
+                  </div>
                 </td>
                 <td className="py-1 pr-2 whitespace-nowrap text-xs text-gray-500">
                   {cur(m.ouLine)}

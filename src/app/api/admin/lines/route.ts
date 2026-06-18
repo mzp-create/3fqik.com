@@ -29,10 +29,11 @@ function validateLine(s: Partial<LineSpec>): string | null {
       : "handicap must be 0–10 (a multiple of 0.25)";
   if (
     !Number.isInteger(s.priceC) ||
-    (s.priceC as number) < 1 ||
+    s.priceC === 0 ||
+    (s.priceC as number) < -100 ||
     (s.priceC as number) > 100
   )
-    return "price must be between 0.01 and 1.00";
+    return "price must be a signed value −1.00…+1.00 (not 0)";
   if (s.market === "ah" && s.favSide !== "home" && s.favSide !== "away")
     return "favSide must be 'home' or 'away'";
   return null;

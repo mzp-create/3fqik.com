@@ -64,9 +64,10 @@ async function bet(matchId: number, side: "fav" | "dog", stake: number) {
 }
 
 it("grades all pending tickets; closes the day when last match graded", async () => {
-  const b1 = await bet(1, "fav", 100_000); // BRA -0.75 @0.92
-  const b2 = await bet(2, "dog", 200_000); // JPN +0.75 @0.92
-  // A3: BRA 2-1 → effFav=2,effDog=1 → d=(2-1)-0.75=0.25>0 → full win +100,000
+  const b1 = await bet(1, "fav", 100_000); // BRA -0.75 @ +0.92
+  const b2 = await bet(2, "dog", 200_000); // JPN +0.75 @ +0.92
+  // Malay: BRA 2-1 → effFav=2,effDog=1 → margin=1 > N=0.75 → fav WIN.
+  //        priceC=+92 → +0.92×100k = +92,000
   await confirmFinalScore(db, 1, 1, 2, 1, NOW);
   let day = (await db.select().from(schema.matchDays))[0];
   expect(day.status).toBe("open"); // match 2 not graded yet
@@ -75,16 +76,17 @@ it("grades all pending tickets; closes the day when last match graded", async ()
     .from(schema.bets)
     .where(eq(schema.bets.id, b1.id));
   expect(g1.status).toBe("won");
-  expect(g1.netMmk).toBe(100_000);
+  expect(g1.netMmk).toBe(92_000);
 
-  // A3: draw 0-0 → dog effDog=0,effFav=0 → d=(0-0)+0.75=0.75>0 → full win +200,000
+  // Malay: draw 0-0 → effFav=0,effDog=0 → margin=0 < N=0.75 → dog WIN.
+  //        priceC=+92 → +0.92×200k = +184,000
   await confirmFinalScore(db, 1, 2, 0, 0, NOW);
   const [g2] = await db
     .select()
     .from(schema.bets)
     .where(eq(schema.bets.id, b2.id));
   expect(g2.status).toBe("won");
-  expect(g2.netMmk).toBe(200_000);
+  expect(g2.netMmk).toBe(184_000);
   day = (await db.select().from(schema.matchDays))[0];
   expect(day.status).toBe("closed");
 });
@@ -95,27 +97,28 @@ it("live bets grade on effective score", async () => {
     .set({ status: "live", homeScore: 1, awayScore: 0 })
     .where(eq(schema.matches.id, 1));
   const b = await bet(1, "dog", 100_000); // MEX +0.75 at 1-0
-  // A3: eff 1-1 → dog d=(1-1)+0.75=0.75>0 → full win +100,000
+  // Malay: eff 1-1 → margin=0 < N=0.75 → dog WIN. priceC=+92 → +0.92×100k = +92,000
   await confirmFinalScore(db, 1, 1, 2, 1, NOW);
   const [g] = await db
     .select()
     .from(schema.bets)
     .where(eq(schema.bets.id, b.id));
   expect(g.status).toBe("won");
-  expect(g.netMmk).toBe(100_000);
+  expect(g.netMmk).toBe(92_000);
 });
 
 it("correction re-grades while unsettled, blocked once settled, voids excluded", async () => {
   const b = await bet(1, "fav", 100_000);
   await confirmFinalScore(db, 1, 1, 2, 1, NOW);
-  // A3: BRA 3-1 → effFav=3,effDog=1 → d=(3-1)-0.75=1.25>0 → full win +100,000
+  // Malay: BRA 3-1 → effFav=3,effDog=1 → margin=2 > N=0.75 → fav WIN.
+  //        priceC=+92 → +0.92×100k = +92,000
   await correctScore(db, 1, 1, 3, 1, NOW);
   const [g] = await db
     .select()
     .from(schema.bets)
     .where(eq(schema.bets.id, b.id));
   expect(g.status).toBe("won");
-  expect(g.netMmk).toBe(100_000);
+  expect(g.netMmk).toBe(92_000);
   expect(
     (await db.select().from(schema.auditLog)).some(
       (a) => a.action === "score_correction",
@@ -178,7 +181,7 @@ it("VAR clamp: live bet at 2-1, final 0-0 → graded as effective 0-0", async ()
   // effHome = 0 - 2 = -2, clamped to 0
   // effAway = 0 - 1 = -1, clamped to 0
   // dog eff score: effFav=0, effDog=0
-  // A3: dog d = (effDog - effFav) + L = (0-0) + 0.75 = 0.75 > 0 → full win +100,000
+  // Malay: margin = 0-0 = 0 < N=0.75 → dog WIN. priceC=+92 → +0.92×100k = +92,000
   await confirmFinalScore(db, 1, 1, 0, 0, NOW);
 
   const [g] = await db
@@ -186,7 +189,7 @@ it("VAR clamp: live bet at 2-1, final 0-0 → graded as effective 0-0", async ()
     .from(schema.bets)
     .where(eq(schema.bets.id, b.id));
   expect(g.status).toBe("won");
-  expect(g.netMmk).toBe(100_000);
+  expect(g.netMmk).toBe(92_000);
 });
 
 it("invalid scores: home 100 or fractional → /invalid score/", async () => {
@@ -292,8 +295,8 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
   /*
    * Setup:
    *   Match 1 (BRA vs MEX), matchDay 2026-06-12
-   *   AH line:  BRA home fav, ballQ=3 (0.75 handicap), priceC=92 (p=0.92 > 0)
-   *   OU line:  ballQ=10 (2.5 goals × 4), priceC=90 (p=0.90 > 0)
+   *   AH line:  BRA home fav, ballQ=3 (N=0.75 handicap), priceC=+92 (p=+0.92)
+   *   OU line:  ballQ=10 (N=2.5 goals × 4), priceC=+90 (p=+0.90)
    *
    * Bets:
    *   Bet A — ah fav, stake 100,000 MMK, placed pre-match (score 0-0)
@@ -302,25 +305,26 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
    *
    * Final score: BRA 2 – 1 MEX
    *
-   * A3 hand math:
+   * Malay hand math:
    *
    * Bet A (AH fav, pre-match, scoreAtBet 0-0):
    *   effHome = 2−0 = 2, effAway = 1−0 = 1
    *   favSide = home → effFav=2, effDog=1
-   *   L = 0.75; d = (2−1) − 0.75 = 0.25 > 0 → full win
-   *   status: won, net = +100,000
+   *   margin = 2−1 = 1 > N=0.75 → fav WIN
+   *   priceC>0 → +0.92×100,000 = +92,000
+   *   status: won, net = +92,000
    *
    * Bet B (OU over, live at 1-0, scoreAtBet home=1 away=0):
    *   effHome = 2−1 = 1, effAway = 1−0 = 1
-   *   L = 2.5; d = (1+1) − 2.5 = −0.5 < 0
-   *   net = −min(0.5,1) × 200,000 = −100,000
-   *   status: lost, net = −100,000
+   *   total = 1+1 = 2 < N=2.5 → over LOSE
+   *   priceC>0 → −S = −200,000
+   *   status: lost, net = −200,000
    *
    * Bet C (OU under, pre-match, scoreAtBet 0-0):
    *   effHome = 2−0 = 2, effAway = 1−0 = 1
-   *   L = 2.5; d = 2.5 − (2+1) = −0.5 < 0
-   *   net = −min(0.5,1) × 150,000 = −75,000
-   *   status: lost, net = −75,000
+   *   total = 2+1 = 3 > N=2.5 → under LOSE
+   *   priceC>0 → −S = −150,000
+   *   status: lost, net = −150,000
    */
 
   // Post AH line pre-match
@@ -409,15 +413,15 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
     .from(schema.bets)
     .where(eq(schema.bets.id, betC.id));
 
-  // Bet A: AH fav pre-match → A3: d=0.25>0 → full win +100,000
+  // Bet A: AH fav pre-match → margin 1>0.75 → WIN, +0.92×100k = +92,000
   expect(gA.status).toBe("won");
-  expect(gA.netMmk).toBe(100_000);
+  expect(gA.netMmk).toBe(92_000);
 
-  // Bet B: OU over live at 1-0 → A3: d=-0.5 → -min(0.5,1)×200k = -100,000
+  // Bet B: OU over live at 1-0 → total 2<2.5 → LOSE, priceC>0 → −S = −200,000
   expect(gB.status).toBe("lost");
-  expect(gB.netMmk).toBe(-100_000);
+  expect(gB.netMmk).toBe(-200_000);
 
-  // Bet C: OU under pre-match → A3: d=-0.5 → -min(0.5,1)×150k = -75,000
+  // Bet C: OU under pre-match → total 3>2.5 → LOSE, priceC>0 → −S = −150,000
   expect(gC.status).toBe("lost");
-  expect(gC.netMmk).toBe(-75_000);
+  expect(gC.netMmk).toBe(-150_000);
 });

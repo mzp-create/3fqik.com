@@ -3,6 +3,9 @@ export const signedMmk = (n: number) =>
   (n > 0 ? "+" : "") + n.toLocaleString("en-US");
 export const ball = (q: number) => (q / 4).toString();
 export const price = (c: number) => (c / 100).toFixed(2);
+/** Signed Malay price, e.g. +35 → "+0.35", −90 → "−0.90". */
+export const priceSigned = (c: number) =>
+  (c > 0 ? "+" : "−") + (Math.abs(c) / 100).toFixed(2);
 
 /** Today's date in Myanmar Time (MMT, UTC+6:30), formatted YYYY-MM-DD. */
 export function todayMmt(): string {
@@ -114,11 +117,11 @@ export function pickLabel(
   if (l.market === "ou" || side === "over" || side === "under") {
     const labels = ouLabels ?? { over: "Over", under: "Under" };
     const word = side === "over" ? labels.over : labels.under;
-    return `${word} ${ball(l.ballQ)} @ ${price(l.priceC)}`;
+    return `${word} ${ball(l.ballQ)} @ ${priceSigned(l.priceC)}`;
   }
   const fav = l.favSide === "home" ? m.homeTeam : m.awayTeam;
   const dog = l.favSide === "home" ? m.awayTeam : m.homeTeam;
   return side === "fav"
-    ? `${fav} −${ball(l.ballQ)} @ ${price(l.priceC)}`
-    : `${dog} +${ball(l.ballQ)} @ ${price(l.priceC)}`;
+    ? `${fav} −${ball(l.ballQ)} @ ${priceSigned(l.priceC)}`
+    : `${dog} +${ball(l.ballQ)} @ ${priceSigned(l.priceC)}`;
 }

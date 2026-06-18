@@ -71,16 +71,18 @@ beforeEach(async () => {
     },
     NOW,
   ); // Thiri dog
-  // A3: BRA -0.5 wins 2-0 → d=1.5>0 → full win. Zaw +100,000, Thiri −200,000. House net=+100,000
+  // Malay: line ballQ=2 (N=0.5), priceC=+90. BRA 2-0 → margin=2 > 0.5.
+  //   Zaw fav WIN  → +0.90×100k = +90,000
+  //   Thiri dog LOSE → priceC>0 → −S = −200,000
   await confirmFinalScore(db, 1, 1, 2, 0, NOW);
 });
 
 it("aggregates volume, exposure, and house P&L", async () => {
   const d = await dashboard(db, "2026-06-12");
-  // A4: Zaw effective +97k (net +100k, fee -3k), Thiri effective -196k (net -200k, fee +4k)
-  //     house net = -(97k + (-196k)) = +99k
-  expect(d.todayHouseNet).toBe(99_000);
-  expect(d.tournamentHouseNet).toBe(99_000);
+  // Zaw effective +87,300 (net +90k, fee -2.7k), Thiri effective -196k (net -200k, fee +4k)
+  //     house net = -(87,300 + (-196,000)) = +108,700
+  expect(d.todayHouseNet).toBe(108_700);
+  expect(d.tournamentHouseNet).toBe(108_700);
   expect(d.todayStakeVolume).toBe(300_000);
   expect(d.todayBetCount).toBe(2);
   expect(d.activePlayers).toBe(2);
@@ -93,11 +95,11 @@ it("aggregates volume, exposure, and house P&L", async () => {
   );
 });
 
-it("includes outstanding settlements: A4 effective nets applied", async () => {
+it("includes outstanding settlements: effective nets applied", async () => {
   const d = await dashboard(db, "2026-06-12");
   expect(d.outstanding).toBeDefined();
-  // A4: Zaw effective +97k (commission 3%), Thiri effective -196k (discount 2%)
-  expect(d.outstanding.toPayMmk).toBe(97_000);
+  // Zaw effective +87,300 (commission 3%), Thiri effective -196k (discount 2%)
+  expect(d.outstanding.toPayMmk).toBe(87_300);
   expect(d.outstanding.toCollectMmk).toBe(196_000);
   expect(d.outstanding.payCount).toBe(1);
   expect(d.outstanding.collectCount).toBe(1);

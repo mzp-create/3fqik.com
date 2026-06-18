@@ -47,12 +47,12 @@ function parseBall(v: string, market: "ah" | "ou"): number | null {
   const min = market === "ou" ? 1 : 0;
   return q >= min && q <= 40 ? q : null;
 }
-/** Parse a price string to priceC (×100); null if invalid or out of range. */
+/** Parse a signed price string to priceC (×100); null if invalid/out of range/0. */
 function parsePrice(v: string): number | null {
   const f = parseFloat(v);
   if (isNaN(f)) return null;
   const c = Math.round(f * 100);
-  return c >= 1 && c <= 100 ? c : null;
+  return c !== 0 && c >= -100 && c <= 100 ? c : null;
 }
 
 type Result = { matchId: number; market: string; ok: boolean; error?: string };

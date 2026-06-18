@@ -131,13 +131,13 @@ export default function LinesPage() {
     const f = ahForms[matchId];
     if (!f) return;
     const parsedPrice = parseFloat(f.priceCInput);
-    if (isNaN(parsedPrice) || parsedPrice <= 0 || parsedPrice > 1) {
-      setError(matchId, "AH on-the-line payout must be between 0.01 and 1.00");
+    if (isNaN(parsedPrice) || parsedPrice < -1 || parsedPrice > 1) {
+      setError(matchId, "AH price must be a signed value −1.00…+1.00");
       return;
     }
     const priceC = Math.round(parsedPrice * 100);
-    if (priceC < 1 || priceC > 100) {
-      setError(matchId, "AH on-the-line payout must be between 0.01 and 1.00");
+    if (priceC === 0 || priceC < -100 || priceC > 100) {
+      setError(matchId, "AH price must be a non-zero signed value −1.00…+1.00");
       return;
     }
     // Favourite-flip guard: warn admin if the new line's favourite side differs
@@ -178,13 +178,16 @@ export default function LinesPage() {
     const f = ouForms[matchId];
     if (!f) return;
     const parsedPrice = parseFloat(f.priceCInput);
-    if (isNaN(parsedPrice) || parsedPrice <= 0 || parsedPrice > 1) {
-      setError(matchId, "O/U on-the-line payout must be between 0.01 and 1.00");
+    if (isNaN(parsedPrice) || parsedPrice < -1 || parsedPrice > 1) {
+      setError(matchId, "O/U price must be a signed value −1.00…+1.00");
       return;
     }
     const priceC = Math.round(parsedPrice * 100);
-    if (priceC < 1 || priceC > 100) {
-      setError(matchId, "O/U on-the-line payout must be between 0.01 and 1.00");
+    if (priceC === 0 || priceC < -100 || priceC > 100) {
+      setError(
+        matchId,
+        "O/U price must be a non-zero signed value −1.00…+1.00",
+      );
       return;
     }
     if (f.ballQ < 1) {

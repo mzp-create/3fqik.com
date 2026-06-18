@@ -15,50 +15,17 @@ export type SlipState = {
 const CHIPS = [10_000, 50_000, 100_000, 500_000, 1_000_000];
 
 /**
- * Payout preview for the A3 even-money + on-the-line model.
- * priceC is the on-the-line fraction ×100 (integer 1–100, positive only).
- *
- * Win (covers):   +stake (full), always green.
- * On the line:    Only shown for whole-number lines (ballQ % 4 === 0).
- *                 Amount = round(priceC×stake/100) using integer-product trick
- *                 for exact .5 rounding. Sign depends on side/market/line:
- *                   ah non-level (ballQ>0): +win (green) for both fav and dog.
- *                   ah level (ballQ===0):   −lose (red).
- *                   ou over:                −lose (red).
- *                   ou under:               +win (green).
- * Lose (misses):  −stake (full), red.
- *                 For half/quarter lines a narrow miss loses only a fraction
- *                 (¼–¾ of stake) while a clear miss loses the full stake.
+ * Payout preview for the Malay signed-price model.
+ *   WIN  → p>0: +round(p·stake)   p<0: +stake
+ *   LOSE → p>0: −stake            p<0: −round(|p|·stake)
+ *   PUSH → 0 (refund) — only possible on whole-number lines (ballQ % 4 === 0).
  */
-function preview(
-  stake: number,
-  priceC: number,
-  market: "ah" | "ou",
-  side: "fav" | "dog" | "over" | "under",
-  ballQ: number,
-) {
-  // On-the-line amount: use integer product then /100 for exact .5 values.
-  const onLineMag = Math.round((priceC * stake) / 100);
-
-  // Determine sign of on-line outcome
-  let onLineNet: number;
-  if (market === "ah") {
-    onLineNet = ballQ > 0 ? onLineMag : -onLineMag;
-  } else {
-    // ou
-    onLineNet = side === "under" ? onLineMag : -onLineMag;
-  }
-
-  // Only whole-number lines (ballQ % 4 === 0) can land exactly on the line.
-  const showOnLine = ballQ % 4 === 0;
-
-  return {
-    win: stake,
-    onLineNet,
-    showOnLine,
-    // For half/quarter lines narrow misses lose a fraction; worst case is full stake.
-    hasPartialLoss: ballQ % 4 !== 0,
-  };
+function preview(stake: number, priceC: number, ballQ: number) {
+  const winNet = priceC > 0 ? Math.round((priceC * stake) / 100) : stake;
+  const loseNet =
+    priceC > 0 ? -stake : -Math.round((Math.abs(priceC) * stake) / 100);
+  const showPush = ballQ % 4 === 0;
+  return { winNet, loseNet, showPush };
 }
 
 export function BetSlip({
@@ -74,7 +41,7 @@ export function BetSlip({
   const [stake, setStake] = useState(100_000);
   const [error, setError] = useState("");
   const [line, setLine] = useState(slip.line);
-  const p = preview(stake, line.priceC, slip.market, slip.side, line.ballQ);
+  const p = preview(stake, line.priceC, line.ballQ);
 
   async function confirm() {
     try {
@@ -150,46 +117,29 @@ export function BetSlip({
             ))}
           </div>
 
-          {/* Outcome preview — 2-col grid (A3 even-money model) */}
+          {/* Outcome preview — Malay signed-price model */}
           <div className="my-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-canvas p-3 text-base leading-relaxed">
-            {/* Win row — always green */}
+            {/* Win row */}
             <span className="text-ink/50">{t.outWin}</span>
-            <span className="font-semibold text-mx">{signedMmk(p.win)}</span>
+            <span className="font-semibold text-mx">{signedMmk(p.winNet)}</span>
 
-            {/* On-the-line row — only for whole-number lines; color follows sign */}
-            {p.showOnLine && (
+            {/* Push row — only whole-number lines can land exactly on the line */}
+            {p.showPush && (
               <>
                 <span className="text-ink/50">
-                  {t.outOnLine} ({line.ballQ / 4})
+                  {t.outPush} ({line.ballQ / 4})
                 </span>
-                <span
-                  className={`font-semibold ${p.onLineNet >= 0 ? "text-mx" : "text-ca"}`}
-                >
-                  {signedMmk(p.onLineNet)}
+                <span className="font-semibold text-ink/60">
+                  {signedMmk(0)}
                 </span>
               </>
             )}
 
-            {/* Lose row — red; for half/quarter lines note partial losses */}
-            {p.hasPartialLoss ? (
-              <>
-                <span className="text-ink/50">{t.outNarrowMiss}</span>
-                <span className="font-semibold text-ca">
-                  {t.outNarrowMissRange}
-                </span>
-                <span className="text-ink/50">{t.outClearMiss}</span>
-                <span className="font-semibold text-ca">
-                  {signedMmk(-stake)}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-ink/50">{t.outLose}</span>
-                <span className="font-semibold text-ca">
-                  {signedMmk(-stake)}
-                </span>
-              </>
-            )}
+            {/* Lose row */}
+            <span className="text-ink/50">{t.outLose}</span>
+            <span className="font-semibold text-ca">
+              {signedMmk(p.loseNet)}
+            </span>
           </div>
 
           {error && (

@@ -1,9 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
-import { mmk, signedMmk, ball, price, pickLabel } from "@/lib/client/format";
-import { gradeDetail } from "@/lib/engine/grade";
-import type { GradeInput } from "@/lib/engine/grade";
+import { mmk, signedMmk, pickLabel } from "@/lib/client/format";
+import { gradeBreakdown } from "@/lib/client/gradeBreakdown";
 
 type BetRow = {
   ticketNo: string;
@@ -69,80 +68,6 @@ function StatusBadge({ status }: { status: string }) {
   }
 }
 
-type GradeLines = {
-  scoreLine: string;
-  mathLine: string;
-  resultLine: string;
-  net: number;
-};
-
-function computeGradeLines(t: BetRow): GradeLines | null {
-  try {
-    const finalHome = t.finalHome!;
-    const finalAway = t.finalAway!;
-    const effHome = Math.max(finalHome - t.scoreHomeAtBet, 0);
-    const effAway = Math.max(finalAway - t.scoreAwayAtBet, 0);
-    const effFav = t.favSide === "home" ? effHome : effAway;
-    const effDog = t.favSide === "home" ? effAway : effHome;
-
-    const d = gradeDetail({
-      market: t.market,
-      side: t.side,
-      ballQ: t.ballQ,
-      priceC: t.priceC,
-      stake: t.stakeMmk,
-      effFav,
-      effDog,
-    } as GradeInput);
-
-    const fav = t.favSide === "home" ? t.homeTeam : t.awayTeam;
-    const dog = t.favSide === "home" ? t.awayTeam : t.homeTeam;
-
-    const isLive = t.scoreHomeAtBet !== 0 || t.scoreAwayAtBet !== 0;
-    const scoreLine = isLive
-      ? `Bet at ${t.scoreHomeAtBet}–${t.scoreAwayAtBet} · final ${finalHome}–${finalAway} · counts after-bet goals: ${effHome}–${effAway}`
-      : `Final ${finalHome}–${finalAway}`;
-
-    let mathLine: string;
-    if (t.market === "ah") {
-      const sign = t.side === "fav" ? "−" : "+";
-      const handicapGoals = ball(t.ballQ);
-      const teamLabel = t.side === "fav" ? fav : dog;
-      mathLine = `${teamLabel} ${sign}${handicapGoals}: effective ${effFav}–${effDog}, d=${d.d > 0 ? "+" : ""}${d.d} → ${d.kind}`;
-    } else {
-      const total = effFav + effDog;
-      const lineGoals = ball(t.ballQ);
-      mathLine = `Total ${total} vs ${lineGoals}: d=${d.d > 0 ? "+" : ""}${d.d} → ${d.kind}`;
-    }
-
-    const net = t.netMmk!;
-    let resultLine: string;
-    const s = t.status;
-    if (s === "won") {
-      resultLine =
-        d.kind === "full_win"
-          ? `WON full stake +${mmk(net)}`
-          : `WON on-line +${mmk(net)} (${price(t.priceC)} × ${mmk(t.stakeMmk)})`;
-    } else if (s === "lost") {
-      if (d.kind === "full_lose") {
-        resultLine = `LOST full stake −${mmk(t.stakeMmk)}`;
-      } else if (d.kind === "partial_lose") {
-        resultLine = `LOST partial −${mmk(Math.abs(net))} (${d.lossFraction} × ${mmk(t.stakeMmk)})`;
-      } else {
-        resultLine = `LOST on-line −${mmk(Math.abs(net))} (${price(t.priceC)} × ${mmk(t.stakeMmk)})`;
-      }
-    } else if (s === "push") {
-      resultLine = `PUSH 0 (stake returned)`;
-    } else {
-      resultLine = signedMmk(net);
-    }
-
-    return { scoreLine, mathLine, resultLine, net };
-  } catch {
-    return null;
-  }
-}
-
 function GradeBreakdown({ t }: { t: BetRow }) {
   if (t.status === "void") {
     return (
@@ -163,7 +88,20 @@ function GradeBreakdown({ t }: { t: BetRow }) {
     );
   }
 
-  const lines = computeGradeLines(t);
+  const lines = gradeBreakdown({
+    market: t.market,
+    side: t.side,
+    ballQ: t.ballQ,
+    priceC: t.priceC,
+    stakeMmk: t.stakeMmk,
+    favSide: t.favSide,
+    homeTeam: t.homeTeam,
+    awayTeam: t.awayTeam,
+    scoreHomeAtBet: t.scoreHomeAtBet,
+    scoreAwayAtBet: t.scoreAwayAtBet,
+    finalHome: t.finalHome,
+    finalAway: t.finalAway,
+  });
   if (!lines) return null;
 
   const fee = t.feeMmk ?? 0;

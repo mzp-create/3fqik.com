@@ -1,44 +1,49 @@
+// Malay signed-price grading model (replaces the A3 even-money model).
+// A line offers ONE side at a signed price p (−1.00…+1.00, stored ×100).
+// Whole-number lines push (refund) on an exact result. See
+// docs/superpowers/specs/2026-06-18-malay-pricing-model.md.
+//
+//   AH fav:  win margin>N · push margin=N · lose margin<N   (margin = effFav−effDog)
+//   AH dog:  win margin<N · push margin=N · lose margin>N
+//   OU over: win total>N  · push total=N  · lose total<N    (total = effFav+effDog)
+//   OU under:win total<N  · push total=N  · lose total>N
+//
+//   WIN  → p>0: +p·S   p<0: +S
+//   LOSE → p>0: −S     p<0: −|p|·S
+//   PUSH → 0
+
 export type GradeInput = {
-  ballQ: number; // handicap or goals line ×4, integer ≥ 0
-  priceC: number; // on-the-line payout ×100, integer 1–100 (positive only)
+  ballQ: number; // handicap / goals line ×4, integer 0–40
+  priceC: number; // signed Malay price ×100, integer in [−100,−1] ∪ [1,100]
   stake: number; // MMK, integer > 0
-  effFav: number; // favorite's (or home's) effective goals for this bet
-  effDog: number; // dog's (or away's) effective goals for this bet
+  effFav: number; // favourite's (home's) effective goals for this bet
+  effDog: number; // dog's (away's) effective goals for this bet
 } & (
   | { market: "ah"; side: "fav" | "dog" }
   | { market: "ou"; side: "over" | "under" }
 );
 
 export type GradeResult = {
-  status: "won" | "half_won" | "push" | "half_lost" | "lost";
+  status: "won" | "push" | "lost";
   netMmk: number;
 };
 
-export type GradeKind =
-  | "full_win"
-  | "on_line_win"
-  | "on_line_lose"
-  | "partial_lose"
-  | "full_lose";
-
 export type GradeDetail = {
-  status: "won" | "lost" | "push";
+  status: "won" | "push" | "lost";
   netMmk: number;
   market: "ah" | "ou";
-  lineGoals: number;
-  d: number;
-  kind: GradeKind;
-  lossFraction: number | null; // min(|d|,1) when kind is partial_lose/full_lose, else null
+  lineGoals: number; // N
+  value: number; // margin (ah) or total (ou) — the integer compared to N
+  result: "win" | "push" | "lose";
+  priceC: number; // signed price ×100
 };
 
 function roundHalfAwayFromZero(x: number): number {
-  // Use Math.sign to preserve direction; avoid -0 by || 0
   return Math.sign(x) * Math.round(Math.abs(x)) || 0;
 }
 
 /** Shared computation kernel — validates input and computes full detail. */
 function compute(i: GradeInput): GradeDetail {
-  // Validate market first, then side pairing
   if (i.market !== "ah" && i.market !== "ou") throw new Error("invalid market");
   if (i.market === "ah") {
     if (i.side !== "fav" && i.side !== "dog")
@@ -50,9 +55,14 @@ function compute(i: GradeInput): GradeDetail {
 
   if (!Number.isInteger(i.ballQ) || i.ballQ < 0 || i.ballQ > 40)
     throw new Error("invalid ballQ: must be integer 0–40");
-  // A3 model: priceC must be positive integer 1–100
-  if (!Number.isInteger(i.priceC) || i.priceC < 1 || i.priceC > 100)
-    throw new Error("invalid priceC: must be integer 1–100");
+  // Malay model: signed price, magnitude 1–100, never 0.
+  if (
+    !Number.isInteger(i.priceC) ||
+    i.priceC < -100 ||
+    i.priceC > 100 ||
+    i.priceC === 0
+  )
+    throw new Error("invalid priceC: must be integer in [−100,−1] ∪ [1,100]");
   if (!Number.isInteger(i.stake) || i.stake <= 0 || i.stake > 1_000_000_000)
     throw new Error("invalid stake: must be positive integer ≤ 1,000,000,000");
   if (
@@ -63,99 +73,48 @@ function compute(i: GradeInput): GradeDetail {
   )
     throw new Error("invalid effective score: must be non-negative integers");
 
-  const L = i.ballQ / 4; // line in goals
+  const N = i.ballQ / 4; // line in goals
 
-  // Distance d: how far the result lands on the bet's WINNING side of the line
-  let d: number;
+  // `value` is the integer we compare to the line; `beyond` is true when it
+  // clears the line on the bet's winning side.
+  let value: number;
+  let beyond: boolean;
   if (i.market === "ah") {
-    if (i.side === "fav") {
-      d = i.effFav - i.effDog - L;
-    } else {
-      d = i.effDog - i.effFav + L;
-    }
+    value = i.effFav - i.effDog; // margin
+    beyond = i.side === "fav" ? value > N : value < N;
   } else {
-    // ou
-    if (i.side === "over") {
-      d = i.effFav + i.effDog - L;
-    } else {
-      d = L - (i.effFav + i.effDog);
-    }
+    value = i.effFav + i.effDog; // total
+    beyond = i.side === "over" ? value > N : value < N;
   }
+  const onLine = value === N; // exact → push (only possible on whole lines)
 
-  // Compute raw net
+  let result: "win" | "push" | "lose";
   let rawNet: number;
-  if (d > 0) {
-    // Full win: +S
-    rawNet = i.stake;
-  } else if (d < 0) {
-    // Partial or full loss: -min(|d|,1) × S
-    rawNet = -Math.min(Math.abs(d), 1) * i.stake;
+  if (onLine) {
+    result = "push";
+    rawNet = 0;
+  } else if (beyond) {
+    result = "win";
+    // p>0 → +p·S ; p<0 → +S
+    rawNet = i.priceC > 0 ? (i.priceC * i.stake) / 100 : i.stake;
   } else {
-    // d === 0: on-the-line price payout, sign by side/market/L
-    // ah fav (L>0) → +pS
-    // ah dog (L>0) → +pS
-    // ah level (L==0) → -pS
-    // ou over → -pS
-    // ou under → +pS
-    //
-    // Compute magnitude as integer product then divide by 100 so that
-    // X.5 results are represented exactly (up to 2^53) and
-    // roundHalfAwayFromZero rounds them correctly.
-    // e.g. priceC=69, stake=150 → 69*150=10350 → /100=103.5 → rounds to 104.
-    const magnitude = (i.priceC * i.stake) / 100;
-    if (i.market === "ah") {
-      if (L > 0) {
-        rawNet = magnitude; // win for both fav and dog when on a non-level line
-      } else {
-        rawNet = -magnitude; // loss on level (draw) line
-      }
-    } else {
-      // ou
-      if (i.side === "over") {
-        rawNet = -magnitude; // over loses on the line
-      } else {
-        rawNet = magnitude; // under wins on the line
-      }
-    }
+    result = "lose";
+    // p>0 → −S ; p<0 → −|p|·S  (priceC<0 makes the product negative)
+    rawNet = i.priceC > 0 ? -i.stake : (i.priceC * i.stake) / 100;
   }
 
   const netMmk = roundHalfAwayFromZero(rawNet);
-
-  // Status from sign of net
-  let status: "won" | "lost" | "push";
-  if (netMmk > 0) status = "won";
-  else if (netMmk < 0) status = "lost";
-  else status = "push";
-
-  // Kind classification
-  let kind: GradeKind;
-  let lossFraction: number | null;
-  if (d > 0) {
-    kind = "full_win";
-    lossFraction = null;
-  } else if (d === 0 && netMmk > 0) {
-    kind = "on_line_win";
-    lossFraction = null;
-  } else if (d === 0 && netMmk < 0) {
-    kind = "on_line_lose";
-    lossFraction = null;
-  } else if (d < 0 && Math.abs(d) < 1) {
-    kind = "partial_lose";
-    lossFraction = Math.abs(d);
-  } else {
-    // d < 0 && |d| >= 1  (or d==0 && net==0, which is push — classify as full_lose for consistency)
-    kind = "full_lose";
-    lossFraction = Math.min(Math.abs(d), 1);
-  }
+  const status: "won" | "push" | "lost" =
+    result === "push" ? "push" : result === "win" ? "won" : "lost";
 
   return {
     status,
     netMmk,
     market: i.market,
-    lineGoals: L,
-    d,
-    kind,
-    lossFraction,
+    lineGoals: N,
+    value,
+    result,
+    priceC: i.priceC,
   };
 }
 

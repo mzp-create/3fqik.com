@@ -73,21 +73,23 @@ beforeEach(async () => {
     },
     NOW,
   ); // Thiri dog
-  // A3: BRA -0.5 wins 2-0 → d=(2-0)-0.5=1.5>0 → full win. Zaw +100,000, Thiri −200,000
+  // Malay: line ballQ=2 (N=0.5), priceC=+90. BRA 2-0 → margin=2 > 0.5.
+  //   Zaw fav WIN  → +0.90×100k = +90,000
+  //   Thiri dog LOSE → priceC>0 → −S = −200,000
   await confirmFinalScore(db, 1, 1, 2, 0, NOW);
 });
 
 it("board shows nets and ticket items; marking paid stamps ref onto tickets", async () => {
   const board = await dayBoard(db, "2026-06-12");
   expect(board.day.status).toBe("closed");
-  // A4: Zaw fav wins gross +100,000; fee = -3% × 100k = -3,000 → effective +97,000
-  //     Thiri dog loses gross -200,000; fee = +2% × 200k = +4,000 → effective -196,000
-  //     houseNet = -(97,000 + (-196,000)) = +99,000
+  // Fees: Zaw fav wins gross +90,000; commission = -3% × 90k = -2,700 → effective +87,300
+  //       Thiri dog loses gross -200,000; discount = +2% × 200k = +4,000 → effective -196,000
+  //       houseNet = -(87,300 + (-196,000)) = +108,700
   expect(board.rows).toEqual([
-    expect.objectContaining({ playerId: 2, netMmk: 97_000, ticketCount: 1 }),
+    expect.objectContaining({ playerId: 2, netMmk: 87_300, ticketCount: 1 }),
     expect.objectContaining({ playerId: 3, netMmk: -196_000, ticketCount: 1 }),
   ]);
-  expect(board.houseNet).toBe(99_000);
+  expect(board.houseNet).toBe(108_700);
 
   const s1 = await markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
   expect(s1.ref).toBe("S-0612-01");
@@ -201,9 +203,9 @@ it("no-tickets 404: markPlayerPaid for player with no tickets throws", async () 
 
 describe("outstandingSettlements", () => {
   it("basic: payCount=1(+100k), collectCount=1(-200k), settled and void excluded", async () => {
-    // A4: Zaw effective +97,000 unsettled, Thiri effective -196,000 unsettled
+    // Zaw effective +87,300 unsettled, Thiri effective -196,000 unsettled
     const r = await outstandingSettlements(db);
-    expect(r.toPayMmk).toBe(97_000);
+    expect(r.toPayMmk).toBe(87_300);
     expect(r.toCollectMmk).toBe(196_000);
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(1);
@@ -213,7 +215,7 @@ describe("outstandingSettlements", () => {
     // Mark Zaw paid → his day1 unit is now settled
     await markPlayerPaid(db, 1, "2026-06-12", 2, NOW);
     const r = await outstandingSettlements(db);
-    // Zaw's effective +97k unit is settled → only Thiri remains (effective -196k)
+    // Zaw's effective +87,300 unit is settled → only Thiri remains (effective -196k)
     expect(r.toPayMmk).toBe(0);
     expect(r.toCollectMmk).toBe(196_000);
     expect(r.payCount).toBe(0);
@@ -228,8 +230,8 @@ describe("outstandingSettlements", () => {
       .where(eq(schema.bets.playerId, 3));
     await voidTicket(db, 1, thiriTicket.ticketNo, "test", NOW);
     const r = await outstandingSettlements(db);
-    // Zaw effective +97,000 remains; Thiri voided → 0
-    expect(r.toPayMmk).toBe(97_000);
+    // Zaw effective +87,300 remains; Thiri voided → 0
+    expect(r.toPayMmk).toBe(87_300);
     expect(r.toCollectMmk).toBe(0);
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(0);
@@ -279,14 +281,14 @@ describe("outstandingSettlements", () => {
       settlementId: null,
     });
     const r = await outstandingSettlements(db);
-    // A4: Zaw has two bets on day "2026-06-12":
-    //   - original: effective +97,000 (net +100k + fee -3k)
+    // Zaw has two bets on day "2026-06-12":
+    //   - original: effective +87,300 (net +90k + fee -2.7k)
     //   - push:     feeMmk=null → effective 0 (coalesce 0)
-    // They GROUP into ONE unit: net = 97,000 + 0 = 97,000 (still pay).
+    // They GROUP into ONE unit: net = 87,300 + 0 = 87,300 (still pay).
     // Thiri effective -196,000 still collect.
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(1);
-    expect(r.toPayMmk).toBe(97_000);
+    expect(r.toPayMmk).toBe(87_300);
   });
 
   it("two match-days for player A: appears as separate (player,day) units", async () => {
@@ -331,13 +333,13 @@ describe("outstandingSettlements", () => {
       settlementId: null,
     });
     const r = await outstandingSettlements(db);
-    // A4 effective nets:
-    //   (Zaw, day1)   = +97,000  (net +100k, fee -3k) → pay
+    // Effective nets:
+    //   (Zaw, day1)   = +87,300  (net +90k, fee -2.7k) → pay
     //   (Zaw, day2)   = -150,000 (direct insert, feeMmk null → +0) → collect
     //   (Thiri, day1) = -196,000 (net -200k, fee +4k) → collect
     expect(r.payCount).toBe(1);
     expect(r.collectCount).toBe(2);
-    expect(r.toPayMmk).toBe(97_000);
+    expect(r.toPayMmk).toBe(87_300);
     expect(r.toCollectMmk).toBe(346_000); // 150k + 196k
   });
 });

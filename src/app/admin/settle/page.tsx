@@ -1,17 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
-import {
-  mmk,
-  signedMmk,
-  ball,
-  price,
-  todayMmt,
-  pickLabel,
-} from "@/lib/client/format";
+import { mmk, signedMmk, todayMmt, pickLabel } from "@/lib/client/format";
 import { teamName } from "@/lib/client/flags";
-import { gradeDetail } from "@/lib/engine/grade";
-import type { GradeInput } from "@/lib/engine/grade";
+import { gradeBreakdown } from "@/lib/client/gradeBreakdown";
 
 const PAYMENT_METHODS = [
   "Cash",
@@ -356,100 +348,39 @@ export default function SettlePage() {
                         );
                         const voidKey = `void-${t.ticketNo}`;
 
-                        // Compute breakdown using gradeDetail (same engine as grading)
+                        // Settlement breakdown (shared Malay engine) + fee lines
                         let breakdown: React.ReactNode = null;
                         if (t.netMmk != null && t.status !== "void") {
-                          const finalHome =
-                            t.finalHomeScore ?? t.scoreHomeAtBet;
-                          const finalAway =
-                            t.finalAwayScore ?? t.scoreAwayAtBet;
-                          const effHome = Math.max(
-                            finalHome - t.scoreHomeAtBet,
-                            0,
-                          );
-                          const effAway = Math.max(
-                            finalAway - t.scoreAwayAtBet,
-                            0,
-                          );
-                          const effFav =
-                            t.favSide === "home" ? effHome : effAway;
-                          const effDog =
-                            t.favSide === "home" ? effAway : effHome;
-
-                          try {
-                            const d = gradeDetail({
-                              market: t.market,
-                              side: t.side,
-                              ballQ: t.ballQ,
-                              priceC: t.priceC,
-                              stake: t.stakeMmk,
-                              effFav,
-                              effDog,
-                            } as GradeInput);
-
-                            const isLive =
-                              t.scoreHomeAtBet !== 0 || t.scoreAwayAtBet !== 0;
-                            const scoreLine = isLive
-                              ? `Bet at ${t.scoreHomeAtBet}–${t.scoreAwayAtBet} · final ${finalHome}–${finalAway} · counts after-bet goals: ${effHome}–${effAway}`
-                              : `Final ${finalHome}–${finalAway}`;
-
-                            // A3 model: show distance d and kind
-                            let mathLine: string;
-                            if (t.market === "ah") {
-                              const sign = t.side === "fav" ? "−" : "+";
-                              const handicapGoals = ball(t.ballQ);
-                              const teamLabel = t.side === "fav" ? fav : dog;
-                              mathLine = `${teamLabel} ${sign}${handicapGoals}: effective ${effFav}–${effDog}, d=${d.d > 0 ? "+" : ""}${d.d} → ${d.kind}`;
-                            } else {
-                              const total = effFav + effDog;
-                              const line = ball(t.ballQ);
-                              mathLine = `Total ${total} vs ${line}: d=${d.d > 0 ? "+" : ""}${d.d} → ${d.kind}`;
-                            }
-
-                            let resultLine: string;
-                            const s = t.status;
-                            if (s === "won") {
-                              if (d.kind === "full_win") {
-                                resultLine = `WON full stake +${mmk(t.netMmk)}`;
-                              } else {
-                                resultLine = `WON on-line +${mmk(t.netMmk)} (${price(t.priceC)} × ${mmk(t.stakeMmk)})`;
-                              }
-                            } else if (s === "lost") {
-                              if (d.kind === "full_lose") {
-                                resultLine = `LOST full stake −${mmk(t.stakeMmk)}`;
-                              } else if (d.kind === "partial_lose") {
-                                resultLine = `LOST partial −${mmk(Math.abs(t.netMmk))} (${d.lossFraction} × ${mmk(t.stakeMmk)})`;
-                              } else {
-                                resultLine = `LOST on-line −${mmk(Math.abs(t.netMmk))} (${price(t.priceC)} × ${mmk(t.stakeMmk)})`;
-                              }
-                            } else if (s === "push") {
-                              resultLine = `PUSH 0 (stake returned)`;
-                            } else {
-                              resultLine = signedMmk(t.netMmk);
-                            }
-
-                            // Fee line (A4)
+                          const bk = gradeBreakdown({
+                            market: t.market,
+                            side: t.side,
+                            ballQ: t.ballQ,
+                            priceC: t.priceC,
+                            stakeMmk: t.stakeMmk,
+                            favSide: t.favSide,
+                            homeTeam: t.homeTeam,
+                            awayTeam: t.awayTeam,
+                            scoreHomeAtBet: t.scoreHomeAtBet,
+                            scoreAwayAtBet: t.scoreAwayAtBet,
+                            finalHome: t.finalHomeScore ?? t.scoreHomeAtBet,
+                            finalAway: t.finalAwayScore ?? t.scoreAwayAtBet,
+                          });
+                          if (bk) {
                             const fee = t.feeMmk ?? 0;
-                            let feeLine: React.ReactNode = null;
-                            if (fee !== 0 && board.feeSettings) {
-                              if (fee < 0) {
-                                // win → commission reduces win
-                                feeLine = (
+                            const feeLine =
+                              fee !== 0 && board.feeSettings ? (
+                                fee < 0 ? (
                                   <div className="text-orange-500">
                                     Commission −{mmk(Math.abs(fee))} (
                                     {board.feeSettings.commissionPct}%)
                                   </div>
-                                );
-                              } else {
-                                // loss → discount reduces loss
-                                feeLine = (
+                                ) : (
                                   <div className="text-blue-500">
                                     Discount +{mmk(fee)} (
                                     {board.feeSettings.discountPct}%)
                                   </div>
-                                );
-                              }
-                            }
+                                )
+                              ) : null;
                             const netAfterFee =
                               fee !== 0 ? (
                                 <div
@@ -462,26 +393,23 @@ export default function SettlePage() {
                                   Net after fee: {signedMmk(t.netMmk + fee)}
                                 </div>
                               ) : null;
-
                             breakdown = (
                               <div className="text-xs text-gray-400 mt-1 space-y-0.5 font-mono">
-                                <div>{scoreLine}</div>
-                                <div>{mathLine}</div>
+                                <div>{bk.scoreLine}</div>
+                                <div>{bk.mathLine}</div>
                                 <div
                                   className={
-                                    t.netMmk >= 0
+                                    bk.net >= 0
                                       ? "text-green-600"
                                       : "text-red-500"
                                   }
                                 >
-                                  {resultLine}
+                                  {bk.resultLine}
                                 </div>
                                 {feeLine}
                                 {netAfterFee}
                               </div>
                             );
-                          } catch {
-                            // gradeDetail throws on bad data; show nothing
                           }
                         } else if (t.status === "void") {
                           breakdown = (

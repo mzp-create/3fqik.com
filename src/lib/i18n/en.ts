@@ -150,6 +150,18 @@ export const en = {
     "Prices are Malay odds. A positive price pays a fraction of your stake on a win; a negative price risks a fraction to win your full stake.",
   rulesPushTitle: "Refunds (push)",
   rulesPushBody: "On a whole-number line, an exact result returns your stake.",
+  obChooseLanguage: "Choose your language",
+  obWelcome: "Welcome to 3fqik",
+  obInstallTitle: "Install the app",
+  obInstallWhy:
+    "Install 3fqik to your home screen for the full app experience.",
+  obInstallAndroid: "Install app",
+  obInstallIosSteps:
+    "In Safari: tap the Share icon, then 'Add to Home Screen'.",
+  obOpenInstalled: "After installing, open 3fqik from your home screen.",
+  obContinueBrowser: "Continue in browser",
+  langEnglish: "English",
+  langBurmeseNative: "မြန်မာ",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

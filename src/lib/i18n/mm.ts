@@ -159,6 +159,18 @@ export const mm: Dict = {
   rulesPushTitle: "ပြန်အမ်းငွေ",
   rulesPushBody:
     "ကိန်းပြည့်လိုင်းတွင် တိကျသောရလဒ်သည် သင့်လောင်းကြေးကို ပြန်အမ်းသည်။",
+  obChooseLanguage: "ဘာသာစကား ရွေးပါ",
+  obWelcome: "3fqik မှ ကြိုဆိုပါသည်",
+  obInstallTitle: "အက်ပ်ထည့်သွင်းပါ",
+  obInstallWhy:
+    "အပြည့်အဝ အသုံးပြုနိုင်ရန် 3fqik ကို ပင်မဖန်သားပြင်တွင် ထည့်သွင်းပါ။",
+  obInstallAndroid: "အက်ပ်ထည့်မည်",
+  obInstallIosSteps:
+    "Safari တွင်: Share ကိုနှိပ်ပြီး 'Add to Home Screen' ကိုရွေးပါ။",
+  obOpenInstalled: "ထည့်သွင်းပြီးနောက် ပင်မဖန်သားပြင်မှ 3fqik ကိုဖွင့်ပါ။",
+  obContinueBrowser: "ဘရောက်ဇာတွင် ဆက်လက်သုံးမည်",
+  langEnglish: "English",
+  langBurmeseNative: "မြန်မာ",
 } as const;
 
 /*

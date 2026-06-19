@@ -142,6 +142,7 @@ export function MatchCard({
         <div className="mt-2">
           <button
             onClick={() => setShowOu((v) => !v)}
+            aria-expanded={showOu}
             className="flex w-full items-center justify-between rounded-lg px-1 py-1.5 text-sm font-semibold text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           >
             <span>

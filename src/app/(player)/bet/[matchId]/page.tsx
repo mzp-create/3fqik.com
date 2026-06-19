@@ -5,7 +5,7 @@ import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
 import { useT } from "@/lib/i18n";
 import { mmk, ball, priceSigned, winNeed } from "@/lib/client/format";
-import { flag, teamName } from "@/lib/client/flags";
+import { flag, teamName, teamLabel } from "@/lib/client/flags";
 import { errMsg } from "@/lib/client/errMsg";
 import type { MatchRow, LineRow } from "@/components/MatchCard";
 
@@ -115,13 +115,18 @@ function BetPageInner() {
     }
   }
 
-  if (loading) return <main className="p-4 text-center text-ink/40">…</main>;
+  if (loading)
+    return (
+      <main className="min-h-screen bg-canvas p-4 text-center text-muted">
+        …
+      </main>
+    );
 
   if (!match || !line || line.status === "closed")
     return (
-      <main className="p-4">
+      <main className="min-h-screen bg-canvas p-4">
         <BackBar onBack={() => router.back()} label={t.backToMatches} />
-        <p className="mt-8 text-center text-ink/40">{error || "—"}</p>
+        <p className="mt-8 text-center text-muted">{error || "—"}</p>
       </main>
     );
 
@@ -141,13 +146,13 @@ function BetPageInner() {
       ? [
           {
             side: "fav",
-            label: `${flag(fav)} ${teamName(fav)}`,
+            label: `${flag(fav)} ${teamLabel(fav)}`,
             sub: `−${ball(line.ballQ)}`,
             tone: "mx",
           },
           {
             side: "dog",
-            label: `${flag(dog)} ${teamName(dog)}`,
+            label: `${flag(dog)} ${teamLabel(dog)}`,
             sub: `+${ball(line.ballQ)}`,
             tone: "us",
           },
@@ -183,16 +188,16 @@ function BetPageInner() {
   });
 
   return (
-    <main className="p-4">
+    <main className="min-h-screen bg-canvas p-4">
       <BackBar onBack={() => router.back()} label={t.backToMatches} />
 
       {/* Match header — make "which match" unmissable */}
-      <div className="mt-2 rounded-xl bg-canvas px-3 py-3 text-center">
+      <div className="mt-2 rounded-xl border border-border bg-surface px-3 py-3 text-center">
         <div className="text-lg font-semibold text-ink">
-          {flag(m.homeTeam)} {teamName(m.homeTeam)} vs {teamName(m.awayTeam)}{" "}
+          {flag(m.homeTeam)} {teamLabel(m.homeTeam)} vs {teamLabel(m.awayTeam)}{" "}
           {flag(m.awayTeam)}
         </div>
-        <div className="text-sm text-ink/50">{m.stage}</div>
+        <div className="text-sm text-faint">{m.stage}</div>
         {m.status === "live" && (
           <div className="text-sm font-semibold text-ca">
             {t.scoreNow}: {m.homeScore}–{m.awayScore} · {t.liveNote}
@@ -201,20 +206,20 @@ function BetPageInner() {
       </div>
 
       {/* Pick a side — two big, clear outcome buttons */}
-      <p className="mt-4 text-base text-ink/50">{t.betBacking}</p>
+      <p className="mt-4 text-base text-muted">{t.betBacking}</p>
       <div className="mt-1 grid grid-cols-2 gap-3">
         {outcomes.map((o) => {
           const op = sidePrice(line, o.side);
           const selected = side === o.side;
           const rail = o.tone === "mx" ? "bg-mx" : "bg-us";
-          const priceColor = o.tone === "mx" ? "text-mx" : "text-us";
+          const priceColor = o.tone === "mx" ? "text-mx-neon" : "text-us-neon";
           return (
             <button
               key={o.side}
               disabled={op == null}
               onClick={() => changeSide(o.side)}
               className={`relative overflow-hidden rounded-xl border-2 p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us disabled:opacity-30 ${
-                selected ? "border-ink bg-ink/5" : "border-ink/15 bg-white"
+                selected ? "border-ink bg-surface" : "border-border bg-raised"
               }`}
               style={{ minHeight: "104px" }}
             >
@@ -227,7 +232,7 @@ function BetPageInner() {
               <span className="block pl-2 text-base font-bold uppercase tracking-wide text-ink">
                 {o.label}
               </span>
-              <span className="block pl-2 text-base text-ink/50">{o.sub}</span>
+              <span className="block pl-2 text-base text-muted">{o.sub}</span>
               <span
                 className={`font-display block pl-2 text-3xl ${priceColor}`}
               >
@@ -239,26 +244,24 @@ function BetPageInner() {
       </div>
 
       {/* What result wins this bet — grandpa-clear */}
-      <div className="mt-3 rounded-lg border border-mx/30 bg-mx/5 p-3">
+      <div className="mt-3 rounded-lg border border-mx/30 bg-mx/10 p-3">
         <div className="flex items-baseline gap-2">
-          <span className="text-base font-bold text-mx">✓ {t.winIf}</span>
+          <span className="text-base font-bold text-mx-neon">✓ {t.winIf}</span>
           <span className="text-base font-semibold text-ink">{need.text}</span>
         </div>
         {need.push && (
-          <div className="mt-0.5 text-sm text-ink/50">↩ {need.push}</div>
+          <div className="mt-0.5 text-sm text-muted">↩ {need.push}</div>
         )}
       </div>
 
       {suspended && (
-        <p className="mt-3 text-center text-base text-ink/50">
-          ⏸ {t.suspended}
-        </p>
+        <p className="mt-3 text-center text-base text-muted">⏸ {t.suspended}</p>
       )}
 
       {/* Stake */}
-      <label className="mt-5 block text-base text-ink/50">{t.yourStake}</label>
+      <label className="mt-5 block text-base text-muted">{t.yourStake}</label>
       <input
-        className="font-display mt-1 w-full rounded-lg border border-ink/20 bg-white p-4 text-3xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+        className="font-display mt-1 w-full rounded-lg border border-border bg-raised p-4 text-3xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         inputMode="numeric"
         value={mmk(stake)}
         onChange={(e) =>
@@ -269,7 +272,7 @@ function BetPageInner() {
         {CHIPS.map((c) => (
           <button
             key={c}
-            className="rounded-full border border-ink/20 px-4 py-3 text-base font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+            className="rounded-full border border-border px-4 py-3 text-base font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
             onClick={() => changeStake(c)}
           >
             {c >= 1_000_000 ? `${c / 1_000_000}M` : `${c / 1_000}k`}
@@ -279,23 +282,23 @@ function BetPageInner() {
 
       {/* Plain-MMK payout */}
       {p && (
-        <div className="my-4 space-y-1.5 rounded-lg bg-canvas p-3">
+        <div className="my-4 space-y-1.5 rounded-lg bg-surface p-3">
           <div className="flex items-center justify-between">
-            <span className="text-base text-ink/60">{t.ifWin}</span>
-            <span className="font-display text-xl text-mx">
+            <span className="text-base text-muted">{t.ifWin}</span>
+            <span className="font-display text-xl text-mx-neon">
               +{mmk(p.winNet)}
             </span>
           </div>
           {p.showPush && (
             <div className="flex items-center justify-between">
-              <span className="text-base text-ink/60">{t.ifPush}</span>
-              <span className="text-base font-semibold text-ink/50">
+              <span className="text-base text-muted">{t.ifPush}</span>
+              <span className="text-base font-semibold text-muted">
                 {mmk(stake)}
               </span>
             </div>
           )}
           <div className="flex items-center justify-between">
-            <span className="text-base text-ink/60">{t.ifLose}</span>
+            <span className="text-base text-muted">{t.ifLose}</span>
             <span className="font-display text-xl text-ca">
               −{mmk(Math.abs(p.loseNet))}
             </span>
@@ -322,7 +325,7 @@ function BetPageInner() {
               : t.placeBtn.replace("{n}", mmk(stake))}
       </button>
       {armed && !busy && (
-        <p className="mt-2 text-center text-sm text-ink/50">
+        <p className="mt-2 text-center text-sm text-muted">
           {t.placeReview.replace("{pick}", pickText)}
         </p>
       )}
@@ -334,7 +337,7 @@ function BackBar({ onBack, label }: { onBack: () => void; label: string }) {
   return (
     <button
       onClick={onBack}
-      className="flex items-center gap-1 text-base font-semibold text-ink/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+      className="flex items-center gap-1 text-base font-semibold text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
     >
       <span aria-hidden>←</span> {label}
     </button>
@@ -344,7 +347,13 @@ function BackBar({ onBack, label }: { onBack: () => void; label: string }) {
 export default function BetPage() {
   // useSearchParams must sit under a Suspense boundary for the production build.
   return (
-    <Suspense fallback={<main className="p-4 text-center text-ink/40">…</main>}>
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-canvas p-4 text-center text-muted">
+          …
+        </main>
+      }
+    >
       <BetPageInner />
     </Suspense>
   );

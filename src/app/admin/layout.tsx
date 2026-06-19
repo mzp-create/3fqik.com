@@ -25,20 +25,20 @@ export default async function AdminLayout({
   ];
   return (
     <I18nProvider initial={me.language}>
-      <div className="admin-light min-h-screen">
-        <header className="relative bg-ink text-sm font-semibold">
+      <div className="min-h-screen">
+        <header className="relative bg-surface-2 text-sm font-semibold">
           <div className="flex items-center justify-between px-3 pt-2">
-            <span className="font-display tracking-wider text-white">
-              WB26 ADMIN
+            <span className="font-display tracking-wider text-ink">
+              3fqik ADMIN
             </span>
             <div className="flex items-center gap-4">
               <Link
                 href="/"
-                className="text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                className="text-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
               >
                 ⚽ App
               </Link>
-              <LogoutButton className="text-white/80 hover:text-white" />
+              <LogoutButton className="text-muted hover:text-ink" />
             </div>
           </div>
           <nav className="flex gap-3 overflow-x-auto p-3">
@@ -46,7 +46,7 @@ export default async function AdminLayout({
               <Link
                 key={href}
                 href={href}
-                className="text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                className="text-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
               >
                 {label}
               </Link>

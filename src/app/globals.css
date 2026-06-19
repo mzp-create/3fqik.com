@@ -32,12 +32,6 @@ body {
   color: var(--color-ink);
 }
 
-/* Admin stays on the old light look this pass. */
-.admin-light {
-  background-color: #fafaf7;
-  color: #14161b;
-}
-
 /* Triband: 3 equal horizontal stripes — mx-green / ca-red / us-blue */
 .triband {
   height: 5px;

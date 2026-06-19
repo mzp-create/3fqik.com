@@ -10,7 +10,7 @@ import { and, eq, gte, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { createTestDb, schema, type Db } from "@/lib/db";
 import { hashPin } from "@/lib/auth/pin";
 import { postLine } from "@/lib/lines/manage";
-import { placeBet } from "@/lib/bets/place";
+import { recordBet } from "@/lib/bets/place";
 
 // ─── Shared seed helpers ──────────────────────────────────────────────────────
 
@@ -80,15 +80,26 @@ async function seedGradedBet(
     },
     NOW,
   );
-  const bet = await placeBet(
+  // Admin record path bypasses the started gate (match kickoff is in the past).
+  // recordBet does not create the match_days row, so ensure it exists just as a
+  // normal placement would have (tests below fetch this row).
+  const [existingDay] = await db
+    .select()
+    .from(schema.matchDays)
+    .where(eq(schema.matchDays.date, match.matchDay));
+  if (!existingDay)
+    await db.insert(schema.matchDays).values({ date: match.matchDay });
+  const bet = await recordBet(
     db,
-    playerId,
+    1,
     {
+      playerId,
       matchId: match.id,
       market: "ah",
-      lineVersion: line.version,
       side: "fav",
       stakeMmk,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
     },
     NOW,
   );
@@ -193,7 +204,7 @@ describe("P&L report query", () => {
     await seedGradedBet(2, 100_000, 100_000, -3_000); // valid win
     // Insert a void bet directly
     const [match] = await db.select().from(schema.matches);
-    const line = await postLine(
+    await postLine(
       db,
       1,
       {
@@ -205,15 +216,17 @@ describe("P&L report query", () => {
       },
       NOW,
     );
-    const voidBet = await placeBet(
+    const voidBet = await recordBet(
       db,
-      3,
+      1,
       {
+        playerId: 3,
         matchId: match.id,
         market: "ah",
-        lineVersion: line.version,
         side: "fav",
         stakeMmk: 500_000,
+        scoreHomeAtBet: 0,
+        scoreAwayAtBet: 0,
       },
       NOW,
     );

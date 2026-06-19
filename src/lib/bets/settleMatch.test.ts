@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createTestDb, schema, type Db } from "@/lib/db";
 import { hashPin } from "@/lib/auth/pin";
 import { postLine } from "@/lib/lines/manage";
-import { placeBet } from "./place";
+import { recordBet } from "./place";
 import { confirmFinalScore, correctScore } from "./settleMatch";
 import { eq } from "drizzle-orm";
 import { sseHub } from "@/lib/sse";
@@ -49,7 +49,7 @@ beforeEach(async () => {
 });
 
 async function bet(matchId: number, side: "fav" | "dog", stake: number) {
-  const line = await postLine(
+  await postLine(
     db,
     1,
     {
@@ -61,10 +61,32 @@ async function bet(matchId: number, side: "fav" | "dog", stake: number) {
     },
     NOW,
   );
-  return placeBet(
+  // Admin record path bypasses the started gate. Mirror the old placeBet
+  // snapshot semantics: score-at-bet = the match's CURRENT score. recordBet
+  // also bypasses match-day creation, so ensure the (open) matchDays row exists
+  // just as a normal placement would have, keeping day-close assertions intact.
+  const [m] = await db
+    .select()
+    .from(schema.matches)
+    .where(eq(schema.matches.id, matchId));
+  const [existingDay] = await db
+    .select()
+    .from(schema.matchDays)
+    .where(eq(schema.matchDays.date, m.matchDay));
+  if (!existingDay)
+    await db.insert(schema.matchDays).values({ date: m.matchDay });
+  return recordBet(
     db,
-    2,
-    { matchId, market: "ah", lineVersion: line.version, side, stakeMmk: stake },
+    1,
+    {
+      playerId: 2,
+      matchId,
+      market: "ah",
+      side,
+      stakeMmk: stake,
+      scoreHomeAtBet: m.homeScore ?? 0,
+      scoreAwayAtBet: m.awayScore ?? 0,
+    },
     NOW,
   );
 }
@@ -334,7 +356,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
    */
 
   // Post AH line pre-match
-  const ahLine = await postLine(
+  await postLine(
     db,
     1,
     {
@@ -348,7 +370,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
   );
 
   // Post OU line pre-match (ballQ=10 = 2.5 goals × 4), offering under for Bet C
-  const ouLineUnder = await postLine(
+  await postLine(
     db,
     1,
     {
@@ -361,16 +383,18 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
     NOW,
   );
 
-  // Bet A: ah fav pre-match (score 0-0)
-  const betA = await placeBet(
+  // Bet A: ah fav pre-match (score 0-0) — admin record path bypasses started gate
+  const betA = await recordBet(
     db,
-    2,
+    1,
     {
+      playerId: 2,
       matchId: 1,
       market: "ah",
-      lineVersion: ahLine.version,
       side: "fav",
       stakeMmk: 100_000,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
     },
     NOW,
   );
@@ -378,15 +402,17 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
   expect(betA.scoreAwayAtBet).toBe(0);
 
   // Bet C: ou under pre-match (score 0-0) — placed before going live
-  const betC = await placeBet(
+  const betC = await recordBet(
     db,
-    2,
+    1,
     {
+      playerId: 2,
       matchId: 1,
       market: "ou",
-      lineVersion: ouLineUnder.version,
       side: "under",
       stakeMmk: 150_000,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
     },
     NOW,
   );
@@ -394,7 +420,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
   expect(betC.scoreAwayAtBet).toBe(0);
 
   // Re-post the OU line offering over for Bet B (same ballQ/priceC → same grading)
-  const ouLineOver = await postLine(
+  await postLine(
     db,
     1,
     {
@@ -414,15 +440,17 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
     .where(eq(schema.matches.id, 1));
 
   // Bet B: ou over placed live at 1-0 (score snapshot 1-0)
-  const betB = await placeBet(
+  const betB = await recordBet(
     db,
-    2,
+    1,
     {
+      playerId: 2,
       matchId: 1,
       market: "ou",
-      lineVersion: ouLineOver.version,
       side: "over",
       stakeMmk: 200_000,
+      scoreHomeAtBet: 1,
+      scoreAwayAtBet: 0,
     },
     NOW,
   );
@@ -460,7 +488,7 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
 
 it("two-sided line: fav and dog grade from their own snapshot prices", async () => {
   // One line, two prices: fav +0.92, dog −0.98. Both sides bet on v1.
-  const line = await postLine(
+  await postLine(
     db,
     1,
     {
@@ -473,27 +501,31 @@ it("two-sided line: fav and dog grade from their own snapshot prices", async () 
     },
     NOW,
   );
-  const favBet = await placeBet(
+  const favBet = await recordBet(
     db,
-    2,
+    1,
     {
+      playerId: 2,
       matchId: 1,
       market: "ah",
-      lineVersion: line.version,
       side: "fav",
       stakeMmk: 100_000,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
     },
     NOW,
   );
-  const dogBet = await placeBet(
+  const dogBet = await recordBet(
     db,
-    2,
+    1,
     {
+      playerId: 2,
       matchId: 1,
       market: "ah",
-      lineVersion: line.version,
       side: "dog",
       stakeMmk: 100_000,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
     },
     NOW,
   );

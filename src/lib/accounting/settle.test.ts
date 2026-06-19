@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createTestDb, schema, type Db } from "@/lib/db";
 import { hashPin } from "@/lib/auth/pin";
 import { postLine } from "@/lib/lines/manage";
-import { placeBet } from "@/lib/bets/place";
+import { recordBet } from "@/lib/bets/place";
 import { confirmFinalScore } from "@/lib/bets/settleMatch";
 import { dayBoard, playerDayItems, outstandingSettlements } from "./queries";
 import { markPlayerPaid, voidTicket } from "./settle";
@@ -43,7 +43,7 @@ beforeEach(async () => {
     venue: "X",
     matchDay: "2026-06-12",
   });
-  const favLine = await postLine(
+  await postLine(
     db,
     1,
     {
@@ -55,20 +55,22 @@ beforeEach(async () => {
     },
     NOW,
   );
-  await placeBet(
+  await recordBet(
     db,
-    2,
+    1,
     {
+      playerId: 2,
       matchId: 1,
       market: "ah",
-      lineVersion: favLine.version,
       side: "fav",
       stakeMmk: 100_000,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
     },
     NOW,
   ); // Zaw fav
   // re-post offering dog (same ballQ/priceC → same grading) for Thiri's dog bet
-  const dogLine = await postLine(
+  await postLine(
     db,
     1,
     {
@@ -80,15 +82,17 @@ beforeEach(async () => {
     },
     NOW,
   );
-  await placeBet(
+  await recordBet(
     db,
-    3,
+    1,
     {
+      playerId: 3,
       matchId: 1,
       market: "ah",
-      lineVersion: dogLine.version,
       side: "dog",
       stakeMmk: 200_000,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
     },
     NOW,
   ); // Thiri dog

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { createTestDb, schema, type Db } from "@/lib/db";
 import { hashPin } from "@/lib/auth/pin";
 import { postLine, setLineStatus } from "@/lib/lines/manage";
-import { placeBet, MAX_STAKE } from "./place";
+import { placeBet, recordBet, MAX_STAKE } from "./place";
 
 let db: Db;
 const NOW = "2026-06-12T10:00:00Z";
@@ -18,7 +18,7 @@ async function seedMatch(
       stage: "Group C",
       homeTeam: "BRA",
       awayTeam: "MEX",
-      kickoffUtc: "2026-06-12T02:00:00Z",
+      kickoffUtc: "2026-06-12T20:00:00Z",
       venue: "X",
       matchDay: "2026-06-12",
       ...overrides,
@@ -48,7 +48,7 @@ beforeEach(async () => {
 });
 
 it("places a bet locking line version and snapshotting score", async () => {
-  const m = await seedMatch(db, { status: "live", homeScore: 1, awayScore: 0 });
+  const m = await seedMatch(db);
   const line = await postLine(
     db,
     1,
@@ -74,7 +74,7 @@ it("places a bet locking line version and snapshotting score", async () => {
     NOW,
   );
   expect(bet.ticketNo).toMatch(/^WB-/);
-  expect(bet.scoreHomeAtBet).toBe(1);
+  expect(bet.scoreHomeAtBet).toBe(0);
   expect(bet.scoreAwayAtBet).toBe(0);
   expect(bet.lineId).toBe(line.id);
 });
@@ -298,7 +298,7 @@ it("rejects a bet on a finished match", async () => {
       },
       NOW,
     ),
-  ).rejects.toThrow(/finished/);
+  ).rejects.toThrow(/started/);
 });
 
 it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/ headroom", async () => {
@@ -485,7 +485,7 @@ it("MAX_STAKE: stake 1_000_000_001 and 2_000_000_000_000 are both rejected", asy
 // ── O2 NEW TESTS ─────────────────────────────────────────────────────────────
 
 it("ou bet happy path: snapshot, ticket, linked to ou line", async () => {
-  const m = await seedMatch(db, { status: "live", homeScore: 1, awayScore: 0 });
+  const m = await seedMatch(db);
   const ouLine = await postLine(
     db,
     1,
@@ -513,7 +513,7 @@ it("ou bet happy path: snapshot, ticket, linked to ou line", async () => {
   expect(bet.ticketNo).toMatch(/^WB-/);
   expect(bet.lineId).toBe(ouLine.id);
   expect(bet.side).toBe("over");
-  expect(bet.scoreHomeAtBet).toBe(1);
+  expect(bet.scoreHomeAtBet).toBe(0);
   expect(bet.scoreAwayAtBet).toBe(0);
 });
 
@@ -893,4 +893,139 @@ it("two-sided: fav snapshots priceC, dog snapshots priceOppC; unpriced side reje
       NOW,
     ),
   ).rejects.toThrow(/not offered/);
+});
+
+// ── STARTED-GATE GUARDRAIL ────────────────────────────────────────────────────
+
+it("placeBet rejects when kickoff has passed (betting_started)", async () => {
+  // scheduled match but kickoff is BEFORE `at`
+  const m = await seedMatch(db, { kickoffUtc: "2026-06-12T02:00:00Z" });
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+    },
+    NOW,
+  );
+  let caught: (Error & { code?: string }) | null = null;
+  try {
+    await placeBet(
+      db,
+      2,
+      {
+        matchId: m.id,
+        market: "ah",
+        lineVersion: line.version,
+        side: "fav",
+        stakeMmk: 50_000,
+      },
+      NOW,
+    );
+  } catch (e) {
+    caught = e as Error & { code?: string };
+  }
+  expect(caught).not.toBeNull();
+  expect(caught!.code).toBe("betting_started");
+});
+
+it("placeBet rejects when match status is live (betting_started)", async () => {
+  // future kickoff is irrelevant once status is live
+  const m = await seedMatch(db);
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+    },
+    NOW,
+  );
+  await db
+    .update(schema.matches)
+    .set({ status: "live", homeScore: 1, awayScore: 0 })
+    .where(eq(schema.matches.id, m.id));
+  let caught: (Error & { code?: string }) | null = null;
+  try {
+    await placeBet(
+      db,
+      2,
+      {
+        matchId: m.id,
+        market: "ah",
+        lineVersion: line.version,
+        side: "fav",
+        stakeMmk: 50_000,
+      },
+      NOW,
+    );
+  } catch (e) {
+    caught = e as Error & { code?: string };
+  }
+  expect(caught).not.toBeNull();
+  expect(caught!.code).toBe("betting_started");
+});
+
+it("recordBet succeeds on a live match (admin path bypasses started gate)", async () => {
+  const m = await seedMatch(db, {
+    status: "live",
+    homeScore: 1,
+    awayScore: 0,
+  });
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+    },
+    NOW,
+  );
+  // default score-at-bet is 0–0
+  const bet = await recordBet(
+    db,
+    1,
+    {
+      playerId: 2,
+      matchId: m.id,
+      market: "ah",
+      side: "fav",
+      stakeMmk: 100_000,
+    },
+    NOW,
+  );
+  expect(bet.ticketNo).toMatch(/^WB-/);
+  expect(bet.lineId).toBe(line.id);
+  expect(bet.side).toBe("fav");
+  expect(bet.priceC).toBe(92);
+  expect(bet.scoreHomeAtBet).toBe(0);
+  expect(bet.scoreAwayAtBet).toBe(0);
+
+  // variant: explicit score-at-bet persists
+  const bet2 = await recordBet(
+    db,
+    1,
+    {
+      playerId: 2,
+      matchId: m.id,
+      market: "ah",
+      side: "fav",
+      stakeMmk: 100_000,
+      scoreHomeAtBet: 1,
+      scoreAwayAtBet: 0,
+    },
+    NOW,
+  );
+  expect(bet2.scoreHomeAtBet).toBe(1);
+  expect(bet2.scoreAwayAtBet).toBe(0);
 });

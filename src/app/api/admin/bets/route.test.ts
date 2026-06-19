@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createTestDb, schema, type Db } from "@/lib/db";
 import { hashPin } from "@/lib/auth/pin";
 import { postLine } from "@/lib/lines/manage";
-import { placeBet } from "@/lib/bets/place";
+import { recordBet } from "@/lib/bets/place";
 import { confirmFinalScore } from "@/lib/bets/settleMatch";
 import { voidTicket } from "@/lib/accounting/settle";
 import { getAllBets, type BetsFilter } from "./route";
@@ -36,7 +36,7 @@ beforeEach(async () => {
     venue: "X",
     matchDay: "2026-06-12",
   });
-  const line = await postLine(
+  await postLine(
     db,
     1,
     {
@@ -48,15 +48,17 @@ beforeEach(async () => {
     },
     NOW,
   );
-  await placeBet(
+  await recordBet(
     db,
-    2,
+    1,
     {
+      playerId: 2,
       matchId: 1,
       market: "ah",
-      lineVersion: line.version,
       side: "fav",
       stakeMmk: 100_000,
+      scoreHomeAtBet: 0,
+      scoreAwayAtBet: 0,
     },
     NOW,
   );

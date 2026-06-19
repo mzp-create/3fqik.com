@@ -12,7 +12,7 @@ import {
   dayLabel,
   stageSection,
 } from "@/lib/client/format";
-import { flag, teamName } from "@/lib/client/flags";
+import { flag, teamLabel } from "@/lib/client/flags";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
 
 type View = "day" | "group";
@@ -52,7 +52,7 @@ export default function MatchesPage() {
   return (
     <main className="p-3">
       {/* View toggle */}
-      <div className="mb-4 flex gap-1 rounded-xl bg-ink/5 p-1">
+      <div className="mb-4 flex gap-1 rounded-xl bg-surface-2 p-1">
         <TabButton active={view === "day"} onClick={() => setView("day")}>
           {t.byDay}
         </TabButton>
@@ -61,7 +61,7 @@ export default function MatchesPage() {
         </TabButton>
       </div>
 
-      {error && <p className="mt-8 text-center text-red-600">{error}</p>}
+      {error && <p className="mt-8 text-center text-ca">{error}</p>}
 
       {view === "day" ? (
         <ByDay matches={matches} onPick={onPick} t={t} />
@@ -85,7 +85,7 @@ function TabButton({
     <button
       onClick={onClick}
       className={`flex-1 rounded-lg py-2 text-base font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us ${
-        active ? "bg-white text-ink shadow-sm" : "text-ink/50"
+        active ? "bg-surface text-ink shadow-sm" : "text-faint"
       }`}
     >
       {children}
@@ -100,10 +100,10 @@ function DayTag({ tag, t }: { tag: string; t: Dict }) {
     <span
       className={`rounded-full px-2 py-0.5 text-xs font-bold ${
         tag === "Today"
-          ? "bg-mx/10 text-mx"
+          ? "bg-mx/15 text-mx-neon"
           : tag === "Overdue"
-            ? "bg-ca/10 text-ca"
-            : "bg-ink/5 text-ink/60"
+            ? "bg-ca/15 text-ca"
+            : "bg-surface text-muted"
       }`}
     >
       {label}
@@ -138,14 +138,14 @@ function ByDay({
   })();
 
   if (dayGroups.length === 0)
-    return <p className="mt-8 text-center text-ink/40">{t.noBets}</p>;
+    return <p className="mt-8 text-center text-faint">{t.noBets}</p>;
 
   return (
     <>
       {dayGroups.map(([day, dayMatches]) => {
         const dl = dayLabel(day, today, tomorrow);
         return (
-          <section key={day} className="mb-5">
+          <section key={day} className="mb-4">
             <div className="sticky top-0 z-10 -mx-3 mb-2 flex items-center gap-2 bg-canvas/95 px-3 py-2 backdrop-blur">
               <h2 className="font-display text-lg text-ink">{dl.formatted}</h2>
               {dl.tag && <DayTag tag={dl.tag} t={t} />}
@@ -183,7 +183,7 @@ function ByGroup({ matches, t }: { matches: MatchRow[]; t: Dict }) {
   })();
 
   if (sections.length === 0)
-    return <p className="mt-8 text-center text-ink/40">{t.noBets}</p>;
+    return <p className="mt-8 text-center text-faint">{t.noBets}</p>;
 
   return (
     <>
@@ -197,18 +197,18 @@ function ByGroup({ matches, t }: { matches: MatchRow[]; t: Dict }) {
           a.kickoffUtc.localeCompare(b.kickoffUtc),
         );
         return (
-          <section key={sec.label} className="mb-5">
+          <section key={sec.label} className="mb-4">
             <h2 className="mb-2 font-display text-lg text-ink">{sec.label}</h2>
             {teams.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 rounded-xl bg-white px-3 py-2 text-sm text-ink/70">
+              <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 rounded-xl bg-surface px-3 py-2 text-sm text-muted">
                 {teams.map((code) => (
-                  <span key={code} className="whitespace-nowrap">
-                    {flag(code)} {teamName(code)}
+                  <span key={code} className="whitespace-nowrap text-ink">
+                    {flag(code)} {teamLabel(code)}
                   </span>
                 ))}
               </div>
             )}
-            <div className="rounded-xl bg-white">
+            <div className="rounded-xl bg-surface">
               {fixtures.map((m) => (
                 <ResultRow key={m.id} m={m} t={t} />
               ))}
@@ -232,12 +232,18 @@ function ResultRow({ m, t }: { m: MatchRow; t: Dict }) {
   const center = showScore ? `${m.homeScore ?? 0}–${m.awayScore ?? 0}` : ko;
 
   return (
-    <div className="flex items-center gap-2 border-b border-ink/5 px-3 py-2 text-sm last:border-0">
+    <div className="flex items-center gap-2 border-b border-border px-3 py-2 text-sm text-ink last:border-0">
       <span className="flex-1 truncate text-right">
-        {flag(m.homeTeam)} {teamName(m.homeTeam)}
+        {flag(m.homeTeam)} {teamLabel(m.homeTeam)}
       </span>
       <span className="w-14 text-center">
-        <span className={showScore ? "font-display text-base" : "text-ink/60"}>
+        <span
+          className={
+            showScore
+              ? `font-display text-base${m.status === "live" ? " text-ca" : ""}`
+              : "text-muted"
+          }
+        >
           {center}
         </span>
         {m.status === "live" && (
@@ -246,11 +252,11 @@ function ResultRow({ m, t }: { m: MatchRow; t: Dict }) {
           </span>
         )}
         {m.status === "finished" && (
-          <div className="text-[10px] font-bold text-ink/40">{t.finished}</div>
+          <div className="text-[10px] font-bold text-faint">{t.finished}</div>
         )}
       </span>
       <span className="flex-1 truncate">
-        {teamName(m.awayTeam)} {flag(m.awayTeam)}
+        {teamLabel(m.awayTeam)} {flag(m.awayTeam)}
       </span>
     </div>
   );

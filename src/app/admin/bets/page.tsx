@@ -38,6 +38,30 @@ type BetsResponse = {
   note: string | null;
 };
 
+// Minimal shapes for the Record-bet dropdowns.
+type PlayerOpt = { id: number; displayName: string; phone: string };
+type MatchOpt = {
+  id: number;
+  homeTeam: string;
+  awayTeam: string;
+  status: string;
+  kickoffUtc: string;
+};
+type RecordedBet = { ticketNo: string };
+
+type Market = "ah" | "ou";
+type Side = "fav" | "dog" | "over" | "under";
+const SIDES_BY_MARKET: Record<Market, { value: Side; label: string }[]> = {
+  ah: [
+    { value: "fav", label: "Favourite" },
+    { value: "dog", label: "Underdog" },
+  ],
+  ou: [
+    { value: "over", label: "Over" },
+    { value: "under", label: "Under" },
+  ],
+};
+
 const STATUS_OPTIONS = [
   { value: "all", label: "All" },
   { value: "pending", label: "Pending" },
@@ -142,6 +166,205 @@ function GradeBreakdown({ t }: { t: BetRow }) {
   );
 }
 
+function RecordBetPanel({ onRecorded }: { onRecorded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [players, setPlayers] = useState<PlayerOpt[]>([]);
+  const [matches, setMatches] = useState<MatchOpt[]>([]);
+  const [playerId, setPlayerId] = useState("");
+  const [matchId, setMatchId] = useState("");
+  const [market, setMarket] = useState<Market>("ah");
+  const [side, setSide] = useState<Side>("fav");
+  const [stake, setStake] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    api<PlayerOpt[]>("/api/admin/players")
+      .then((rows) =>
+        setPlayers(
+          [...rows].sort((a, b) => a.displayName.localeCompare(b.displayName)),
+        ),
+      )
+      .catch((e) => setErr(e instanceof Error ? e.message : "error"));
+    api<MatchOpt[]>("/api/matches")
+      .then((rows) =>
+        setMatches(
+          [...rows].sort((a, b) => a.kickoffUtc.localeCompare(b.kickoffUtc)),
+        ),
+      )
+      .catch((e) => setErr(e instanceof Error ? e.message : "error"));
+  }, []);
+
+  // Side options depend on market; reset the side when the market changes.
+  function changeMarket(m: Market) {
+    setMarket(m);
+    setSide(SIDES_BY_MARKET[m][0].value);
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr("");
+    setSuccess("");
+    const pid = Number(playerId);
+    const mid = Number(matchId);
+    const stakeMmk = Number(stake);
+    if (!Number.isInteger(pid) || pid <= 0) return setErr("Choose a player.");
+    if (!Number.isInteger(mid) || mid <= 0) return setErr("Choose a match.");
+    if (!Number.isInteger(stakeMmk) || stakeMmk <= 0)
+      return setErr("Enter a whole-number stake in MMK.");
+    setSubmitting(true);
+    try {
+      const bet = await api<RecordedBet>("/api/admin/bets", {
+        action: "record",
+        playerId: pid,
+        matchId: mid,
+        market,
+        side,
+        stakeMmk,
+      });
+      setSuccess(`Recorded ${bet.ticketNo}`);
+      setStake("");
+      onRecorded();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "error");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const field =
+    "bg-raised border-border text-ink placeholder:text-faint focus-visible:ring-us w-full rounded border px-2 py-1.5 text-sm";
+  const labelCls = "block text-xs font-medium text-muted mb-1";
+
+  return (
+    <section className="border-border bg-surface mb-5 rounded-lg border">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="text-ink focus-visible:ring-us flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold"
+      >
+        <span>➕ Record bet</span>
+        <span className="text-faint text-xs">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <form onSubmit={submit} className="border-border border-t px-3 py-3">
+          <p className="text-muted mb-3 text-xs leading-relaxed">
+            Records a bet on the player&apos;s behalf, bypassing the
+            match-started block. Price is taken from the latest posted line;
+            score-at-bet is 0–0 (pre-match).
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className={labelCls} htmlFor="rb-player">
+                Player
+              </label>
+              <select
+                id="rb-player"
+                value={playerId}
+                onChange={(e) => setPlayerId(e.target.value)}
+                className={field}
+              >
+                <option value="">Select player…</option>
+                {players.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.displayName} ({p.phone})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={labelCls} htmlFor="rb-match">
+                Match
+              </label>
+              <select
+                id="rb-match"
+                value={matchId}
+                onChange={(e) => setMatchId(e.target.value)}
+                className={field}
+              >
+                <option value="">Select match…</option>
+                {matches.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.homeTeam} v {m.awayTeam} — {m.status}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={labelCls} htmlFor="rb-market">
+                Market
+              </label>
+              <select
+                id="rb-market"
+                value={market}
+                onChange={(e) => changeMarket(e.target.value as Market)}
+                className={field}
+              >
+                <option value="ah">Asian handicap</option>
+                <option value="ou">Over / Under</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelCls} htmlFor="rb-side">
+                Side
+              </label>
+              <select
+                id="rb-side"
+                value={side}
+                onChange={(e) => setSide(e.target.value as Side)}
+                className={field}
+              >
+                {SIDES_BY_MARKET[market].map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={labelCls} htmlFor="rb-stake">
+                Stake (MMK)
+              </label>
+              <input
+                id="rb-stake"
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                placeholder="e.g. 50000"
+                value={stake}
+                onChange={(e) => setStake(e.target.value)}
+                className={field}
+              />
+            </div>
+          </div>
+
+          {err && <p className="text-ca mt-3 text-sm">{err}</p>}
+          {success && <p className="text-mx-neon mt-3 text-sm">{success}</p>}
+
+          <div className="mt-3">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="bg-us focus-visible:ring-us rounded px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {submitting ? "Recording…" : "Record bet"}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
 export default function BetsPage() {
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
@@ -223,6 +446,8 @@ export default function BetsPage() {
   return (
     <main>
       <h1 className="mb-3 text-lg font-bold">Bets by player</h1>
+
+      <RecordBetPanel onRecorded={reload} />
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-2 items-center mb-4">

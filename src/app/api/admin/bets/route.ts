@@ -1,7 +1,9 @@
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { getDb, schema, type Db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/session";
-import { ok, handle } from "@/lib/api";
+import { ok, fail, handle } from "@/lib/api";
+import { recordBet } from "@/lib/bets/place";
+import { nowIso } from "@/lib/time";
 
 export type BetsFilter = {
   status?: string;
@@ -157,5 +159,31 @@ export async function GET(req: Request) {
         ? "Results capped at 500. Use filters to narrow down."
         : null,
     });
+  });
+}
+
+export async function POST(req: Request) {
+  return handle(async () => {
+    const admin = await requireAdmin();
+    const body = await req.json();
+    if (body.action !== "record") return fail("bad_request", "unknown action");
+    const { playerId, matchId, market, side, stakeMmk } = body;
+    if (!Number.isInteger(playerId))
+      return fail("bad_request", "playerId required");
+    if (!Number.isInteger(matchId))
+      return fail("bad_request", "matchId required");
+    if (market !== "ah" && market !== "ou")
+      return fail("bad_request", "market must be ah|ou");
+    const validSides = new Set(["fav", "dog", "over", "under"]);
+    if (!validSides.has(side)) return fail("bad_request", "invalid side");
+    if (!Number.isInteger(stakeMmk))
+      return fail("bad_request", "stakeMmk required");
+    const bet = await recordBet(
+      getDb(),
+      admin.id,
+      { playerId, matchId, market, side, stakeMmk },
+      nowIso(),
+    );
+    return ok(bet);
   });
 }

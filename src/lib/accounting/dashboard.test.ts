@@ -118,6 +118,15 @@ it("aggregates volume, exposure, and house P&L", async () => {
   );
 });
 
+it("exposure: house outstanding, daily pool, tier breakdown, top players", async () => {
+  const d = await dashboard(db, "2026-06-12");
+  expect(d.exposure.houseOutstandingMmk).toBeGreaterThanOrEqual(0);
+  expect(d.exposure.tier.standard + d.exposure.tier.pro).toBeGreaterThan(0);
+  expect(Array.isArray(d.exposure.topPlayers)).toBe(true);
+  expect(d.exposure).toHaveProperty("dailyPoolLimitMmk");
+  expect(d.exposure).toHaveProperty("dailyPoolUsedMmk");
+});
+
 it("includes outstanding settlements: effective nets applied", async () => {
   const d = await dashboard(db, "2026-06-12");
   expect(d.outstanding).toBeDefined();

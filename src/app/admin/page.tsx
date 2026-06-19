@@ -22,6 +22,13 @@ type DashData = {
     payCount: number;
     collectCount: number;
   };
+  exposure: {
+    houseOutstandingMmk: number;
+    dailyPoolLimitMmk: number;
+    dailyPoolUsedMmk: number;
+    tier: { standard: number; pro: number };
+    topPlayers: { name: string; outstandingMmk: number }[];
+  };
 };
 
 type MatchRow = {
@@ -125,6 +132,77 @@ export default function AdminDashboard() {
               MMK
             </div>
             <div className="text-xs text-faint">(positive = house ahead)</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded border border-border bg-surface p-3 mb-6">
+        <div className="text-xs text-muted mb-3 font-semibold uppercase tracking-wide">
+          Exposure
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded border border-border bg-raised p-3">
+            <div className="text-xs text-muted mb-0.5">House outstanding</div>
+            <div className="text-gold font-bold">
+              {mmk(data.exposure.houseOutstandingMmk)} MMK
+            </div>
+            <div className="text-xs text-faint">unsettled pending stakes</div>
+          </div>
+
+          <div className="rounded border border-border bg-raised p-3">
+            <div className="text-xs text-muted mb-0.5">Daily pool</div>
+            <div className="font-bold">
+              {mmk(data.exposure.dailyPoolUsedMmk)}
+              <span className="text-muted font-normal"> / </span>
+              {data.exposure.dailyPoolLimitMmk === 0
+                ? "∞"
+                : mmk(data.exposure.dailyPoolLimitMmk)}
+            </div>
+            {data.exposure.dailyPoolLimitMmk > 0 ? (
+              <div className="text-xs text-faint">
+                {mmk(
+                  Math.max(
+                    data.exposure.dailyPoolLimitMmk -
+                      data.exposure.dailyPoolUsedMmk,
+                    0,
+                  ),
+                )}{" "}
+                MMK remaining
+              </div>
+            ) : (
+              <div className="text-xs text-faint">no daily limit set</div>
+            )}
+          </div>
+
+          <div className="rounded border border-border bg-raised p-3">
+            <div className="text-xs text-muted mb-0.5">Tier breakdown</div>
+            <div className="font-bold">
+              Standard {data.exposure.tier.standard}
+              <span className="text-muted font-normal"> · </span>
+              Pro {data.exposure.tier.pro}
+            </div>
+            <div className="text-xs text-faint">players by tier</div>
+          </div>
+
+          <div className="rounded border border-border bg-raised p-3">
+            <div className="text-xs text-muted mb-1">Top exposures</div>
+            {data.exposure.topPlayers.length === 0 ? (
+              <div className="text-faint">—</div>
+            ) : (
+              <ul className="space-y-0.5">
+                {data.exposure.topPlayers.map((p, i) => (
+                  <li
+                    key={`${p.name}-${i}`}
+                    className="flex justify-between gap-2 text-sm"
+                  >
+                    <span className="truncate text-ink">{p.name}</span>
+                    <span className="text-gold font-semibold tabular-nums">
+                      {mmk(p.outstandingMmk)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>

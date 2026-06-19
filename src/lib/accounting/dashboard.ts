@@ -57,6 +57,47 @@ export async function dashboard(db: Db, today: string) {
 
   const outstanding = await outstandingSettlements(db);
 
+  const pendingStake =
+    sql<number>`coalesce(sum(${schema.bets.stakeMmk}), 0)`.mapWith(Number);
+  const [houseOut] = await db
+    .select({ s: pendingStake })
+    .from(schema.bets)
+    .where(eq(schema.bets.status, "pending"));
+  const [pool] = await db
+    .select({
+      s: sql<number>`coalesce(sum(${schema.bets.stakeMmk}), 0)`.mapWith(Number),
+    })
+    .from(schema.bets)
+    .innerJoin(schema.matches, eq(schema.bets.matchId, schema.matches.id))
+    .where(
+      and(
+        ne(schema.bets.status, "void"),
+        eq(schema.matches.matchDay, today),
+        sql`${schema.matches.betLimitMmk} is null`,
+      ),
+    );
+  const [cfg] = await db.select().from(schema.settings);
+  const dailyPoolLimitMmk = cfg?.dailyTotalLimitMmk ?? 0;
+  const tierRows = await db
+    .select({
+      tier: schema.players.tier,
+      c: sql<number>`count(*)`.mapWith(Number),
+    })
+    .from(schema.players)
+    .groupBy(schema.players.tier);
+  const tier = {
+    standard: tierRows.find((r) => r.tier === "standard")?.c ?? 0,
+    pro: tierRows.find((r) => r.tier === "pro")?.c ?? 0,
+  };
+  const topRows = await db
+    .select({ name: schema.players.displayName, s: pendingStake })
+    .from(schema.bets)
+    .innerJoin(schema.players, eq(schema.bets.playerId, schema.players.id))
+    .where(eq(schema.bets.status, "pending"))
+    .groupBy(schema.bets.playerId, schema.players.displayName)
+    .orderBy(sql`sum(${schema.bets.stakeMmk}) desc`)
+    .limit(5);
+
   return {
     todayHouseNet: -todayNet,
     tournamentHouseNet: -tournament,
@@ -65,5 +106,12 @@ export async function dashboard(db: Db, today: string) {
     activePlayers: todayBets.players,
     matches,
     outstanding,
+    exposure: {
+      houseOutstandingMmk: houseOut.s,
+      dailyPoolLimitMmk,
+      dailyPoolUsedMmk: pool.s,
+      tier,
+      topPlayers: topRows.map((r) => ({ name: r.name, outstandingMmk: r.s })),
+    },
   };
 }

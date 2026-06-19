@@ -25,36 +25,38 @@ export default async function AdminLayout({
   ];
   return (
     <I18nProvider initial={me.language}>
-      <header className="relative bg-ink text-sm font-semibold">
-        <div className="flex items-center justify-between px-3 pt-2">
-          <span className="font-display tracking-wider text-white">
-            WB26 ADMIN
-          </span>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-            >
-              ⚽ App
-            </Link>
-            <LogoutButton className="text-white/80 hover:text-white" />
+      <div className="admin-light min-h-screen">
+        <header className="relative bg-ink text-sm font-semibold">
+          <div className="flex items-center justify-between px-3 pt-2">
+            <span className="font-display tracking-wider text-white">
+              WB26 ADMIN
+            </span>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+              >
+                ⚽ App
+              </Link>
+              <LogoutButton className="text-white/80 hover:text-white" />
+            </div>
           </div>
-        </div>
-        <nav className="flex gap-3 overflow-x-auto p-3">
-          {nav.map(([href, label]) => (
-            <Link
-              key={href}
-              href={href}
-              className="text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-        {/* Triband bottom border */}
-        <div className="triband absolute bottom-0 left-0 right-0" />
-      </header>
-      <div className="mx-auto w-full max-w-md p-3">{children}</div>
+          <nav className="flex gap-3 overflow-x-auto p-3">
+            {nav.map(([href, label]) => (
+              <Link
+                key={href}
+                href={href}
+                className="text-white/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+          {/* Triband bottom border */}
+          <div className="triband absolute bottom-0 left-0 right-0" />
+        </header>
+        <div className="mx-auto w-full max-w-md p-3">{children}</div>
+      </div>
     </I18nProvider>
   );
 }

@@ -1,12 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #fafaf7;
-  --color-ink: #14161b;
-  --color-mx: #007a33;
-  --color-ca: #e03c31;
-  --color-us: #0a3a82;
-  --color-gold: #f5b335;
+  /* Dark Stadium surfaces (layered shades) */
+  --color-canvas: #0d1018; /* app background */
+  --color-surface: #161b27; /* cards */
+  --color-surface-2: #11151f; /* bars: header, tabs */
+  --color-raised: #0f1623; /* inset buttons */
+  --color-border: #232c3d;
+  --color-border-2: #1e2533;
+
+  /* Text */
+  --color-ink: #eef1f6; /* primary on dark */
+  --color-muted: #9aa7c0;
+  --color-faint: #5d6b85;
+
+  /* Functional accents (names preserved from old theme) */
+  --color-mx: #007a33; /* favourite / over (base) */
+  --color-us: #0a3a82; /* underdog / under (base) */
+  --color-ca: #e03c31; /* LIVE / loss */
+  --color-gold: #f5b335; /* brand / balance */
+  --color-mx-neon: #34d27f; /* price text on dark — fav/over */
+  --color-us-neon: #5aa2ff; /* price text on dark — dog/under */
+
   --font-display: var(--font-anton), sans-serif;
   --font-sans: var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
@@ -15,6 +30,12 @@
 body {
   background-color: var(--color-canvas);
   color: var(--color-ink);
+}
+
+/* Admin stays on the old light look this pass. */
+.admin-light {
+  background-color: #fafaf7;
+  color: #14161b;
 }
 
 /* Triband: 3 equal horizontal stripes — mx-green / ca-red / us-blue */

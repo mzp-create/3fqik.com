@@ -3,6 +3,7 @@ import { currentPlayer } from "@/lib/auth/session";
 import { I18nProvider } from "@/lib/i18n";
 import { Tabs } from "@/components/Tabs";
 import { InstallBanner } from "@/components/InstallBanner";
+import { AppBar } from "@/components/AppBar";
 
 export default async function PlayerLayout({
   children,
@@ -13,7 +14,10 @@ export default async function PlayerLayout({
   if (!me) redirect("/login");
   return (
     <I18nProvider initial={me.language}>
-      <div className="mx-auto w-full max-w-md pb-20">{children}</div>
+      <div className="mx-auto w-full max-w-md pb-20">
+        <AppBar isAdmin={me.role === "admin"} name={me.displayName} />
+        {children}
+      </div>
       <Tabs isAdmin={me.role === "admin"} />
       <InstallBanner />
     </I18nProvider>

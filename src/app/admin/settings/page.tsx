@@ -110,14 +110,14 @@ export default function SettingsPage() {
     <main>
       <h1 className="mb-4 text-lg font-bold">Settings</h1>
 
-      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      {error && <p className="text-ca text-sm mb-3">{error}</p>}
       {saved && (
-        <p className="text-green-700 text-sm mb-3">Saved successfully.</p>
+        <p className="text-mx-neon text-sm mb-3">Saved successfully.</p>
       )}
 
-      <div className="rounded border p-4 mb-4">
+      <div className="rounded border border-border bg-surface p-4 mb-4">
         <h2 className="font-semibold mb-3">Daily Bet Limit</h2>
-        <p className="text-sm text-gray-500 mb-3">
+        <p className="text-sm text-muted mb-3">
           Maximum total stake across all players for any match day. Set to 0 for
           unlimited.
           {settings && settings.dailyTotalLimitMmk > 0 && (
@@ -136,7 +136,7 @@ export default function SettingsPage() {
             type="number"
             min="0"
             step="1000"
-            className="border rounded px-2 py-1 text-sm w-40"
+            className="border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-1 text-sm w-40"
             placeholder="0 = unlimited"
             value={limitInput}
             onChange={(e) => {
@@ -144,32 +144,32 @@ export default function SettingsPage() {
               setSaved(false);
             }}
           />
-          <span className="text-sm text-gray-500">MMK</span>
+          <span className="text-sm text-muted">MMK</span>
           <button
             disabled={busy}
             onClick={saveLimit}
-            className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+            className="bg-us text-white text-sm px-3 py-1 rounded disabled:opacity-50"
           >
             Save
           </button>
         </div>
       </div>
 
-      <div className="rounded border p-4">
+      <div className="rounded border border-border bg-surface p-4">
         <h2 className="font-semibold mb-3">Commission &amp; Discount Rates</h2>
-        <p className="text-sm text-gray-500 mb-3">
+        <p className="text-sm text-muted mb-3">
           Commission is deducted from player winnings; discount reduces player
           losses. Both applied at grading for unsettled bets only.
         </p>
         <div className="grid gap-3">
           <div className="flex gap-2 items-center">
-            <label className="text-sm w-32 text-gray-600">Commission %</label>
+            <label className="text-sm w-32 text-muted">Commission %</label>
             <input
               type="number"
               min="0"
               max="100"
               step="1"
-              className="border rounded px-2 py-1 text-sm w-20"
+              className="border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-1 text-sm w-20"
               placeholder="3"
               value={commissionInput}
               onChange={(e) => {
@@ -177,18 +177,18 @@ export default function SettingsPage() {
                 setSaved(false);
               }}
             />
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-muted">
               {settings != null && `(current: ${settings.commissionPct}%)`}
             </span>
           </div>
           <div className="flex gap-2 items-center">
-            <label className="text-sm w-32 text-gray-600">Discount %</label>
+            <label className="text-sm w-32 text-muted">Discount %</label>
             <input
               type="number"
               min="0"
               max="100"
               step="1"
-              className="border rounded px-2 py-1 text-sm w-20"
+              className="border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-1 text-sm w-20"
               placeholder="2"
               value={discountInput}
               onChange={(e) => {
@@ -196,7 +196,7 @@ export default function SettingsPage() {
                 setSaved(false);
               }}
             />
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-muted">
               {settings != null && `(current: ${settings.discountPct}%)`}
             </span>
           </div>
@@ -204,7 +204,7 @@ export default function SettingsPage() {
             <button
               disabled={busy}
               onClick={saveFeeRates}
-              className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+              className="bg-us text-white text-sm px-3 py-1 rounded disabled:opacity-50"
             >
               Save Fee Rates
             </button>
@@ -212,21 +212,21 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="rounded border p-4 mt-4">
+      <div className="rounded border border-border bg-surface p-4 mt-4">
         <h2 className="font-semibold mb-3">Bet Cancellation Window</h2>
-        <p className="text-sm text-gray-500 mb-3">
+        <p className="text-sm text-muted mb-3">
           How long after placing a bet a player may self-cancel it — only while
           the match hasn&apos;t kicked off and the line hasn&apos;t moved. Set
           to 0 to disable self-cancel (players must ask you to void).
         </p>
         <div className="flex gap-2 items-center">
-          <label className="text-sm w-32 text-gray-600">Window (seconds)</label>
+          <label className="text-sm w-32 text-muted">Window (seconds)</label>
           <input
             type="number"
             min="0"
             max="3600"
             step="30"
-            className="border rounded px-2 py-1 text-sm w-24"
+            className="border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-1 text-sm w-24"
             placeholder="180"
             value={cancelWindowInput}
             onChange={(e) => {
@@ -234,7 +234,7 @@ export default function SettingsPage() {
               setSaved(false);
             }}
           />
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted">
             {settings != null &&
               `(current: ${settings.cancelWindowSeconds}s${
                 settings.cancelWindowSeconds === 0 ? " — off" : ""
@@ -245,7 +245,7 @@ export default function SettingsPage() {
           <button
             disabled={busy}
             onClick={saveCancelWindow}
-            className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+            className="bg-us text-white text-sm px-3 py-1 rounded disabled:opacity-50"
           >
             Save Cancel Window
           </button>

@@ -47,3 +47,9 @@ worldbet.db*
 *.db-wal
 *.db-shm
 worldbet.dev-backup-*.db
+
+# DB backups (pg_dump output) — never commit
+backups/
+*.dump
+# Private betting ledger / spreadsheets — never commit
+*.xlsx

@@ -4,7 +4,7 @@
 import type { Dict } from "./en";
 
 export const mm: Dict = {
-  appName: "WorldBet2026",
+  appName: "3fqik 2026",
   login: "ဝင်မည်",
   register: "စာရင်းသွင်းမည်",
   logout: "ထွက်မည်",
@@ -90,7 +90,7 @@ export const mm: Dict = {
   paidVia: "ပေးချေမှု",
   refLabel: "ကိုး",
   remarkLabel: "မှတ်ချက်",
-  installTitle: "WorldBet ကို သင့်ဖုန်းပင်မဖန်သားပြင်တွင် ထည့်သွင်းပါ",
+  installTitle: "3fqik ကို သင့်ဖုန်းပင်မဖန်သားပြင်တွင် ထည့်သွင်းပါ",
   installBtn: "ထည့်သွင်းမည်",
   installIos: "Share နှိပ်ပြီး 'Add to Home Screen' ရွေးပါ",
   dismiss: "နောက်မှ",

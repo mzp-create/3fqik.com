@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "WorldBet 2026",
-    short_name: "WorldBet26",
+    name: "3fqik 2026",
+    short_name: "3fqik",
     description: "World Cup 2026 betting",
     start_url: "/",
     scope: "/",

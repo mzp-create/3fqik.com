@@ -20,11 +20,11 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
-  title: "WorldBet2026",
+  title: "3fqik 2026",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "WorldBet26",
+    title: "3fqik",
     statusBarStyle: "black-translucent",
   },
   icons: {

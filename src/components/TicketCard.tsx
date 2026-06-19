@@ -151,7 +151,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
 
         <div className="p-4 text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-faint">
-            WORLDBET<span className="font-display">26</span> ·{" "}
+            3FQIK<span className="font-display">26</span> ·{" "}
             {t.ticket.toUpperCase()}
           </p>
           <p className="font-display mt-1 text-4xl tracking-wider text-ink">

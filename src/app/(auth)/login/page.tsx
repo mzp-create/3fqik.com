@@ -38,7 +38,7 @@ function LoginForm() {
           FIFA World Cup
         </p>
         <h1 className="text-5xl font-bold text-ink">
-          WorldBet<span className="font-display text-6xl">26</span>
+          3fqik<span className="font-display text-6xl">26</span>
         </h1>
         <div className="triband-skew mx-auto mt-2 w-32" />
       </div>

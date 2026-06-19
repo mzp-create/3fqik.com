@@ -15,7 +15,7 @@ export function AppBar({ isAdmin, name }: { isAdmin: boolean; name: string }) {
         ☰
       </button>
       <span className="font-display text-lg tracking-wide text-ink">
-        WORLD<span className="text-gold">BET</span>
+        3f<span className="text-gold">qik</span>
       </span>
       <MenuDrawer
         open={open}

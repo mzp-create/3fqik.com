@@ -1,5 +1,5 @@
 export const en = {
-  appName: "WorldBet2026",
+  appName: "3fqik 2026",
   login: "Log in",
   register: "Register",
   logout: "Log out",
@@ -84,7 +84,7 @@ export const en = {
   paidVia: "Paid via",
   refLabel: "Ref",
   remarkLabel: "Remark",
-  installTitle: "Add WorldBet to your home screen",
+  installTitle: "Add 3fqik to your home screen",
   installBtn: "Install",
   installIos: "Tap Share, then 'Add to Home Screen'",
   dismiss: "Not now",

@@ -33,6 +33,7 @@ type BetRow = {
   finalAway: number | null;
   voidedBy: string | null;
   voidReason: string | null;
+  reconcileNote: string | null;
 };
 
 const CAP = 500;
@@ -98,6 +99,7 @@ export async function getAllBets(
       finalAway: schema.matches.awayScore,
       voidedById: schema.bets.voidedBy,
       voidReason: schema.bets.voidReason,
+      reconcileNote: schema.bets.reconcileNote,
     })
     .from(schema.bets)
     .innerJoin(schema.players, eq(schema.bets.playerId, schema.players.id))

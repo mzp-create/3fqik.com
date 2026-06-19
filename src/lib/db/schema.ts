@@ -165,6 +165,9 @@ export const bets = pgTable("bets", {
   settlementId: integer("settlement_id").references(() => settlements.id),
   voidedBy: integer("voided_by").references(() => players.id),
   voidReason: text("void_reason"),
+  // Reconciliation flag: set when a bet's grading is in question vs the master
+  // ledger (e.g. round-1 sign / wrong favourite / quarter-line / bet-set diffs).
+  reconcileNote: text("reconcile_note"),
 });
 
 export const settings = pgTable("settings", {

@@ -29,6 +29,7 @@ type BetRow = {
   finalAway: number | null;
   voidedBy: string | null;
   voidReason: string | null;
+  reconcileNote: string | null;
 };
 
 type BetsResponse = {
@@ -69,6 +70,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function GradeBreakdown({ t }: { t: BetRow }) {
+  const flag = t.reconcileNote ? (
+    <div className="mt-1 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800">
+      ⚑ {t.reconcileNote}
+    </div>
+  ) : null;
   if (t.status === "void") {
     return (
       <div className="text-xs text-gray-500 mt-1 italic">
@@ -84,7 +90,10 @@ function GradeBreakdown({ t }: { t: BetRow }) {
     t.netMmk == null
   ) {
     return (
-      <div className="text-xs text-gray-400 mt-1 italic">not yet graded</div>
+      <>
+        {flag}
+        <div className="text-xs text-gray-400 mt-1 italic">not yet graded</div>
+      </>
     );
   }
 
@@ -102,7 +111,7 @@ function GradeBreakdown({ t }: { t: BetRow }) {
     finalHome: t.finalHome,
     finalAway: t.finalAway,
   });
-  if (!lines) return null;
+  if (!lines) return flag;
 
   const fee = t.feeMmk ?? 0;
   const hasFee = fee !== 0;
@@ -110,6 +119,7 @@ function GradeBreakdown({ t }: { t: BetRow }) {
 
   return (
     <div className="text-xs text-gray-400 mt-1 space-y-0.5 font-mono">
+      {flag}
       <div>{lines.scoreLine}</div>
       <div>{lines.mathLine}</div>
       <div className={lines.net >= 0 ? "text-green-600" : "text-red-500"}>
@@ -341,6 +351,14 @@ export default function BetsPage() {
                             >
                               <td className="py-2 pr-3 font-mono text-xs text-gray-500 whitespace-nowrap">
                                 {t.ticketNo}
+                                {t.reconcileNote && (
+                                  <span
+                                    title={t.reconcileNote}
+                                    className="ml-1 rounded bg-amber-100 px-1 text-amber-700"
+                                  >
+                                    ⚑
+                                  </span>
+                                )}
                               </td>
                               {/* Match — bold the picked team so "which team" is obvious */}
                               <td className="py-2 pr-3 whitespace-nowrap">

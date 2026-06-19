@@ -9,6 +9,9 @@ type Settings = {
   commissionPct: number;
   discountPct: number;
   cancelWindowSeconds: number;
+  stdMaxStakeMmk: number;
+  stdOutstandingMmk: number;
+  stdMaxBetsPerMatch: number;
 };
 
 export default function SettingsPage() {
@@ -17,6 +20,9 @@ export default function SettingsPage() {
   const [commissionInput, setCommissionInput] = useState("");
   const [discountInput, setDiscountInput] = useState("");
   const [cancelWindowInput, setCancelWindowInput] = useState("");
+  const [stdMaxStakeInput, setStdMaxStakeInput] = useState("");
+  const [stdOutstandingInput, setStdOutstandingInput] = useState("");
+  const [stdMaxBetsInput, setStdMaxBetsInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -29,6 +35,9 @@ export default function SettingsPage() {
         setCommissionInput(String(s.commissionPct));
         setDiscountInput(String(s.discountPct));
         setCancelWindowInput(String(s.cancelWindowSeconds));
+        setStdMaxStakeInput(String(s.stdMaxStakeMmk));
+        setStdOutstandingInput(String(s.stdOutstandingMmk));
+        setStdMaxBetsInput(String(s.stdMaxBetsPerMatch));
       })
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Failed to load"),
@@ -97,6 +106,40 @@ export default function SettingsPage() {
     setBusy(true);
     try {
       await api("/api/admin/settings", { cancelWindowSeconds: val });
+      setSaved(true);
+      reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveStdTier() {
+    const maxStake = parseInt(stdMaxStakeInput, 10);
+    const outstanding = parseInt(stdOutstandingInput, 10);
+    const maxBets = parseInt(stdMaxBetsInput, 10);
+    if (!Number.isInteger(maxStake) || maxStake < 0) {
+      setError("Max stake per bet must be a non-negative integer");
+      return;
+    }
+    if (!Number.isInteger(outstanding) || outstanding < 0) {
+      setError("Max outstanding must be a non-negative integer");
+      return;
+    }
+    if (!Number.isInteger(maxBets) || maxBets < 0) {
+      setError("Max bets per match must be a non-negative integer");
+      return;
+    }
+    setError("");
+    setSaved(false);
+    setBusy(true);
+    try {
+      await api("/api/admin/settings", {
+        stdMaxStakeMmk: maxStake,
+        stdOutstandingMmk: outstanding,
+        stdMaxBetsPerMatch: maxBets,
+      });
       setSaved(true);
       reload();
     } catch (e) {
@@ -249,6 +292,76 @@ export default function SettingsPage() {
           >
             Save Cancel Window
           </button>
+        </div>
+      </div>
+
+      <div className="rounded border border-border bg-surface p-4 mt-4">
+        <h2 className="font-semibold mb-3">Standard-tier limits</h2>
+        <p className="text-sm text-muted mb-3">
+          Default caps applied to standard-tier players. These govern how much a
+          player can stake and how many bets they can hold on a single match.
+        </p>
+        <div className="grid gap-3">
+          <div className="flex gap-2 items-center">
+            <label className="text-sm w-48 text-muted">
+              Max stake per bet (MMK)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1000"
+              className="border border-border bg-raised text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-us rounded px-2 py-1 text-sm w-40"
+              placeholder="500000"
+              value={stdMaxStakeInput}
+              onChange={(e) => {
+                setStdMaxStakeInput(e.target.value);
+                setSaved(false);
+              }}
+            />
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="text-sm w-48 text-muted">
+              Max outstanding (MMK)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1000"
+              className="border border-border bg-raised text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-us rounded px-2 py-1 text-sm w-40"
+              placeholder="1000000"
+              value={stdOutstandingInput}
+              onChange={(e) => {
+                setStdOutstandingInput(e.target.value);
+                setSaved(false);
+              }}
+            />
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="text-sm w-48 text-muted">
+              Max bets per match
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              className="border border-border bg-raised text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-us rounded px-2 py-1 text-sm w-24"
+              placeholder="2"
+              value={stdMaxBetsInput}
+              onChange={(e) => {
+                setStdMaxBetsInput(e.target.value);
+                setSaved(false);
+              }}
+            />
+          </div>
+          <div>
+            <button
+              disabled={busy}
+              onClick={saveStdTier}
+              className="bg-us text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+            >
+              Save Standard-tier Limits
+            </button>
+          </div>
         </div>
       </div>
     </main>

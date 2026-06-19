@@ -22,6 +22,9 @@ export async function POST(req: Request) {
       commissionPct,
       discountPct,
       cancelWindowSeconds,
+      stdMaxStakeMmk,
+      stdOutstandingMmk,
+      stdMaxBetsPerMatch,
     } = await req.json();
 
     // Validate dailyTotalLimitMmk if present
@@ -81,6 +84,26 @@ export async function POST(req: Request) {
         return fail(
           "bad_request",
           "cancelWindowSeconds must be an integer 0–3600",
+        );
+      }
+    }
+
+    // Validate standard-tier caps if present
+    if (stdMaxStakeMmk != null) {
+      if (!Number.isInteger(stdMaxStakeMmk) || stdMaxStakeMmk < 0) {
+        return fail("bad_request", "stdMaxStakeMmk must be an integer >= 0");
+      }
+    }
+    if (stdOutstandingMmk != null) {
+      if (!Number.isInteger(stdOutstandingMmk) || stdOutstandingMmk < 0) {
+        return fail("bad_request", "stdOutstandingMmk must be an integer >= 0");
+      }
+    }
+    if (stdMaxBetsPerMatch != null) {
+      if (!Number.isInteger(stdMaxBetsPerMatch) || stdMaxBetsPerMatch < 0) {
+        return fail(
+          "bad_request",
+          "stdMaxBetsPerMatch must be an integer >= 0",
         );
       }
     }
@@ -146,6 +169,30 @@ export async function POST(req: Request) {
         action: "settings_change",
         subject: "cancel_window",
         detail: String(cancelWindowSeconds),
+        at,
+      });
+    }
+
+    if (
+      stdMaxStakeMmk != null ||
+      stdOutstandingMmk != null ||
+      stdMaxBetsPerMatch != null
+    ) {
+      const tierUpdate: Record<string, number> = {};
+      if (stdMaxStakeMmk != null) tierUpdate.stdMaxStakeMmk = stdMaxStakeMmk;
+      if (stdOutstandingMmk != null)
+        tierUpdate.stdOutstandingMmk = stdOutstandingMmk;
+      if (stdMaxBetsPerMatch != null)
+        tierUpdate.stdMaxBetsPerMatch = stdMaxBetsPerMatch;
+      await db
+        .update(schema.settings)
+        .set(tierUpdate)
+        .where(eq(schema.settings.id, 1));
+      await db.insert(schema.auditLog).values({
+        actorId: admin.id,
+        action: "limit_change",
+        subject: "std_tier",
+        detail: JSON.stringify(tierUpdate),
         at,
       });
     }

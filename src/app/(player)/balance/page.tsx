@@ -6,6 +6,7 @@ import { errMsg } from "@/lib/client/errMsg";
 import { statusKey } from "@/lib/client/status";
 import { signedMmk, mmk, pickLabel } from "@/lib/client/format";
 import { teamName } from "@/lib/client/flags";
+import { EmptyState } from "@/components/EmptyState";
 
 type BalanceItem = {
   id: number;
@@ -35,7 +36,7 @@ type BalanceDay = {
 };
 
 const DAY_STATUS_COLORS = {
-  open: "border border-us text-us",
+  open: "border border-us text-us-neon",
   closed: "border border-ca text-ca",
   settled: "bg-mx text-white",
 };
@@ -57,7 +58,13 @@ export default function BalancePage() {
     <main className="p-3">
       {error && <p className="mt-8 text-center text-sm text-ca">{error}</p>}
       {days.length === 0 && !error && (
-        <p className="mt-8 text-center text-ink/40">{t.noDays}</p>
+        <EmptyState
+          icon="👛"
+          title={t.emptyBalanceTitle}
+          body={t.emptyBalanceBody}
+          ctaLabel={t.emptyBalanceCta}
+          ctaHref="/"
+        />
       )}
       {days.map((day) => {
         // effective net = net + fee for each item
@@ -75,7 +82,7 @@ export default function BalancePage() {
         return (
           <section
             key={day.date}
-            className="mb-4 rounded-xl border border-ink/10 bg-white p-4"
+            className="mb-4 rounded-xl border border-border bg-surface p-4"
           >
             {/* Section header with triband accent */}
             <div className="mb-1 flex items-center gap-2">
@@ -94,7 +101,7 @@ export default function BalancePage() {
             </div>
 
             <div
-              className={`mt-1 font-display text-3xl ${net > 0 ? "text-mx" : net < 0 ? "text-ca" : "text-gray-500"}`}
+              className={`mt-1 font-display text-3xl ${net > 0 ? "text-mx-neon" : net < 0 ? "text-ca" : "text-muted"}`}
             >
               {net === 0
                 ? t.evenDay
@@ -105,12 +112,12 @@ export default function BalancePage() {
 
             {day.ref && (
               <div className="mt-1 space-y-1">
-                <p className="inline-flex items-center gap-1 rounded-full bg-gold/20 px-3 py-1 text-sm font-bold text-ink">
+                <p className="inline-flex items-center gap-1 rounded-full bg-gold/20 px-3 py-1 text-sm font-bold text-gold">
                   <span className="text-gold">●</span>
                   {t.settledRef} · {day.ref}
                 </p>
                 {(day.paymentMethod || day.paymentReference || day.remark) && (
-                  <p className="text-xs text-ink/50 pl-1">
+                  <p className="text-xs text-faint pl-1">
                     {day.paymentMethod && (
                       <span>
                         {t.paidVia} {day.paymentMethod}
@@ -133,10 +140,10 @@ export default function BalancePage() {
               </div>
             )}
             {!day.ref && day.status !== "settled" && (
-              <p className="text-sm text-ink/40">{t.unsettled}</p>
+              <p className="text-sm text-faint">{t.unsettled}</p>
             )}
 
-            <ul className="mt-2 divide-y divide-ink/5">
+            <ul className="mt-2 divide-y divide-border">
               {day.items.map((item) => {
                 const pickStr = pickLabel(
                   {
@@ -154,18 +161,18 @@ export default function BalancePage() {
                 return (
                   <li key={item.id} className="py-2">
                     <div className="flex justify-between">
-                      <span className="font-mono text-sm font-bold text-ink/40">
+                      <span className="font-mono text-sm font-bold text-faint">
                         {item.ticketNo}
                       </span>
-                      <span className="text-sm font-bold uppercase text-ink/60">
+                      <span className="text-sm font-bold uppercase text-muted">
                         {t[statusKey(item.status)]}
                       </span>
                     </div>
-                    <div className="text-sm font-medium text-ink/70">
+                    <div className="text-sm font-medium text-muted">
                       {teamName(item.homeTeam)} vs {teamName(item.awayTeam)}
                     </div>
-                    <div className="text-base text-ink/80">{pickStr}</div>
-                    <div className="flex justify-between text-sm text-ink/50">
+                    <div className="text-base text-ink">{pickStr}</div>
+                    <div className="flex justify-between text-sm text-faint">
                       <span>
                         {t.stake}: {mmk(item.stakeMmk)} MMK
                       </span>
@@ -173,10 +180,10 @@ export default function BalancePage() {
                         <span
                           className={`font-display ${
                             item.netMmk > 0
-                              ? "text-mx"
+                              ? "text-mx-neon"
                               : item.netMmk < 0
                                 ? "text-ca"
-                                : "text-gray-500"
+                                : "text-muted"
                           }`}
                         >
                           {t.net}: {signedMmk(item.netMmk)} MMK
@@ -184,14 +191,14 @@ export default function BalancePage() {
                       )}
                     </div>
                     {fee !== 0 && item.netMmk != null && (
-                      <div className="flex justify-between text-xs text-ink/40 mt-0.5">
+                      <div className="flex justify-between text-xs text-faint mt-0.5">
                         <span>
                           {fee < 0
                             ? `Commission −${mmk(Math.abs(fee))} MMK`
                             : `Discount +${mmk(fee)} MMK`}
                         </span>
                         <span
-                          className={`font-semibold ${effectiveNet >= 0 ? "text-mx" : "text-ca"}`}
+                          className={`font-semibold ${effectiveNet >= 0 ? "text-mx-neon" : "text-ca"}`}
                         >
                           Net after fee: {signedMmk(effectiveNet)} MMK
                         </span>

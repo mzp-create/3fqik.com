@@ -7,15 +7,16 @@ import { statusKey } from "@/lib/client/status";
 import { pickLabel } from "@/lib/client/format";
 import { teamName } from "@/lib/client/flags";
 import { TicketCard, type TicketRow } from "@/components/TicketCard";
+import { EmptyState } from "@/components/EmptyState";
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-500",
-  won: "bg-mx/10 text-mx",
-  half_won: "bg-mx/10 text-mx",
-  push: "bg-gray-100 text-gray-500",
+  pending: "bg-surface-2 text-muted",
+  won: "bg-mx/10 text-mx-neon",
+  half_won: "bg-mx/10 text-mx-neon",
+  push: "bg-surface-2 text-muted",
   half_lost: "bg-ca/10 text-ca",
   lost: "bg-ca/10 text-ca",
-  void: "bg-gray-100 text-gray-400",
+  void: "bg-surface-2 text-faint",
 };
 
 export default function BetsPage() {
@@ -66,12 +67,18 @@ export default function BetsPage() {
     <main className="p-3">
       {error && <p className="mt-8 text-center text-sm text-ca">{error}</p>}
       {tickets.length === 0 && !error && (
-        <p className="mt-8 text-center text-ink/40">{t.noBets}</p>
+        <EmptyState
+          icon="🎟️"
+          title={t.emptyBetsTitle}
+          body={t.emptyBetsBody}
+          ctaLabel={t.emptyBetsCta}
+          ctaHref="/"
+        />
       )}
       {tickets.map((b) => (
         <button
           key={b.ticketNo}
-          className="mb-2 w-full rounded-xl border border-ink/10 bg-white p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+          className="mb-2 w-full rounded-xl border border-border bg-surface p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           onClick={() => setSelected(b)}
         >
           <div className="flex items-center justify-between">
@@ -79,21 +86,21 @@ export default function BetsPage() {
               {b.ticketNo}
             </span>
             <span
-              className={`rounded-full px-3 py-1 text-sm font-bold ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-600"}`}
+              className={`rounded-full px-3 py-1 text-sm font-bold ${STATUS_COLORS[b.status] ?? "bg-surface-2 text-muted"}`}
             >
               {t[statusKey(b.status)]}
             </span>
           </div>
-          <div className="mt-1 text-base font-medium text-ink/70">
+          <div className="mt-1 text-base font-medium text-ink">
             {teamName(b.match.homeTeam)} vs {teamName(b.match.awayTeam)}
           </div>
-          <div className="text-base text-ink/60">
+          <div className="text-base text-muted">
             {pickLabel(b.line, b.match, b.side, {
               over: t.over,
               under: t.under,
             })}
           </div>
-          <div className="text-base text-ink/50">
+          <div className="text-base text-faint">
             {t.stake}: {b.stakeMmk.toLocaleString("en-US")} MMK
           </div>
         </button>
@@ -101,16 +108,16 @@ export default function BetsPage() {
 
       {selected && (
         <div
-          className="fixed inset-0 z-20 bg-ink/50"
+          className="fixed inset-0 z-20 bg-canvas/70"
           onClick={() => setSelected(null)}
         >
           <div
-            className="fixed bottom-0 left-0 right-0 mx-auto max-w-md overflow-y-auto rounded-t-2xl bg-white p-4 pb-8"
+            className="fixed bottom-0 left-0 right-0 mx-auto max-w-md overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 pb-8"
             style={{ maxHeight: "90vh" }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="mb-3 py-2 text-base text-ink/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+              className="mb-3 py-2 text-base text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
               onClick={() => setSelected(null)}
             >
               ✕ {t.close}

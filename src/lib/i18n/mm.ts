@@ -67,6 +67,7 @@ export const mm: Dict = {
   errLimit: "ကုမ္ပဏီ {n} ကျပ်သာ ထပ်လက်ခံနိုင်သည်",
   errMatchFinished: "ပွဲစဉ်ပြီးဆုံးသွားပြီ",
   errBettingClosed: "လောင်းကြေးပိတ်သည်",
+  errBettingStarted: "လောင်းကြေးပိတ်သည် — ပွဲစတင်သွားပြီ",
   language: "ဘာသာစကား",
   sideFav: "ပေး",
   sideDog: "ယူ",

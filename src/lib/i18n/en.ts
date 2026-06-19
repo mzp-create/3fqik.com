@@ -61,6 +61,7 @@ export const en = {
   errLimit: "House can accept only {n} MMK more",
   errMatchFinished: "Match already finished",
   errBettingClosed: "Betting closed",
+  errBettingStarted: "Betting closed — the match has started",
   language: "Language",
   sideFav: "Fav",
   sideDog: "Dog",

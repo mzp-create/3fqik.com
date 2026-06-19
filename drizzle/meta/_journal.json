@@ -36,6 +36,13 @@
       "when": 1781863312564,
       "tag": "0004_two_sided_price",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781897103930,
+      "tag": "0005_user_tiers",
+      "breakpoints": true
     }
   ]
 }

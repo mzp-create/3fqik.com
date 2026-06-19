@@ -23,6 +23,9 @@ export const players = pgTable("players", {
   role: text("role", { enum: ["player", "admin"] })
     .notNull()
     .default("player"),
+  tier: text("tier", { enum: ["standard", "pro"] })
+    .notNull()
+    .default("standard"),
   language: text("language", { enum: ["en", "mm"] })
     .notNull()
     .default("en"),
@@ -192,6 +195,13 @@ export const settings = pgTable("settings", {
   discountPct: integer("discount_pct").notNull().default(2),
   // Self-service bet-cancel window (seconds after placement). 0 disables it.
   cancelWindowSeconds: integer("cancel_window_seconds").notNull().default(180),
+  stdMaxStakeMmk: bigint("std_max_stake_mmk", { mode: "number" })
+    .notNull()
+    .default(500_000),
+  stdOutstandingMmk: bigint("std_outstanding_mmk", { mode: "number" })
+    .notNull()
+    .default(1_000_000),
+  stdMaxBetsPerMatch: integer("std_max_bets_per_match").notNull().default(2),
 });
 
 export const auditLog = pgTable("audit_log", {

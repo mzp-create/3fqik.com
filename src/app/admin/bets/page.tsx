@@ -51,33 +51,29 @@ function StatusBadge({ status }: { status: string }) {
   const base = "text-xs px-2 py-0.5 rounded font-semibold";
   switch (status) {
     case "won":
-      return <span className={`${base} bg-green-100 text-green-700`}>won</span>;
+      return <span className={`${base} bg-mx/15 text-mx-neon`}>won</span>;
     case "lost":
-      return <span className={`${base} bg-red-100 text-red-600`}>lost</span>;
+      return <span className={`${base} bg-ca/15 text-ca`}>lost</span>;
     case "void":
-      return <span className={`${base} bg-gray-100 text-gray-500`}>void</span>;
+      return <span className={`${base} bg-raised text-muted`}>void</span>;
     case "pending":
-      return (
-        <span className={`${base} bg-blue-100 text-blue-700`}>pending</span>
-      );
+      return <span className={`${base} bg-us/15 text-us-neon`}>pending</span>;
     case "push":
-      return <span className={`${base} bg-gray-100 text-gray-600`}>push</span>;
+      return <span className={`${base} bg-raised text-muted`}>push</span>;
     default:
-      return (
-        <span className={`${base} bg-gray-100 text-gray-500`}>{status}</span>
-      );
+      return <span className={`${base} bg-raised text-muted`}>{status}</span>;
   }
 }
 
 function GradeBreakdown({ t }: { t: BetRow }) {
   const flag = t.reconcileNote ? (
-    <div className="mt-1 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800">
+    <div className="mt-1 rounded border border-gold/40 bg-gold/15 px-2 py-1 text-xs text-gold">
       ⚑ {t.reconcileNote}
     </div>
   ) : null;
   if (t.status === "void") {
     return (
-      <div className="text-xs text-gray-500 mt-1 italic">
+      <div className="text-xs text-muted mt-1 italic">
         VOIDED by {t.voidedBy ?? "unknown"}: {t.voidReason ?? ""}
       </div>
     );
@@ -92,7 +88,7 @@ function GradeBreakdown({ t }: { t: BetRow }) {
     return (
       <>
         {flag}
-        <div className="text-xs text-gray-400 mt-1 italic">not yet graded</div>
+        <div className="text-xs text-faint mt-1 italic">not yet graded</div>
       </>
     );
   }
@@ -118,11 +114,11 @@ function GradeBreakdown({ t }: { t: BetRow }) {
   const effectiveNet = lines.net + fee;
 
   return (
-    <div className="text-xs text-gray-400 mt-1 space-y-0.5 font-mono">
+    <div className="text-xs text-faint mt-1 space-y-0.5 font-mono">
       {flag}
       <div>{lines.scoreLine}</div>
       <div>{lines.mathLine}</div>
-      <div className={lines.net >= 0 ? "text-green-600" : "text-red-500"}>
+      <div className={lines.net >= 0 ? "text-mx-neon" : "text-ca"}>
         {lines.resultLine}
       </div>
       {hasFee && (
@@ -134,8 +130,8 @@ function GradeBreakdown({ t }: { t: BetRow }) {
           <div
             className={
               effectiveNet >= 0
-                ? "text-green-700 font-semibold"
-                : "text-red-600 font-semibold"
+                ? "text-mx-neon font-semibold"
+                : "text-ca font-semibold"
             }
           >
             Net after fee: {signedMmk(effectiveNet)} MMK
@@ -233,7 +229,7 @@ export default function BetsPage() {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="border rounded px-2 py-1 text-sm"
+          className="bg-raised border-border text-ink placeholder:text-faint focus-visible:ring-us rounded border px-2 py-1 text-sm"
         >
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -246,29 +242,29 @@ export default function BetsPage() {
           placeholder="Search ticket / player / team…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="border rounded px-2 py-1 text-sm flex-1 min-w-0"
+          className="bg-raised border-border text-ink placeholder:text-faint focus-visible:ring-us min-w-0 flex-1 rounded border px-2 py-1 text-sm"
         />
       </div>
 
-      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-      {loading && <p className="text-gray-500">Loading…</p>}
+      {error && <p className="text-ca text-sm mb-3">{error}</p>}
+      {loading && <p className="text-muted">Loading…</p>}
 
       {!loading && data && (
         <>
           {data.note && (
-            <p className="text-yellow-700 text-xs mb-2 bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
+            <p className="text-gold text-xs mb-2 bg-gold/15 border border-gold/40 rounded px-2 py-1">
               {data.note}
             </p>
           )}
           {data.rows.length === 0 && (
-            <p className="text-gray-500 text-sm">No bets found.</p>
+            <p className="text-muted text-sm">No bets found.</p>
           )}
 
           {groups.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b text-left text-xs uppercase tracking-wide text-gray-500">
+                  <tr className="bg-surface-2 border-border border-b text-left text-xs uppercase tracking-wide text-muted">
                     <th className="py-2 pr-3">Ticket</th>
                     <th className="py-2 pr-3">Match</th>
                     <th className="py-2 pr-3">Pick</th>
@@ -287,20 +283,20 @@ export default function BetsPage() {
                   return (
                     <tbody key={playerName}>
                       {/* Player group header */}
-                      <tr className="bg-gray-50 border-y">
+                      <tr className="bg-surface-2 border-border border-y">
                         <td
                           colSpan={COLS - 2}
                           className="py-2 pr-3 font-semibold"
                         >
                           {playerName}
-                          <span className="ml-2 text-xs font-normal text-gray-500">
+                          <span className="ml-2 text-xs font-normal text-muted">
                             ({rows.length} {rows.length === 1 ? "bet" : "bets"})
                           </span>
                         </td>
                         <td
                           colSpan={2}
                           className={`py-2 pr-3 text-right font-semibold ${
-                            subtotal >= 0 ? "text-green-700" : "text-red-600"
+                            subtotal >= 0 ? "text-mx-neon" : "text-ca"
                           }`}
                         >
                           {signedMmk(subtotal)}
@@ -346,15 +342,15 @@ export default function BetsPage() {
                         return (
                           <FragmentRow key={t.ticketNo}>
                             <tr
-                              className="border-b cursor-pointer hover:bg-gray-50 align-top"
+                              className="border-border hover:bg-raised cursor-pointer border-b align-top"
                               onClick={() => toggleExpand(t.ticketNo)}
                             >
-                              <td className="py-2 pr-3 font-mono text-xs text-gray-500 whitespace-nowrap">
+                              <td className="py-2 pr-3 font-mono text-xs text-muted whitespace-nowrap">
                                 {t.ticketNo}
                                 {t.reconcileNote && (
                                   <span
                                     title={t.reconcileNote}
-                                    className="ml-1 rounded bg-amber-100 px-1 text-amber-700"
+                                    className="ml-1 rounded bg-gold/15 px-1 text-gold"
                                   >
                                     ⚑
                                   </span>
@@ -371,7 +367,7 @@ export default function BetsPage() {
                                 >
                                   {t.homeTeam}
                                 </span>
-                                <span className="text-gray-400"> v </span>
+                                <span className="text-faint"> v </span>
                                 <span
                                   className={
                                     pickedTeam === t.awayTeam
@@ -381,7 +377,7 @@ export default function BetsPage() {
                                 >
                                   {t.awayTeam}
                                 </span>
-                                <div className="text-xs text-gray-400">
+                                <div className="text-xs text-faint">
                                   {t.stage}
                                 </div>
                               </td>
@@ -396,29 +392,29 @@ export default function BetsPage() {
                               <td
                                 className={`py-2 pr-3 text-right whitespace-nowrap ${
                                   effNet == null
-                                    ? "text-gray-400"
+                                    ? "text-faint"
                                     : effNet >= 0
-                                      ? "text-green-700 font-semibold"
-                                      : "text-red-600 font-semibold"
+                                      ? "text-mx-neon font-semibold"
+                                      : "text-ca font-semibold"
                                 }`}
                               >
                                 {effNet == null ? "—" : signedMmk(effNet)}
                                 {fee !== 0 && effNet != null && (
-                                  <div className="text-[10px] font-normal text-gray-400">
+                                  <div className="text-[10px] font-normal text-faint">
                                     {fee < 0 ? "comm." : "disc."}{" "}
                                     {signedMmk(fee)}
                                   </div>
                                 )}
                               </td>
-                              <td className="py-2 text-gray-400 text-xs">
+                              <td className="py-2 text-faint text-xs">
                                 {isExpanded ? "▲" : "▼"}
                               </td>
                             </tr>
 
                             {isExpanded && (
-                              <tr className="border-b bg-gray-50/60">
+                              <tr className="border-border bg-raised/60 border-b">
                                 <td colSpan={COLS} className="px-3 pb-3 pt-1">
-                                  <div className="text-xs text-gray-500 mb-1">
+                                  <div className="text-xs text-muted mb-1">
                                     {t.homeTeam} vs {t.awayTeam} · {t.stage} ·{" "}
                                     {t.matchStatus}
                                   </div>
@@ -431,7 +427,7 @@ export default function BetsPage() {
                                         handleVoid(t.ticketNo);
                                       }}
                                       title={voidDisabledReason ?? undefined}
-                                      className="border border-red-300 text-red-600 text-xs px-2 py-0.5 rounded disabled:opacity-40"
+                                      className="border border-ca text-ca text-xs px-2 py-0.5 rounded disabled:opacity-40"
                                     >
                                       {voidDisabledReason
                                         ? `Void (${voidDisabledReason})`

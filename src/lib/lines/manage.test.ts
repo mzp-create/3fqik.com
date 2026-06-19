@@ -35,7 +35,6 @@ it("posting closes the previous line and increments version", async () => {
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -49,7 +48,6 @@ it("posting closes the previous line and increments version", async () => {
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 4,
       priceC: 95,
     },
@@ -69,7 +67,6 @@ it("suspend/resume toggles; closed lines cannot resume; bad prices rejected", as
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 85,
     },
@@ -89,7 +86,6 @@ it("suspend/resume toggles; closed lines cannot resume; bad prices rejected", as
         matchId: 1,
         market: "ah",
         favSide: "home",
-        offeredSide: "fav",
         ballQ: 2,
         priceC: 0,
       },
@@ -104,7 +100,6 @@ it("suspend/resume toggles; closed lines cannot resume; bad prices rejected", as
         matchId: 1,
         market: "ah",
         favSide: "home",
-        offeredSide: "fav",
         ballQ: -1,
         priceC: 90,
       },
@@ -124,7 +119,6 @@ it("err codes: not_found for missing match, match_finished for done match, bad_l
           matchId: 999,
           market: "ah",
           favSide: "home",
-          offeredSide: "fav",
           ballQ: 2,
           priceC: 85,
         },
@@ -159,7 +153,6 @@ it("err codes: not_found for missing match, match_finished for done match, bad_l
           matchId: finishedId,
           market: "ah",
           favSide: "home",
-          offeredSide: "fav",
           ballQ: 2,
           priceC: 85,
         },
@@ -182,7 +175,6 @@ it("err codes: not_found for missing match, match_finished for done match, bad_l
           matchId: 1,
           market: "ah",
           favSide: "home",
-          offeredSide: "fav",
           ballQ: -1,
           priceC: 85,
         },
@@ -205,7 +197,6 @@ it("err codes: not_found for missing match, match_finished for done match, bad_l
           matchId: 1,
           market: "ah",
           favSide: "home",
-          offeredSide: "fav",
           ballQ: 2,
           priceC: 0,
         },
@@ -240,7 +231,6 @@ it("setLineStatus errors: no_line for missing matchId, line_closed for closed li
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 85,
     },
@@ -272,7 +262,6 @@ it("sequential posts increment versions", async () => {
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 85,
     },
@@ -285,7 +274,6 @@ it("sequential posts increment versions", async () => {
       matchId: 1,
       market: "ah",
       favSide: "away",
-      offeredSide: "fav",
       ballQ: 4,
       priceC: 95,
     },
@@ -303,7 +291,6 @@ it("raw duplicate insert throws UNIQUE constraint error", async () => {
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 85,
     },
@@ -334,7 +321,6 @@ it("postLine against a finished match throws /finished/ and leaves row count unc
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 85,
     },
@@ -356,7 +342,6 @@ it("postLine against a finished match throws /finished/ and leaves row count unc
         matchId: 1,
         market: "ah",
         favSide: "home",
-        offeredSide: "fav",
         ballQ: 2,
         priceC: 85,
       },
@@ -380,7 +365,6 @@ it("broadcast: successful postLine pushes exactly one line_update chunk; failed 
         matchId: 1,
         market: "ah",
         favSide: "home",
-        offeredSide: "fav",
         ballQ: 2,
         priceC: 85,
       },
@@ -403,7 +387,6 @@ it("broadcast: successful postLine pushes exactly one line_update chunk; failed 
           matchId: 1,
           market: "ah",
           favSide: "home",
-          offeredSide: "fav",
           ballQ: 2,
           priceC: 85,
         },
@@ -426,7 +409,6 @@ it("per-market version independence: ah v1, ou v1, ah v2 → ou still v1 active"
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -441,7 +423,6 @@ it("per-market version independence: ah v1, ou v1, ah v2 → ou still v1 active"
       matchId: 1,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -457,7 +438,6 @@ it("per-market version independence: ah v1, ou v1, ah v2 → ou still v1 active"
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 4,
       priceC: 95,
     },
@@ -487,7 +467,6 @@ it("suspending ou does not affect ah line", async () => {
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -500,7 +479,6 @@ it("suspending ou does not affect ah line", async () => {
       matchId: 1,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -526,7 +504,6 @@ it("ou ballQ 0 is rejected with bad_line (no O 0.0 lines)", async () => {
           matchId: 1,
           market: "ou",
           favSide: "home",
-          offeredSide: "over",
           ballQ: 0,
           priceC: 90,
         },
@@ -552,7 +529,6 @@ it("SSE line_update payload includes market field", async () => {
         matchId: 1,
         market: "ou",
         favSide: "home",
-        offeredSide: "over",
         ballQ: 10,
         priceC: 90,
       },
@@ -574,7 +550,6 @@ it("setLineStatus SSE payload includes market field", async () => {
       matchId: 1,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -591,4 +566,55 @@ it("setLineStatus SSE payload includes market field", async () => {
   } finally {
     unsub();
   }
+});
+
+it("stores both prices; priceOppC defaults to priceC when omitted", async () => {
+  // Explicit two-sided prices persist.
+  const l1 = await postLine(
+    db,
+    1,
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  expect(l1.priceC).toBe(92);
+  expect(l1.priceOppC).toBe(-98);
+
+  // Omitted priceOppC defaults to priceC (symmetric).
+  const l2 = await postLine(
+    db,
+    1,
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 90,
+    },
+    NOW,
+  );
+  expect(l2.priceOppC).toBe(90);
+
+  // Invalid priceOppC is rejected.
+  await expect(
+    postLine(
+      db,
+      1,
+      {
+        matchId: 1,
+        market: "ah",
+        favSide: "home",
+        ballQ: 3,
+        priceC: 90,
+        priceOppC: 0,
+      },
+      NOW,
+    ),
+  ).rejects.toThrow(/invalid price/);
 });

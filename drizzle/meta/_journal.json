@@ -29,6 +29,13 @@
       "when": 1781860462681,
       "tag": "0003_reconcile_note",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781863312564,
+      "tag": "0004_two_sided_price",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
 import { useT } from "@/lib/i18n";
@@ -13,15 +14,14 @@ import {
 } from "@/lib/client/format";
 import { flag, teamName } from "@/lib/client/flags";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
-import { BetSlip, type SlipState } from "@/components/BetSlip";
 
 type View = "day" | "group";
 
 export default function MatchesPage() {
   const { t } = useT();
+  const router = useRouter();
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [view, setView] = useState<View>("day");
-  const [slip, setSlip] = useState<SlipState | null>(null);
   const [error, setError] = useState("");
 
   const reload = () =>
@@ -45,8 +45,7 @@ export default function MatchesPage() {
 
   function onPick(m: MatchRow) {
     return (market: "ah" | "ou", side: "fav" | "dog" | "over" | "under") => {
-      const line = market === "ou" ? m.ouLine : m.line;
-      if (line) setSlip({ match: m, line, side, market });
+      router.push(`/bet/${m.id}?market=${market}&side=${side}`);
     };
   }
 
@@ -68,17 +67,6 @@ export default function MatchesPage() {
         <ByDay matches={matches} onPick={onPick} t={t} />
       ) : (
         <ByGroup matches={matches} t={t} />
-      )}
-
-      {slip && (
-        <BetSlip
-          slip={slip}
-          onClose={() => setSlip(null)}
-          onPlaced={() => {
-            setSlip(null);
-            reload();
-          }}
-        />
       )}
     </main>
   );

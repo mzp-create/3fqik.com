@@ -83,6 +83,7 @@ export async function GET() {
         matchId: schema.bets.matchId,
         lineId: schema.bets.lineId,
         side: schema.bets.side,
+        priceC: schema.bets.priceC, // bet's snapshot price (two-sided)
         stakeMmk: schema.bets.stakeMmk,
         scoreHomeAtBet: schema.bets.scoreHomeAtBet,
         scoreAwayAtBet: schema.bets.scoreAwayAtBet,

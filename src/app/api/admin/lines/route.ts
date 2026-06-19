@@ -8,9 +8,9 @@ type LineSpec = {
   matchId: number;
   market: "ah" | "ou";
   favSide?: "home" | "away";
-  offeredSide?: "fav" | "dog" | "over" | "under";
   ballQ: number;
-  priceC: number;
+  priceC: number; // primary side (fav/over)
+  priceOppC: number; // opposite side (dog/under)
 };
 
 /** Validate one line spec; returns an error message or null. Shared by the
@@ -28,23 +28,21 @@ function validateLine(s: Partial<LineSpec>): string | null {
     return s.market === "ou"
       ? "O/U goals line must be 0.25–10 (a multiple of 0.25)"
       : "handicap must be 0–10 (a multiple of 0.25)";
-  if (
-    !Number.isInteger(s.priceC) ||
-    s.priceC === 0 ||
-    (s.priceC as number) < -100 ||
-    (s.priceC as number) > 100
-  )
-    return "price must be a signed value −1.00…+1.00 (not 0)";
+  const priceOk = (p: unknown) =>
+    Number.isInteger(p) &&
+    (p as number) !== 0 &&
+    (p as number) >= -100 &&
+    (p as number) <= 100;
+  if (!priceOk(s.priceC))
+    return s.market === "ah"
+      ? "fav price must be a signed value −1.00…+1.00 (not 0)"
+      : "over price must be a signed value −1.00…+1.00 (not 0)";
+  if (!priceOk(s.priceOppC))
+    return s.market === "ah"
+      ? "dog price must be a signed value −1.00…+1.00 (not 0)"
+      : "under price must be a signed value −1.00…+1.00 (not 0)";
   if (s.market === "ah" && s.favSide !== "home" && s.favSide !== "away")
     return "favSide must be 'home' or 'away'";
-  const offerOk =
-    s.market === "ah"
-      ? s.offeredSide === "fav" || s.offeredSide === "dog"
-      : s.offeredSide === "over" || s.offeredSide === "under";
-  if (!offerOk)
-    return s.market === "ah"
-      ? "offeredSide must be 'fav' or 'dog'"
-      : "offeredSide must be 'over' or 'under'";
   return null;
 }
 
@@ -92,9 +90,9 @@ export async function POST(req: Request) {
               matchId: s.matchId,
               market: s.market,
               favSide: favOf(s),
-              offeredSide: s.offeredSide!,
               ballQ: s.ballQ,
               priceC: s.priceC,
+              priceOppC: s.priceOppC,
             },
             nowIso(),
           );
@@ -128,9 +126,9 @@ export async function POST(req: Request) {
             matchId: body.matchId,
             market: body.market,
             favSide: favOf(body),
-            offeredSide: body.offeredSide,
             ballQ: body.ballQ,
             priceC: body.priceC,
+            priceOppC: body.priceOppC,
           },
           nowIso(),
         ),

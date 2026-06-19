@@ -18,10 +18,10 @@ type Line = {
   version: number;
   favSide: "home" | "away";
   ballQ: number;
-  priceC: number;
+  priceC: number; // primary side (fav/over)
+  priceOppC: number | null; // opposite side (dog/under)
   status: "active" | "suspended" | "closed";
   market: "ah" | "ou";
-  offeredSide: "fav" | "dog" | "over" | "under";
 };
 
 type MatchRow = {
@@ -56,17 +56,15 @@ function fmtMalay(v: number): string {
 
 type AhFormState = {
   favSide: "home" | "away";
-  offeredSide: "fav" | "dog";
   ballQ: number; // stored as quarter units (×4)
-  priceC: number; // stored ×100
-  priceCInput: string; // raw string for the price input
+  priceCInput: string; // raw string for the favourite price input
+  priceOppCInput: string; // raw string for the underdog price input
 };
 
 type OuFormState = {
-  offeredSide: "over" | "under";
   ballQ: number; // stored as quarter units (×4), min 1 (=0.25)
-  priceC: number;
-  priceCInput: string;
+  priceCInput: string; // over price
+  priceOppCInput: string; // under price
 };
 
 /** Flip the sign of a price string (the mobile numeric keypad has no minus). */
@@ -77,42 +75,44 @@ function flipSign(s: string): string {
 const isNeg = (s: string) => s.trim().startsWith("-");
 const magOf = (s: string) => s.replace(/^-/, "");
 
+/** Parse a price input string to the stored signed ×100 int, or null if invalid. */
+function parsePriceC(input: string): number | null {
+  const parsed = parseFloat(input);
+  if (isNaN(parsed) || parsed < -1 || parsed > 1) return null;
+  const c = Math.round(parsed * 100);
+  if (c === 0 || c < -100 || c > 100) return null;
+  return c;
+}
+
 function initAhForm(line?: Line | null): AhFormState {
   if (line) {
     return {
       favSide: line.favSide,
-      offeredSide:
-        line.offeredSide === "dog" || line.offeredSide === "fav"
-          ? line.offeredSide
-          : "fav",
       ballQ: line.ballQ,
-      priceC: line.priceC,
       priceCInput: (line.priceC / 100).toFixed(2),
+      priceOppCInput:
+        line.priceOppC != null ? (line.priceOppC / 100).toFixed(2) : "-0.98",
     };
   }
   return {
     favSide: "home",
-    offeredSide: "fav",
     ballQ: 4,
-    priceC: 92,
     priceCInput: "0.92",
+    priceOppCInput: "-0.98",
   };
 }
 
 function initOuForm(line?: Line | null): OuFormState {
   if (line) {
     return {
-      offeredSide:
-        line.offeredSide === "under" || line.offeredSide === "over"
-          ? line.offeredSide
-          : "over",
       ballQ: line.ballQ,
-      priceC: line.priceC,
       priceCInput: (line.priceC / 100).toFixed(2),
+      priceOppCInput:
+        line.priceOppC != null ? (line.priceOppC / 100).toFixed(2) : "-0.94",
     };
   }
   // default 2.5 goals = ballQ 10
-  return { offeredSide: "over", ballQ: 10, priceC: 90, priceCInput: "0.90" };
+  return { ballQ: 10, priceCInput: "0.90", priceOppCInput: "-0.94" };
 }
 
 export default function LinesPage() {
@@ -209,14 +209,20 @@ export default function LinesPage() {
   async function postAhLine(matchId: number) {
     const f = ahForms[matchId];
     if (!f) return;
-    const parsedPrice = parseFloat(f.priceCInput);
-    if (isNaN(parsedPrice) || parsedPrice < -1 || parsedPrice > 1) {
-      setError(matchId, "AH price must be a signed value −1.00…+1.00");
+    const priceC = parsePriceC(f.priceCInput);
+    if (priceC == null) {
+      setError(
+        matchId,
+        "Fav price must be a non-zero signed value −1.00…+1.00",
+      );
       return;
     }
-    const priceC = Math.round(parsedPrice * 100);
-    if (priceC === 0 || priceC < -100 || priceC > 100) {
-      setError(matchId, "AH price must be a non-zero signed value −1.00…+1.00");
+    const priceOppC = parsePriceC(f.priceOppCInput);
+    if (priceOppC == null) {
+      setError(
+        matchId,
+        "Dog price must be a non-zero signed value −1.00…+1.00",
+      );
       return;
     }
     // Favourite-flip guard: warn admin if the new line's favourite side differs
@@ -242,9 +248,9 @@ export default function LinesPage() {
         matchId,
         market: "ah",
         favSide: f.favSide,
-        offeredSide: f.offeredSide,
         ballQ: f.ballQ,
         priceC,
+        priceOppC,
       });
       reload();
     } catch (e) {
@@ -257,16 +263,19 @@ export default function LinesPage() {
   async function postOuLine(matchId: number) {
     const f = ouForms[matchId];
     if (!f) return;
-    const parsedPrice = parseFloat(f.priceCInput);
-    if (isNaN(parsedPrice) || parsedPrice < -1 || parsedPrice > 1) {
-      setError(matchId, "O/U price must be a signed value −1.00…+1.00");
-      return;
-    }
-    const priceC = Math.round(parsedPrice * 100);
-    if (priceC === 0 || priceC < -100 || priceC > 100) {
+    const priceC = parsePriceC(f.priceCInput);
+    if (priceC == null) {
       setError(
         matchId,
-        "O/U price must be a non-zero signed value −1.00…+1.00",
+        "Over price must be a non-zero signed value −1.00…+1.00",
+      );
+      return;
+    }
+    const priceOppC = parsePriceC(f.priceOppCInput);
+    if (priceOppC == null) {
+      setError(
+        matchId,
+        "Under price must be a non-zero signed value −1.00…+1.00",
       );
       return;
     }
@@ -284,9 +293,9 @@ export default function LinesPage() {
         matchId,
         market: "ou",
         favSide: "home",
-        offeredSide: f.offeredSide,
         ballQ: f.ballQ,
         priceC,
+        priceOppC,
       });
       reload();
     } catch (e) {
@@ -533,6 +542,10 @@ export default function LinesPage() {
                           {m.line.favSide === "home" ? m.homeTeam : m.awayTeam}
                           {" −"}
                           {ball(m.line.ballQ)} @ {price(m.line.priceC)}
+                          {" / dog "}
+                          {m.line.priceOppC != null
+                            ? price(m.line.priceOppC)
+                            : "—"}
                           <span
                             className={`ml-2 px-1 rounded text-xs ${
                               m.line.status === "active"
@@ -572,29 +585,6 @@ export default function LinesPage() {
                           </select>
                         </div>
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">Offer</label>
-                          <select
-                            className="border rounded px-1 py-0.5 text-sm"
-                            value={ahF.offeredSide}
-                            onChange={(e) =>
-                              updateAhForm(m.id, {
-                                offeredSide: e.target.value as "fav" | "dog",
-                              })
-                            }
-                          >
-                            <option value="fav">
-                              Favourite (
-                              {ahF.favSide === "home" ? m.homeTeam : m.awayTeam}
-                              )
-                            </option>
-                            <option value="dog">
-                              Underdog (
-                              {ahF.favSide === "home" ? m.awayTeam : m.homeTeam}
-                              )
-                            </option>
-                          </select>
-                        </div>
-                        <div className="flex gap-2 items-center text-sm">
                           <label className="w-16 text-gray-600">Ball</label>
                           <button
                             className="border rounded px-2 py-0.5"
@@ -621,7 +611,9 @@ export default function LinesPage() {
                           </button>
                         </div>
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">Price</label>
+                          <label className="w-16 text-gray-600">
+                            Fav price
+                          </label>
                           <button
                             type="button"
                             className={`border rounded w-9 py-0.5 font-bold ${
@@ -654,6 +646,49 @@ export default function LinesPage() {
                               });
                             }}
                           />
+                          <span className="text-xs text-gray-400">
+                            {ahF.favSide === "home" ? m.homeTeam : m.awayTeam}
+                          </span>
+                        </div>
+                        <div className="flex gap-2 items-center text-sm">
+                          <label className="w-16 text-gray-600">
+                            Dog price
+                          </label>
+                          <button
+                            type="button"
+                            className={`border rounded w-9 py-0.5 font-bold ${
+                              isNeg(ahF.priceOppCInput)
+                                ? "bg-red-50 text-red-600 border-red-300"
+                                : "bg-green-50 text-green-700 border-green-300"
+                            }`}
+                            onClick={() =>
+                              updateAhForm(m.id, {
+                                priceOppCInput: flipSign(ahF.priceOppCInput),
+                              })
+                            }
+                          >
+                            {isNeg(ahF.priceOppCInput) ? "−" : "+"}
+                          </button>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0.98"
+                            className="border rounded px-2 py-0.5 w-20 text-sm"
+                            value={magOf(ahF.priceOppCInput)}
+                            onChange={(e) => {
+                              const mag = e.target.value.replace(
+                                /[^0-9.]/g,
+                                "",
+                              );
+                              updateAhForm(m.id, {
+                                priceOppCInput:
+                                  (isNeg(ahF.priceOppCInput) ? "-" : "") + mag,
+                              });
+                            }}
+                          />
+                          <span className="text-xs text-gray-400">
+                            {ahF.favSide === "home" ? m.awayTeam : m.homeTeam}
+                          </span>
                         </div>
                         <button
                           disabled={isBusy}
@@ -709,6 +744,10 @@ export default function LinesPage() {
                         <div className="text-sm mb-2 text-gray-700">
                           Line: O/U {ball(m.ouLine.ballQ)} @{" "}
                           {price(m.ouLine.priceC)}
+                          {" / U "}
+                          {m.ouLine.priceOppC != null
+                            ? price(m.ouLine.priceOppC)
+                            : "—"}
                           <span
                             className={`ml-2 px-1 rounded text-xs ${
                               m.ouLine.status === "active"
@@ -732,21 +771,6 @@ export default function LinesPage() {
 
                       {/* O/U Post / move form */}
                       <div className="space-y-2 mb-3">
-                        <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">Offer</label>
-                          <select
-                            className="border rounded px-1 py-0.5 text-sm"
-                            value={ouF.offeredSide}
-                            onChange={(e) =>
-                              updateOuForm(m.id, {
-                                offeredSide: e.target.value as "over" | "under",
-                              })
-                            }
-                          >
-                            <option value="over">Over</option>
-                            <option value="under">Under</option>
-                          </select>
-                        </div>
                         <div className="flex gap-2 items-center text-sm">
                           <label className="w-16 text-gray-600">Goals</label>
                           <button
@@ -774,7 +798,9 @@ export default function LinesPage() {
                           </button>
                         </div>
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">Price</label>
+                          <label className="w-16 text-gray-600">
+                            Over price
+                          </label>
                           <button
                             type="button"
                             className={`border rounded w-9 py-0.5 font-bold ${
@@ -804,6 +830,43 @@ export default function LinesPage() {
                               updateOuForm(m.id, {
                                 priceCInput:
                                   (isNeg(ouF.priceCInput) ? "-" : "") + mag,
+                              });
+                            }}
+                          />
+                        </div>
+                        <div className="flex gap-2 items-center text-sm">
+                          <label className="w-16 text-gray-600">
+                            Under price
+                          </label>
+                          <button
+                            type="button"
+                            className={`border rounded w-9 py-0.5 font-bold ${
+                              isNeg(ouF.priceOppCInput)
+                                ? "bg-red-50 text-red-600 border-red-300"
+                                : "bg-green-50 text-green-700 border-green-300"
+                            }`}
+                            onClick={() =>
+                              updateOuForm(m.id, {
+                                priceOppCInput: flipSign(ouF.priceOppCInput),
+                              })
+                            }
+                          >
+                            {isNeg(ouF.priceOppCInput) ? "−" : "+"}
+                          </button>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0.94"
+                            className="border rounded px-2 py-0.5 w-20 text-sm"
+                            value={magOf(ouF.priceOppCInput)}
+                            onChange={(e) => {
+                              const mag = e.target.value.replace(
+                                /[^0-9.]/g,
+                                "",
+                              );
+                              updateOuForm(m.id, {
+                                priceOppCInput:
+                                  (isNeg(ouF.priceOppCInput) ? "-" : "") + mag,
                               });
                             }}
                           />

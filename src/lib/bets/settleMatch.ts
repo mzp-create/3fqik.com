@@ -71,7 +71,9 @@ async function gradeMatchTickets(
       market: line.market,
       side: t.side,
       ballQ: line.ballQ,
-      priceC: line.priceC,
+      // Grade from the bet's snapshot price (two-sided: fav and dog on the same
+      // line have different prices). Fall back to the line for any pre-0004 row.
+      priceC: t.priceC ?? line.priceC,
       stake: t.stakeMmk,
       effFav: Math.max(effFav, 0),
       effDog: Math.max(effDog, 0),

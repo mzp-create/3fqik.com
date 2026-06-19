@@ -75,8 +75,14 @@ export async function placeBet(
       throw err("line moved — confirm the new price", 409, "line_moved", {
         currentLine: line,
       });
-    // Malay one-sided lines: only the offered side is bettable.
-    if (input.side !== line.offeredSide)
+    // Two-sided lines: resolve the chosen side's price. priceC is the primary
+    // side (fav/over); priceOppC is the opposite side (dog/under). A side with
+    // no price (legacy one-sided line) is not bettable.
+    const priceC =
+      input.side === "fav" || input.side === "over"
+        ? line.priceC
+        : line.priceOppC;
+    if (priceC == null)
       throw err(
         "this side is not offered for this line",
         400,
@@ -163,6 +169,7 @@ export async function placeBet(
       matchId: match.id,
       lineId: line.id,
       side: input.side,
+      priceC, // snapshot the chosen side's price for grading & display
       stakeMmk: input.stakeMmk,
       scoreHomeAtBet: match.homeScore ?? 0,
       scoreAwayAtBet: match.awayScore ?? 0,

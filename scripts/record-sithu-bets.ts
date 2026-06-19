@@ -168,7 +168,6 @@ async function main() {
             matchId: b.matchId,
             market: b.market,
             favSide: b.favSide,
-            offeredSide: "fav",
             ballQ: b.repostFav.ballQ,
             priceC: b.repostFav.priceC,
           },

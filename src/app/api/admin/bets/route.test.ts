@@ -43,7 +43,6 @@ beforeEach(async () => {
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 90,
     },

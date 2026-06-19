@@ -6,10 +6,10 @@ import { ball, price, dayLabel } from "@/lib/client/format";
 type Line = {
   favSide: "home" | "away";
   ballQ: number;
-  priceC: number;
+  priceC: number; // primary side (fav/over)
+  priceOppC: number | null; // opposite side (dog/under)
   status: "active" | "suspended" | "closed";
   market: "ah" | "ou";
-  offeredSide: "fav" | "dog" | "over" | "under";
 };
 export type GridMatch = {
   id: number;
@@ -23,36 +23,34 @@ export type GridMatch = {
 
 type AhInput = {
   favSide: "home" | "away";
-  offeredSide: "fav" | "dog";
   ball: string;
-  price: string;
+  price: string; // fav price
+  priceOpp: string; // dog price
 };
-type OuInput = { offeredSide: "over" | "under"; goals: string; price: string };
+type OuInput = {
+  goals: string;
+  price: string; // over price
+  priceOpp: string; // under price
+};
 
 function seedAh(line: Line | null): AhInput {
   return line
     ? {
         favSide: line.favSide,
-        offeredSide:
-          line.offeredSide === "dog" || line.offeredSide === "fav"
-            ? line.offeredSide
-            : "fav",
         ball: ball(line.ballQ),
         price: price(line.priceC),
+        priceOpp: line.priceOppC != null ? price(line.priceOppC) : "",
       }
-    : { favSide: "home", offeredSide: "fav", ball: "", price: "" };
+    : { favSide: "home", ball: "", price: "", priceOpp: "" };
 }
 function seedOu(line: Line | null): OuInput {
   return line
     ? {
-        offeredSide:
-          line.offeredSide === "under" || line.offeredSide === "over"
-            ? line.offeredSide
-            : "over",
         goals: ball(line.ballQ),
         price: price(line.priceC),
+        priceOpp: line.priceOppC != null ? price(line.priceOppC) : "",
       }
-    : { offeredSide: "over", goals: "", price: "" };
+    : { goals: "", price: "", priceOpp: "" };
 }
 
 /** Parse a ball/goals string to ballQ (×4); null if invalid or out of range. */
@@ -133,42 +131,52 @@ export function LineGrid({
       matchId: number;
       market: "ah";
       favSide: "home" | "away";
-      offeredSide: "fav" | "dog";
       ballQ: number;
       priceC: number;
+      priceOppC: number;
     }> = [];
     const bad: string[] = [];
     for (const m of matches) {
       const f = ahOf(m);
-      const both = f.ball.trim() !== "" && f.price.trim() !== "";
-      const some = f.ball.trim() !== "" || f.price.trim() !== "";
-      if (!some) continue; // untouched row
-      if (!both) {
-        bad.push(`${m.homeTeam} v ${m.awayTeam}: fill both ball and price`);
+      const filled = [f.ball, f.price, f.priceOpp].filter(
+        (v) => v.trim() !== "",
+      ).length;
+      if (filled === 0) continue; // untouched row
+      if (filled < 3) {
+        bad.push(
+          `${m.homeTeam} v ${m.awayTeam}: fill ball, fav price and dog price`,
+        );
         continue;
       }
       const ballQ = parseBall(f.ball, "ah");
       const priceC = parsePrice(f.price);
+      const priceOppC = parsePrice(f.priceOpp);
       if (ballQ === null)
         bad.push(`${m.homeTeam} v ${m.awayTeam}: invalid ball "${f.ball}"`);
       else if (priceC === null)
-        bad.push(`${m.homeTeam} v ${m.awayTeam}: invalid price "${f.price}"`);
+        bad.push(
+          `${m.homeTeam} v ${m.awayTeam}: invalid fav price "${f.price}"`,
+        );
+      else if (priceOppC === null)
+        bad.push(
+          `${m.homeTeam} v ${m.awayTeam}: invalid dog price "${f.priceOpp}"`,
+        );
       else {
         const cur = m.line;
         const dirty =
           !cur ||
           cur.ballQ !== ballQ ||
           cur.priceC !== priceC ||
-          cur.favSide !== f.favSide ||
-          cur.offeredSide !== f.offeredSide;
+          cur.priceOppC !== priceOppC ||
+          cur.favSide !== f.favSide;
         if (dirty)
           lines.push({
             matchId: m.id,
             market: "ah",
             favSide: f.favSide,
-            offeredSide: f.offeredSide,
             ballQ,
             priceC,
+            priceOppC,
           });
       }
     }
@@ -186,40 +194,50 @@ export function LineGrid({
     const lines: Array<{
       matchId: number;
       market: "ou";
-      offeredSide: "over" | "under";
       ballQ: number;
       priceC: number;
+      priceOppC: number;
     }> = [];
     const bad: string[] = [];
     for (const m of matches) {
       const f = ouOf(m);
-      const both = f.goals.trim() !== "" && f.price.trim() !== "";
-      const some = f.goals.trim() !== "" || f.price.trim() !== "";
-      if (!some) continue;
-      if (!both) {
-        bad.push(`${m.homeTeam} v ${m.awayTeam}: fill both goals and price`);
+      const filled = [f.goals, f.price, f.priceOpp].filter(
+        (v) => v.trim() !== "",
+      ).length;
+      if (filled === 0) continue;
+      if (filled < 3) {
+        bad.push(
+          `${m.homeTeam} v ${m.awayTeam}: fill goals, over price and under price`,
+        );
         continue;
       }
       const ballQ = parseBall(f.goals, "ou");
       const priceC = parsePrice(f.price);
+      const priceOppC = parsePrice(f.priceOpp);
       if (ballQ === null)
         bad.push(`${m.homeTeam} v ${m.awayTeam}: invalid goals "${f.goals}"`);
       else if (priceC === null)
-        bad.push(`${m.homeTeam} v ${m.awayTeam}: invalid price "${f.price}"`);
+        bad.push(
+          `${m.homeTeam} v ${m.awayTeam}: invalid over price "${f.price}"`,
+        );
+      else if (priceOppC === null)
+        bad.push(
+          `${m.homeTeam} v ${m.awayTeam}: invalid under price "${f.priceOpp}"`,
+        );
       else {
         const cur = m.ouLine;
         const dirty =
           !cur ||
           cur.ballQ !== ballQ ||
           cur.priceC !== priceC ||
-          cur.offeredSide !== f.offeredSide;
+          cur.priceOppC !== priceOppC;
         if (dirty)
           lines.push({
             matchId: m.id,
             market: "ou",
-            offeredSide: f.offeredSide,
             ballQ,
             priceC,
+            priceOppC,
           });
       }
     }
@@ -263,7 +281,11 @@ export function LineGrid({
   }
 
   const cur = (l: Line | null) =>
-    l ? `now ${ball(l.ballQ)} @ ${price(l.priceC)} (${l.status})` : "—";
+    l
+      ? `now ${ball(l.ballQ)} @ ${price(l.priceC)} / ${
+          l.priceOppC != null ? price(l.priceOppC) : "—"
+        } (${l.status})`
+      : "—";
 
   // Render day-separated rows for a table body.
   function dayRows(render: (m: GridMatch) => React.ReactNode, cols: number) {
@@ -327,9 +349,9 @@ export function LineGrid({
             <tr className="border-b text-left text-xs uppercase text-gray-500">
               <th className="py-1 pr-2">Match</th>
               <th className="py-1 pr-2">Fav</th>
-              <th className="py-1 pr-2">Offer</th>
               <th className="py-1 pr-2 text-right">Ball</th>
-              <th className="py-1 pr-2 text-right">Price</th>
+              <th className="py-1 pr-2 text-right">Fav price</th>
+              <th className="py-1 pr-2 text-right">Dog price</th>
               <th className="py-1 pr-2">Current</th>
             </tr>
           </thead>
@@ -355,30 +377,6 @@ export function LineGrid({
                   >
                     <option value="home">{m.homeTeam}</option>
                     <option value="away">{m.awayTeam}</option>
-                  </select>
-                </td>
-                <td className="py-1 pr-2">
-                  <select
-                    className="border rounded px-1 py-1 text-sm"
-                    value={ahOf(m).offeredSide}
-                    onChange={(e) =>
-                      setAh((p) => ({
-                        ...p,
-                        [m.id]: {
-                          ...(p[m.id] ?? seedAh(m.line)),
-                          offeredSide: e.target.value as "fav" | "dog",
-                        },
-                      }))
-                    }
-                  >
-                    <option value="fav">
-                      fav (
-                      {ahOf(m).favSide === "home" ? m.homeTeam : m.awayTeam})
-                    </option>
-                    <option value="dog">
-                      dog (
-                      {ahOf(m).favSide === "home" ? m.awayTeam : m.homeTeam})
-                    </option>
                   </select>
                 </td>
                 <td className="py-1 pr-2 text-right">
@@ -442,6 +440,53 @@ export function LineGrid({
                     />
                   </div>
                 </td>
+                <td className="py-1 pr-2 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      className={`w-6 rounded border text-sm font-bold ${
+                        isNeg(ahOf(m).priceOpp)
+                          ? "border-red-300 bg-red-50 text-red-600"
+                          : "border-green-300 bg-green-50 text-green-700"
+                      }`}
+                      onClick={() =>
+                        setAh((p) => {
+                          const cur0 = p[m.id] ?? seedAh(m.line);
+                          return {
+                            ...p,
+                            [m.id]: {
+                              ...cur0,
+                              priceOpp: flipSign(cur0.priceOpp),
+                            },
+                          };
+                        })
+                      }
+                    >
+                      {isNeg(ahOf(m).priceOpp) ? "−" : "+"}
+                    </button>
+                    <input
+                      inputMode="decimal"
+                      className="w-14 rounded border px-2 py-1 text-right text-sm tabular-nums"
+                      placeholder="—"
+                      value={magOf(ahOf(m).priceOpp)}
+                      onChange={(e) =>
+                        setAh((p) => {
+                          const cur0 = p[m.id] ?? seedAh(m.line);
+                          return {
+                            ...p,
+                            [m.id]: {
+                              ...cur0,
+                              priceOpp: withSign(
+                                isNeg(cur0.priceOpp),
+                                e.target.value,
+                              ),
+                            },
+                          };
+                        })
+                      }
+                    />
+                  </div>
+                </td>
                 <td className="py-1 pr-2 whitespace-nowrap text-xs text-gray-500">
                   {cur(m.line)}
                 </td>
@@ -470,9 +515,9 @@ export function LineGrid({
           <thead>
             <tr className="border-b text-left text-xs uppercase text-gray-500">
               <th className="py-1 pr-2">Match</th>
-              <th className="py-1 pr-2">Offer</th>
               <th className="py-1 pr-2 text-right">Goals</th>
-              <th className="py-1 pr-2 text-right">Price</th>
+              <th className="py-1 pr-2 text-right">Over price</th>
+              <th className="py-1 pr-2 text-right">Under price</th>
               <th className="py-1 pr-2">Current</th>
             </tr>
           </thead>
@@ -481,24 +526,6 @@ export function LineGrid({
               <tr className="border-b">
                 <td className="py-1 pr-2 whitespace-nowrap">
                   {m.homeTeam} v {m.awayTeam}
-                </td>
-                <td className="py-1 pr-2">
-                  <select
-                    className="border rounded px-1 py-1 text-sm"
-                    value={ouOf(m).offeredSide}
-                    onChange={(e) =>
-                      setOu((p) => ({
-                        ...p,
-                        [m.id]: {
-                          ...(p[m.id] ?? seedOu(m.ouLine)),
-                          offeredSide: e.target.value as "over" | "under",
-                        },
-                      }))
-                    }
-                  >
-                    <option value="over">over</option>
-                    <option value="under">under</option>
-                  </select>
                 </td>
                 <td className="py-1 pr-2 text-right">
                   <input
@@ -552,6 +579,53 @@ export function LineGrid({
                               ...cur0,
                               price: withSign(
                                 isNeg(cur0.price),
+                                e.target.value,
+                              ),
+                            },
+                          };
+                        })
+                      }
+                    />
+                  </div>
+                </td>
+                <td className="py-1 pr-2 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      className={`w-6 rounded border text-sm font-bold ${
+                        isNeg(ouOf(m).priceOpp)
+                          ? "border-red-300 bg-red-50 text-red-600"
+                          : "border-green-300 bg-green-50 text-green-700"
+                      }`}
+                      onClick={() =>
+                        setOu((p) => {
+                          const cur0 = p[m.id] ?? seedOu(m.ouLine);
+                          return {
+                            ...p,
+                            [m.id]: {
+                              ...cur0,
+                              priceOpp: flipSign(cur0.priceOpp),
+                            },
+                          };
+                        })
+                      }
+                    >
+                      {isNeg(ouOf(m).priceOpp) ? "−" : "+"}
+                    </button>
+                    <input
+                      inputMode="decimal"
+                      className="w-14 rounded border px-2 py-1 text-right text-sm tabular-nums"
+                      placeholder="—"
+                      value={magOf(ouOf(m).priceOpp)}
+                      onChange={(e) =>
+                        setOu((p) => {
+                          const cur0 = p[m.id] ?? seedOu(m.ouLine);
+                          return {
+                            ...p,
+                            [m.id]: {
+                              ...cur0,
+                              priceOpp: withSign(
+                                isNeg(cur0.priceOpp),
                                 e.target.value,
                               ),
                             },

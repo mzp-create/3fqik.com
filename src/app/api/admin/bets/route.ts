@@ -81,7 +81,11 @@ export async function getAllBets(
       market: schema.lines.market,
       side: schema.bets.side,
       ballQ: schema.lines.ballQ,
-      priceC: schema.lines.priceC,
+      // Bet's snapshot price (two-sided); fall back to the line for legacy rows.
+      priceC:
+        sql<number>`coalesce(${schema.bets.priceC}, ${schema.lines.priceC})`.mapWith(
+          Number,
+        ),
       stakeMmk: schema.bets.stakeMmk,
       scoreHomeAtBet: schema.bets.scoreHomeAtBet,
       scoreAwayAtBet: schema.bets.scoreAwayAtBet,

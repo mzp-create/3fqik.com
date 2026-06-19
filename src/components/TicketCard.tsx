@@ -1,6 +1,4 @@
 "use client";
-import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import { useT } from "@/lib/i18n";
 import { mmk, signedMmk, pickLabel } from "@/lib/client/format";
 import { statusKey } from "@/lib/client/status";
@@ -8,6 +6,7 @@ import { statusKey } from "@/lib/client/status";
 export type TicketRow = {
   ticketNo: string;
   side: "fav" | "dog" | "over" | "under";
+  priceC: number | null; // bet's snapshot price (two-sided)
   stakeMmk: number;
   status: string;
   scoreHomeAtBet: number;
@@ -68,25 +67,16 @@ function stampLabel(status: string): string | null {
 
 export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
   const { t } = useT();
-  const [qr, setQr] = useState("");
-  const [qrError, setQrError] = useState(false);
   const stamp = stampLabel(b.status);
   const ouLabels = { over: t.over, under: t.under };
 
-  useEffect(() => {
-    QRCode.toDataURL(b.qrUrl, { width: 160 })
-      .then(setQr)
-      .catch(() => setQrError(true));
-  }, [b.qrUrl]);
-
   async function save() {
     try {
-      const qrData = qr || (await QRCode.toDataURL(b.qrUrl, { width: 160 }));
       const hasNet = b.netMmk != null;
       const fee = b.feeMmk ?? 0;
       const hasFee = hasNet && fee !== 0;
-      // Each extra fee+effectiveNet line adds 36px; base 620, +40 for net, +72 for fee lines
-      const canvasHeight = hasNet ? (hasFee ? 732 : 660) : 620;
+      // No QR: base 360, +40 for net, +72 for fee lines (each extra row +36).
+      const canvasHeight = hasNet ? (hasFee ? 472 : 400) : 360;
       const canvas = document.createElement("canvas");
       canvas.width = 360;
       canvas.height = canvasHeight;
@@ -103,7 +93,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
       const rows: [string, string][] = [
         [t.player, b.playerName],
         [t.match, `${b.match.homeTeam} vs ${b.match.awayTeam}`],
-        [t.pick, pickLabel(b.line, b.match, b.side, ouLabels)],
+        [t.pick, pickLabel(b.line, b.match, b.side, ouLabels, b.priceC)],
         [t.stake, `${mmk(b.stakeMmk)} MMK`],
         [t.scoreAtBet, `${b.scoreHomeAtBet}–${b.scoreAwayAtBet}`],
         [t.placed, formatMmt(b.placedAt)],
@@ -134,13 +124,6 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
         ctx.fillStyle = "#000";
         ctx.fillText(v, 140, 100 + idx * 36);
       });
-      const qrTop = 100 + rows.length * 36 + 10;
-      const img = new Image();
-      await new Promise((res) => {
-        img.onload = res;
-        img.src = qrData;
-      });
-      ctx.drawImage(img, 100, qrTop, 160, 160);
       const a = document.createElement("a");
       a.download = `${b.ticketNo}.png`;
       a.href = canvas.toDataURL("image/png");
@@ -181,7 +164,10 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
               k={t.match}
               v={`${b.match.homeTeam} vs ${b.match.awayTeam} (${b.match.stage})`}
             />
-            <Row k={t.pick} v={pickLabel(b.line, b.match, b.side, ouLabels)} />
+            <Row
+              k={t.pick}
+              v={pickLabel(b.line, b.match, b.side, ouLabels, b.priceC)}
+            />
             <Row k={t.stake} v={`${mmk(b.stakeMmk)} MMK`} />
             <Row
               k={t.scoreAtBet}
@@ -221,22 +207,12 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
                 );
               })()}
           </dl>
-          {!qrError && qr && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={qr}
-              alt="QR"
-              className="mx-auto mt-3 h-[180px] w-[180px]"
-            />
-          )}
-          <p className="mt-2 text-sm text-ink/40">{t.scanToVerify}</p>
         </div>
       </div>
 
       <button
-        className="mt-2 w-full rounded-lg bg-ink p-4 text-base font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us disabled:opacity-40"
+        className="mt-2 w-full rounded-lg bg-ink p-4 text-base font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         onClick={save}
-        disabled={qrError}
       >
         💾 {t.saveTicket}
       </button>

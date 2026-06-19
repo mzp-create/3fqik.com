@@ -103,6 +103,77 @@ export function stageSection(stage: string): {
     order: 99,
   };
 }
+/**
+ * Plain-language "what result wins this bet", derived from the grading model
+ * (grade.ts): AH wins when margin > N (fav) / < N (dog); O/U when total > N
+ * (over) / < N (under); a whole-number line pushes (stake back) on exact N.
+ * `value` is goals-since-bet, so for a LIVE bet the condition is "from now".
+ * Returns the win sentence plus an optional push (stake-back) note.
+ */
+export function winNeed(opts: {
+  market: "ah" | "ou";
+  side: "fav" | "dog" | "over" | "under";
+  ballQ: number;
+  favName: string;
+  dogName: string;
+  live: boolean;
+}): { text: string; push?: string } {
+  const { market, side, ballQ, favName, dogName, live } = opts;
+  const N = ballQ / 4;
+  const whole = ballQ % 4 === 0;
+  const from = live ? " from now" : "";
+  const pushGoals = whole
+    ? `exactly ${N} goal${N === 1 ? "" : "s"}${from} — stake back`
+    : undefined;
+
+  if (market === "ou") {
+    if (side === "over") {
+      const min = whole ? N + 1 : Math.floor(N) + 1;
+      return { text: `${min} or more goals${from}`, push: pushGoals };
+    }
+    const max = whole ? N - 1 : Math.floor(N);
+    return {
+      text: max <= 0 ? `no goals${from}` : `${max} or fewer goals${from}`,
+      push: pushGoals,
+    };
+  }
+
+  // Asian handicap. Push (whole lines) happens when the favourite wins by
+  // exactly N — phrase the stake-back note in those terms.
+  const pushAh =
+    whole && N >= 1
+      ? `${favName} ${live ? `outscores ${dogName}` : "wins"} by exactly ${N}${from} — stake back`
+      : whole && N === 0
+        ? `a draw${from} — stake back`
+        : undefined;
+
+  if (side === "fav") {
+    const by = whole ? N + 1 : Math.floor(N) + 1; // smallest integer margin > N
+    const verb = live ? `outscores ${dogName}` : "wins";
+    const text =
+      by <= 1
+        ? `${favName} ${verb}${from}`
+        : `${favName} ${verb} by ${by}+${from}`;
+    return { text, push: pushAh };
+  }
+
+  // dog: wins when margin < N → favourite's margin is at most `maxMargin`.
+  const maxMargin = whole ? N - 1 : Math.floor(N);
+  let text: string;
+  if (maxMargin < 0) {
+    text = live ? `${dogName} outscores ${favName}${from}` : `${dogName} wins`;
+  } else if (maxMargin === 0) {
+    text = live
+      ? `${dogName} is not outscored${from}`
+      : `${dogName} wins or draws`;
+  } else {
+    text = live
+      ? `${dogName} not outscored by ${maxMargin + 1}+${from}`
+      : `${dogName} wins, draws, or loses by ${maxMargin}`;
+  }
+  return { text, push: pushAh };
+}
+
 export function pickLabel(
   l: {
     favSide: "home" | "away";
@@ -113,15 +184,19 @@ export function pickLabel(
   m: { homeTeam: string; awayTeam: string },
   side: "fav" | "dog" | "over" | "under",
   ouLabels?: { over: string; under: string },
+  // Two-sided lines: the bet's own snapshot price (dog/under differ from the
+  // line's primary priceC). Falls back to l.priceC for legacy rows.
+  priceCOverride?: number | null,
 ) {
+  const pc = priceCOverride ?? l.priceC;
   if (l.market === "ou" || side === "over" || side === "under") {
     const labels = ouLabels ?? { over: "Over", under: "Under" };
     const word = side === "over" ? labels.over : labels.under;
-    return `${word} ${ball(l.ballQ)} @ ${priceSigned(l.priceC)}`;
+    return `${word} ${ball(l.ballQ)} @ ${priceSigned(pc)}`;
   }
   const fav = l.favSide === "home" ? m.homeTeam : m.awayTeam;
   const dog = l.favSide === "home" ? m.awayTeam : m.homeTeam;
   return side === "fav"
-    ? `${fav} −${ball(l.ballQ)} @ ${priceSigned(l.priceC)}`
-    : `${dog} +${ball(l.ballQ)} @ ${priceSigned(l.priceC)}`;
+    ? `${fav} −${ball(l.ballQ)} @ ${priceSigned(pc)}`
+    : `${dog} +${ball(l.ballQ)} @ ${priceSigned(pc)}`;
 }

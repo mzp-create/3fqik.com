@@ -56,7 +56,6 @@ it("places a bet locking line version and snapshotting score", async () => {
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -89,7 +88,6 @@ it("rejects: stale version, suspended line, finished match, sub-floor stake", as
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -102,7 +100,6 @@ it("rejects: stale version, suspended line, finished match, sub-floor stake", as
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 4,
       priceC: 95,
     },
@@ -168,7 +165,6 @@ it("enforces the daily pool and per-match carve-out", async () => {
       matchId: a.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 90,
     },
@@ -181,7 +177,6 @@ it("enforces the daily pool and per-match carve-out", async () => {
       matchId: b.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 90,
     },
@@ -210,7 +205,6 @@ it("enforces the daily pool and per-match carve-out", async () => {
       matchId: b.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "dog",
       ballQ: 2,
       priceC: 90,
     },
@@ -251,7 +245,6 @@ it("enforces the daily pool and per-match carve-out", async () => {
       matchId: a.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "dog",
       ballQ: 2,
       priceC: 90,
     },
@@ -282,7 +275,6 @@ it("rejects a bet on a finished match", async () => {
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -318,7 +310,6 @@ it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 90,
     },
@@ -345,7 +336,6 @@ it("stake boundary: exact carve-out limit accepted; second bet rejected with /0/
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "dog",
       ballQ: 2,
       priceC: 90,
     },
@@ -377,7 +367,6 @@ it("rejects betting when match day is closed", async () => {
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 90,
     },
@@ -412,7 +401,6 @@ it("void restores headroom: voided bet stake does not count toward carve-out", a
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 90,
     },
@@ -459,7 +447,6 @@ it("MAX_STAKE: stake 1_000_000_001 and 2_000_000_000_000 are both rejected", asy
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 2,
       priceC: 90,
     },
@@ -506,7 +493,6 @@ it("ou bet happy path: snapshot, ticket, linked to ou line", async () => {
       matchId: m.id,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -540,7 +526,6 @@ it("stale ou version returns 409 with currentLine.market = 'ou'", async () => {
       matchId: m.id,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -554,7 +539,6 @@ it("stale ou version returns 409 with currentLine.market = 'ou'", async () => {
       matchId: m.id,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 11,
       priceC: 92,
     },
@@ -596,7 +580,6 @@ it("ah line stale check is unaffected by ou posts: ah v1 still valid after posti
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -610,7 +593,6 @@ it("ah line stale check is unaffected by ou posts: ah v1 still valid after posti
       matchId: m.id,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -623,7 +605,6 @@ it("ah line stale check is unaffected by ou posts: ah v1 still valid after posti
       matchId: m.id,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 11,
       priceC: 92,
     },
@@ -654,7 +635,6 @@ it("side-market mismatch is rejected with bad_side: over on ah, fav on ou", asyn
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -667,7 +647,6 @@ it("side-market mismatch is rejected with bad_side: over on ah, fav on ou", asyn
       matchId: m.id,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -725,7 +704,6 @@ it("limits count ah+ou stakes together against one match cap", async () => {
       matchId: m.id,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -738,7 +716,6 @@ it("limits count ah+ou stakes together against one match cap", async () => {
       matchId: m.id,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -781,7 +758,6 @@ it("limits count ah+ou stakes together against one match cap", async () => {
       matchId: m.id,
       market: "ou",
       favSide: "home",
-      offeredSide: "under",
       ballQ: 10,
       priceC: 90,
     },
@@ -814,7 +790,6 @@ it("suspended ou line rejects placement with line_suspended code", async () => {
       matchId: m.id,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -842,4 +817,80 @@ it("suspended ou line rejects placement with line_suspended code", async () => {
   expect(caught).not.toBeNull();
   expect(caught!.code).toBe("line_suspended");
   expect(caught!.message).toMatch(/suspended/);
+});
+
+it("two-sided: fav snapshots priceC, dog snapshots priceOppC; unpriced side rejected", async () => {
+  const m = await seedMatch(db);
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  const favBet = await placeBet(
+    db,
+    2,
+    {
+      matchId: m.id,
+      market: "ah",
+      lineVersion: line.version,
+      side: "fav",
+      stakeMmk: 50_000,
+    },
+    NOW,
+  );
+  const dogBet = await placeBet(
+    db,
+    2,
+    {
+      matchId: m.id,
+      market: "ah",
+      lineVersion: line.version,
+      side: "dog",
+      stakeMmk: 50_000,
+    },
+    NOW,
+  );
+  expect(favBet.priceC).toBe(92);
+  expect(dogBet.priceC).toBe(-98);
+
+  // A line with no opposite price (direct insert, priceOppC null) → side not bettable.
+  const m2 = await seedMatch(db, { homeTeam: "ARG", awayTeam: "GER" });
+  const [oneSided] = await db
+    .insert(schema.lines)
+    .values({
+      matchId: m2.id,
+      market: "ah",
+      version: 1,
+      favSide: "home",
+      offeredSide: "fav",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: null,
+      status: "active",
+      postedBy: 1,
+      postedAt: NOW,
+    })
+    .returning();
+  await expect(
+    placeBet(
+      db,
+      2,
+      {
+        matchId: m2.id,
+        market: "ah",
+        lineVersion: oneSided.version,
+        side: "dog",
+        stakeMmk: 50_000,
+      },
+      NOW,
+    ),
+  ).rejects.toThrow(/not offered/);
 });

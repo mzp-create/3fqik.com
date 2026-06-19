@@ -135,7 +135,6 @@ async function main() {
           matchId: b.matchId,
           market: b.market,
           favSide: line.favSide,
-          offeredSide: line.offeredSide,
           ballQ: line.ballQ,
           priceC: line.priceC,
         },

@@ -93,7 +93,10 @@ export const lines = pgTable(
       .notNull()
       .default("fav"),
     ballQ: integer("ball_q").notNull(), // ball ×4, ≥ 0
-    priceC: integer("price_c").notNull(), // signed Malay price ×100, [−100,−1]∪[1,100]
+    priceC: integer("price_c").notNull(), // signed Malay price ×100 for the primary side (fav/over)
+    // Two-sided lines: signed Malay price ×100 for the opposite side (dog/under).
+    // Nullable for legacy one-sided rows; always set on new posts.
+    priceOppC: integer("price_opp_c"),
     status: text("status", {
       enum: ["active", "suspended", "closed"],
     }).notNull(),
@@ -150,6 +153,10 @@ export const bets = pgTable("bets", {
     .notNull()
     .references(() => lines.id),
   side: text("side", { enum: ["fav", "dog", "over", "under"] }).notNull(),
+  // Snapshot of the chosen side's signed Malay price ×100 at placement.
+  // Grading and all price-display surfaces read this, never the line. Nullable
+  // for legacy rows (backfilled from the line in migration 0004).
+  priceC: integer("price_c"),
   stakeMmk: bigint("stake_mmk", { mode: "number" }).notNull(),
   scoreHomeAtBet: integer("score_home_at_bet").notNull(),
   scoreAwayAtBet: integer("score_away_at_bet").notNull(),

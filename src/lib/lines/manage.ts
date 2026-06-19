@@ -39,25 +39,16 @@ export async function postLine(
     matchId: number;
     market: "ah" | "ou";
     favSide: "home" | "away";
-    offeredSide: "fav" | "dog" | "over" | "under";
     ballQ: number;
-    priceC: number;
+    priceC: number; // primary side (fav/over)
+    // Opposite side (dog/under). Defaults to priceC (symmetric) when omitted —
+    // the admin UI always sends both; library/test/seed callers may omit it.
+    priceOppC?: number;
   },
   at: string,
 ) {
+  const priceOppC = input.priceOppC ?? input.priceC;
   // Validate inputs first (before entering the transaction)
-  const okSides =
-    input.market === "ah"
-      ? input.offeredSide === "fav" || input.offeredSide === "dog"
-      : input.offeredSide === "over" || input.offeredSide === "under";
-  if (!okSides)
-    throw err(
-      input.market === "ah"
-        ? "offeredSide must be 'fav' or 'dog'"
-        : "offeredSide must be 'over' or 'under'",
-      400,
-      "bad_line",
-    );
   // ou market: ballQ must be ≥ 1 (no O 0.0 lines); ah keeps ≥ 0
   const minBallQ = input.market === "ou" ? 1 : 0;
   if (
@@ -66,12 +57,9 @@ export async function postLine(
     input.ballQ > 40
   )
     throw err(`invalid ball: must be integer ${minBallQ}–40`, 400, "bad_line");
-  if (
-    !Number.isInteger(input.priceC) ||
-    input.priceC === 0 ||
-    input.priceC < -100 ||
-    input.priceC > 100
-  )
+  const priceOk = (p: number) =>
+    Number.isInteger(p) && p !== 0 && p >= -100 && p <= 100;
+  if (!priceOk(input.priceC) || !priceOk(priceOppC))
     throw err(
       "invalid price: signed integer in [−100,−1] ∪ [1,100]",
       400,
@@ -117,9 +105,12 @@ export async function postLine(
         market: input.market,
         version: (prev?.version ?? 0) + 1,
         favSide: input.favSide,
-        offeredSide: input.offeredSide,
+        // Vestigial: both sides are now offered. Kept to satisfy the NOT NULL
+        // column; no longer read by placement/grading/display.
+        offeredSide: input.market === "ah" ? "fav" : "over",
         ballQ: input.ballQ,
         priceC: input.priceC,
+        priceOppC,
         status: "active",
         postedBy: adminId,
         postedAt: at,

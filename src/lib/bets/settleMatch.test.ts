@@ -56,7 +56,6 @@ async function bet(matchId: number, side: "fav" | "dog", stake: number) {
       matchId,
       market: "ah",
       favSide: "home",
-      offeredSide: side,
       ballQ: 3,
       priceC: 92,
     },
@@ -342,7 +341,6 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
       matchId: 1,
       market: "ah",
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
     },
@@ -357,7 +355,6 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
       matchId: 1,
       market: "ou",
       favSide: "home",
-      offeredSide: "under",
       ballQ: 10,
       priceC: 90,
     },
@@ -404,7 +401,6 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
       matchId: 1,
       market: "ou",
       favSide: "home",
-      offeredSide: "over",
       ballQ: 10,
       priceC: 90,
     },
@@ -460,4 +456,65 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
   // Bet C: OU under pre-match → total 3>2.5 → LOSE, priceC>0 → −S = −150,000
   expect(gC.status).toBe("lost");
   expect(gC.netMmk).toBe(-150_000);
+});
+
+it("two-sided line: fav and dog grade from their own snapshot prices", async () => {
+  // One line, two prices: fav +0.92, dog −0.98. Both sides bet on v1.
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: 1,
+      market: "ah",
+      favSide: "home",
+      ballQ: 2, // N = 0.5
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  const favBet = await placeBet(
+    db,
+    2,
+    {
+      matchId: 1,
+      market: "ah",
+      lineVersion: line.version,
+      side: "fav",
+      stakeMmk: 100_000,
+    },
+    NOW,
+  );
+  const dogBet = await placeBet(
+    db,
+    2,
+    {
+      matchId: 1,
+      market: "ah",
+      lineVersion: line.version,
+      side: "dog",
+      stakeMmk: 100_000,
+    },
+    NOW,
+  );
+  // Snapshot prices differ per side.
+  expect(favBet.priceC).toBe(92);
+  expect(dogBet.priceC).toBe(-98);
+
+  // BRA 1-0 → margin 1 > N=0.5 → fav WIN, dog LOSE.
+  await confirmFinalScore(db, 1, 1, 1, 0, NOW);
+  const [gFav] = await db
+    .select()
+    .from(schema.bets)
+    .where(eq(schema.bets.id, favBet.id));
+  const [gDog] = await db
+    .select()
+    .from(schema.bets)
+    .where(eq(schema.bets.id, dogBet.id));
+  // fav: priceC=+92 → +0.92×100k = +92,000
+  expect(gFav.status).toBe("won");
+  expect(gFav.netMmk).toBe(92_000);
+  // dog: priceOppC=−98 → lose, p<0 → −0.98×100k = −98,000
+  expect(gDog.status).toBe("lost");
+  expect(gDog.netMmk).toBe(-98_000);
 });

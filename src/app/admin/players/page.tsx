@@ -7,6 +7,7 @@ type Player = {
   phone: string;
   displayName: string;
   role: "player" | "admin";
+  tier: "standard" | "pro";
   language: "en" | "mm";
   failedPinAttempts: number;
   lockedUntil: string | null;
@@ -89,6 +90,25 @@ export default function PlayersPage() {
     }
   }
 
+  async function toggleTier(p: Player) {
+    const key = `set_tier-${p.id}`;
+    const tier = p.tier === "pro" ? "standard" : "pro";
+    setError("");
+    setBusyFor(key, true);
+    try {
+      await api("/api/admin/players", {
+        action: "set_tier",
+        playerId: p.id,
+        tier,
+      });
+      reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "error");
+    } finally {
+      setBusyFor(key, false);
+    }
+  }
+
   async function createInvite() {
     const maxUses = parseInt(inviteMaxUses, 10);
     if (!Number.isInteger(maxUses) || maxUses < 1) {
@@ -149,6 +169,15 @@ export default function PlayersPage() {
                     must change PIN
                   </span>
                 )}
+                <span
+                  className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+                    p.tier === "pro"
+                      ? "bg-gold/15 text-gold"
+                      : "bg-raised text-muted"
+                  }`}
+                >
+                  {p.tier}
+                </span>
               </div>
               <span className="text-xs text-faint">#{p.id}</span>
             </div>
@@ -184,6 +213,13 @@ export default function PlayersPage() {
                   Grant Admin
                 </button>
               )}
+              <button
+                disabled={busy[`set_tier-${p.id}`]}
+                onClick={() => toggleTier(p)}
+                className="border border-border bg-raised text-ink text-xs px-2 py-1 rounded disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+              >
+                {p.tier === "pro" ? "Make standard" : "Make pro"}
+              </button>
             </div>
           </div>
         );

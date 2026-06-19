@@ -117,3 +117,24 @@ export async function grantAdmin(
     await audit(tx, adminId, "grant_admin", `player:${playerId}`, at);
   });
 }
+
+export async function setTier(
+  db: Db,
+  adminId: number,
+  playerId: number,
+  tier: "standard" | "pro",
+  at: string,
+) {
+  await db.transaction(async (tx) => {
+    const [p] = await tx
+      .select()
+      .from(schema.players)
+      .where(eq(schema.players.id, playerId));
+    if (!p) notFound();
+    await tx
+      .update(schema.players)
+      .set({ tier })
+      .where(eq(schema.players.id, playerId));
+    await audit(tx, adminId, "set_tier", `player:${playerId}`, at, tier);
+  });
+}

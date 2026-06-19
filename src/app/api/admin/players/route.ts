@@ -1,6 +1,11 @@
 import { getDb, schema } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/session";
-import { resetPin, unlockPlayer, grantAdmin } from "@/lib/auth/adminActions";
+import {
+  resetPin,
+  unlockPlayer,
+  grantAdmin,
+  setTier,
+} from "@/lib/auth/adminActions";
 import { ok, fail, handle } from "@/lib/api";
 import { nowIso } from "@/lib/time";
 import { referrerNameById } from "@/lib/referrals";
@@ -42,6 +47,11 @@ export async function POST(req: Request) {
       await unlockPlayer(db, admin.id, playerId, nowIso());
     } else if (action === "grant_admin") {
       await grantAdmin(db, admin.id, playerId, nowIso());
+    } else if (action === "set_tier") {
+      const tier = body.tier;
+      if (tier !== "standard" && tier !== "pro")
+        return fail("bad_request", "tier must be 'standard' or 'pro'");
+      await setTier(db, admin.id, playerId, tier, nowIso());
     } else {
       return fail("bad_action", "unknown action");
     }

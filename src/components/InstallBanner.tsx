@@ -115,7 +115,7 @@ export function InstallBanner() {
     <div
       role="banner"
       aria-label={t.installTitle}
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center gap-3 bg-ink px-4 py-4 shadow-lg"
+      className="fixed bottom-0 left-0 right-0 z-50 flex items-center gap-3 border border-border bg-surface-2 px-4 py-4 text-ink shadow-lg"
       style={{
         borderTop: "3px solid transparent",
         borderImage:
@@ -135,12 +135,12 @@ export function InstallBanner() {
       </div>
 
       {/* Text */}
-      <p className="flex-1 text-sm font-semibold leading-tight text-white">
+      <p className="flex-1 text-sm font-semibold leading-tight text-ink">
         {t.installTitle}
         {state.platform === "ios" && (
           <>
             <br />
-            <span className="text-xs font-normal text-white/70">
+            <span className="text-xs font-normal text-muted">
               {t.installIos}
             </span>
           </>
@@ -160,7 +160,7 @@ export function InstallBanner() {
         <button
           onClick={dismiss}
           aria-label={t.dismiss}
-          className="min-h-[44px] min-w-[44px] rounded-md px-3 py-2 text-sm text-white/60 active:text-white"
+          className="min-h-[44px] min-w-[44px] rounded-md px-3 py-2 text-sm text-faint active:text-ink"
         >
           ×
         </button>

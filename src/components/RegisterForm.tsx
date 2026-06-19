@@ -45,37 +45,37 @@ export function RegisterForm({ code }: { code: string }) {
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-4 bg-canvas p-6">
       {/* App name hero (same as login) */}
       <div className="text-center">
-        <p className="text-base font-semibold uppercase tracking-widest text-ink/50">
+        <p className="text-base font-semibold uppercase tracking-widest text-faint">
           FIFA World Cup
         </p>
         <h1 className="text-5xl font-bold text-ink">
           WorldBet<span className="font-display text-6xl">26</span>
         </h1>
         <div className="triband-skew mx-auto mt-2 w-32" />
-        <p className="mt-2 text-base font-semibold text-ink/60">{t.register}</p>
+        <p className="mt-2 text-base font-semibold text-muted">{t.register}</p>
       </div>
 
       {/* Locked invite-code confirmation */}
-      <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-white p-5 text-xl text-ink">
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-surface p-5 text-xl text-ink">
         <span className="flex-1 font-mono tracking-widest">{code}</span>
-        <span className="text-green-600">✓</span>
+        <span className="text-mx-neon">✓</span>
       </div>
 
       <input
-        className="rounded-lg border border-ink/20 bg-white p-5 text-xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+        className="rounded-lg border border-border bg-raised p-5 text-xl text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         inputMode="tel"
         placeholder={t.phone}
         value={form.phone}
         onChange={set("phone")}
       />
       <input
-        className="rounded-lg border border-ink/20 bg-white p-5 text-xl text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+        className="rounded-lg border border-border bg-raised p-5 text-xl text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         placeholder={t.displayName}
         value={form.name}
         onChange={set("name")}
       />
       <input
-        className="rounded-lg border border-ink/20 bg-white p-5 text-xl tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+        className="rounded-lg border border-border bg-raised p-5 text-xl tracking-widest text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         type="password"
         inputMode="numeric"
         maxLength={6}
@@ -84,7 +84,7 @@ export function RegisterForm({ code }: { code: string }) {
         onChange={set("pin")}
       />
       <input
-        className="rounded-lg border border-ink/20 bg-white p-5 text-xl tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+        className="rounded-lg border border-border bg-raised p-5 text-xl tracking-widest text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         type="password"
         inputMode="numeric"
         maxLength={6}
@@ -94,7 +94,7 @@ export function RegisterForm({ code }: { code: string }) {
       />
       {error && <p className="text-center text-base text-ca">{error}</p>}
       <button
-        className="rounded-lg bg-ink p-5 text-xl font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+        className="rounded-lg bg-mx p-5 text-xl font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         onClick={submit}
       >
         {t.register}

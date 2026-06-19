@@ -120,7 +120,7 @@ export default function ProfilePage() {
 
       <div className="mb-6 flex flex-col gap-3">
         <input
-          className="rounded-lg border border-ink/20 bg-white p-4 text-lg tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+          className="rounded-lg border border-border bg-raised p-4 text-lg tracking-widest text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           type="password"
           inputMode="numeric"
           maxLength={6}
@@ -129,7 +129,7 @@ export default function ProfilePage() {
           onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))}
         />
         <input
-          className="rounded-lg border border-ink/20 bg-white p-4 text-lg tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+          className="rounded-lg border border-border bg-raised p-4 text-lg tracking-widest text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           type="password"
           inputMode="numeric"
           maxLength={6}
@@ -138,7 +138,7 @@ export default function ProfilePage() {
           onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
         />
         <input
-          className="rounded-lg border border-ink/20 bg-white p-4 text-lg tracking-widest text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+          className="rounded-lg border border-border bg-raised p-4 text-lg tracking-widest text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           type="password"
           inputMode="numeric"
           maxLength={6}
@@ -148,17 +148,17 @@ export default function ProfilePage() {
         />
         {pinError && <p className="text-center text-sm text-ca">{pinError}</p>}
         {pinSuccess && (
-          <p className="text-center text-sm text-mx">{t.changePin} ✓</p>
+          <p className="text-center text-sm text-mx-neon">{t.changePin} ✓</p>
         )}
         <button
-          className="rounded-lg bg-ink p-4 text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+          className="rounded-lg bg-mx p-4 text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
           onClick={handleChangePin}
         >
           {t.changePin}
         </button>
       </div>
 
-      <hr className="my-6 border-ink/10" />
+      <hr className="my-6 border-border" />
 
       <div className="mb-6">
         <p className="mb-3 font-semibold text-ink">{t.language}</p>
@@ -166,8 +166,8 @@ export default function ProfilePage() {
           <button
             className={`flex-1 rounded-lg border p-3 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us ${
               lang === "en"
-                ? "border-mx bg-mx/10 text-mx"
-                : "border-ink/20 text-ink/50"
+                ? "border-mx bg-surface text-mx-neon"
+                : "border-border bg-raised text-muted"
             }`}
             onClick={() => handleLanguage("en")}
           >
@@ -176,8 +176,8 @@ export default function ProfilePage() {
           <button
             className={`flex-1 rounded-lg border p-3 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us ${
               lang === "mm"
-                ? "border-mx bg-mx/10 text-mx"
-                : "border-ink/20 text-ink/50"
+                ? "border-mx bg-surface text-mx-neon"
+                : "border-border bg-raised text-muted"
             }`}
             onClick={() => handleLanguage("mm")}
           >
@@ -189,7 +189,7 @@ export default function ProfilePage() {
       {/* Invite friends section */}
       {invite && (
         <>
-          <hr className="my-6 border-ink/10" />
+          <hr className="my-6 border-border" />
           <div className="mb-6">
             <div className="mb-3 flex items-center gap-2">
               <div
@@ -198,10 +198,10 @@ export default function ProfilePage() {
               />
               <p className="font-semibold text-ink">{t.inviteFriends}</p>
             </div>
-            <p className="mb-2 text-sm text-ink/60">{t.inviteLink}</p>
+            <p className="mb-2 text-sm text-muted">{t.inviteLink}</p>
             <div className="flex gap-2">
               <input
-                className="min-w-0 flex-1 rounded-lg border border-ink/20 bg-white p-4 text-base text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+                className="min-w-0 flex-1 rounded-lg border border-border bg-raised p-4 text-base text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
                 readOnly
                 value={invite.link}
               />
@@ -224,7 +224,7 @@ export default function ProfilePage() {
         </>
       )}
 
-      <hr className="my-6 border-ink/10" />
+      <hr className="my-6 border-border" />
 
       <button
         className="w-full rounded-lg bg-ca p-4 text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us disabled:opacity-50"

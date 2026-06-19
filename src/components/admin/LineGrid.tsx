@@ -297,10 +297,10 @@ export function LineGrid({
       return (
         <tbody key={m.id}>
           {showDay && (
-            <tr className="bg-gray-50">
+            <tr className="bg-raised">
               <td
                 colSpan={cols}
-                className="px-2 py-1 text-xs font-bold text-gray-500"
+                className="px-2 py-1 text-xs font-bold text-muted"
               >
                 {dl.formatted}
                 {dl.tag ? ` · ${dl.tag}` : ""}
@@ -314,17 +314,17 @@ export function LineGrid({
   }
 
   const inputCls =
-    "w-20 border rounded px-2 py-1 text-sm text-right tabular-nums";
+    "w-20 border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-1 text-sm text-right tabular-nums";
 
   return (
     <div>
       {(msg || err) && (
         <div className="mb-3 space-y-1 text-sm">
-          {msg && <p className="text-green-700">{msg}</p>}
-          {err && <p className="text-red-600">{err}</p>}
+          {msg && <p className="text-mx-neon">{msg}</p>}
+          {err && <p className="text-ca">{err}</p>}
         </div>
       )}
-      <p className="mb-3 text-xs text-gray-500">
+      <p className="mb-3 text-xs text-muted">
         Type the handicap/goals as a number (e.g. 0.75, 1, 2.5 — multiples of
         0.25) and the price as 0.01–1.00. Blank rows are ignored. Saving posts a
         new line version for every changed row at once.
@@ -333,20 +333,20 @@ export function LineGrid({
       {/* ── HANDICAP (AH) ── */}
       <div className="mb-6 overflow-x-auto">
         <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-gray-600">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-muted">
             Handicap (AH)
           </h2>
           <button
             disabled={busy}
             onClick={saveAh}
-            className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-50"
+            className="rounded bg-us px-3 py-1 text-sm text-white disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save all AH"}
           </button>
         </div>
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b text-left text-xs uppercase text-gray-500">
+            <tr className="border-b border-border text-left text-xs uppercase text-muted">
               <th className="py-1 pr-2">Match</th>
               <th className="py-1 pr-2">Fav</th>
               <th className="py-1 pr-2 text-right">Ball</th>
@@ -357,13 +357,13 @@ export function LineGrid({
           </thead>
           {dayRows(
             (m) => (
-              <tr className="border-b">
+              <tr className="border-b border-border">
                 <td className="py-1 pr-2 whitespace-nowrap">
                   {m.homeTeam} v {m.awayTeam}
                 </td>
                 <td className="py-1 pr-2">
                   <select
-                    className="border rounded px-1 py-1 text-sm"
+                    className="border border-border bg-raised text-ink rounded px-1 py-1 text-sm"
                     value={ahOf(m).favSide}
                     onChange={(e) =>
                       setAh((p) => ({
@@ -402,8 +402,8 @@ export function LineGrid({
                       type="button"
                       className={`w-6 rounded border text-sm font-bold ${
                         isNeg(ahOf(m).price)
-                          ? "border-red-300 bg-red-50 text-red-600"
-                          : "border-green-300 bg-green-50 text-green-700"
+                          ? "border-ca/40 bg-ca/15 text-ca"
+                          : "border-mx/40 bg-mx/15 text-mx-neon"
                       }`}
                       onClick={() =>
                         setAh((p) => {
@@ -419,7 +419,7 @@ export function LineGrid({
                     </button>
                     <input
                       inputMode="decimal"
-                      className="w-14 rounded border px-2 py-1 text-right text-sm tabular-nums"
+                      className="w-14 rounded border border-border bg-raised text-ink placeholder:text-faint px-2 py-1 text-right text-sm tabular-nums"
                       placeholder="—"
                       value={magOf(ahOf(m).price)}
                       onChange={(e) =>
@@ -446,8 +446,8 @@ export function LineGrid({
                       type="button"
                       className={`w-6 rounded border text-sm font-bold ${
                         isNeg(ahOf(m).priceOpp)
-                          ? "border-red-300 bg-red-50 text-red-600"
-                          : "border-green-300 bg-green-50 text-green-700"
+                          ? "border-ca/40 bg-ca/15 text-ca"
+                          : "border-mx/40 bg-mx/15 text-mx-neon"
                       }`}
                       onClick={() =>
                         setAh((p) => {
@@ -466,7 +466,7 @@ export function LineGrid({
                     </button>
                     <input
                       inputMode="decimal"
-                      className="w-14 rounded border px-2 py-1 text-right text-sm tabular-nums"
+                      className="w-14 rounded border border-border bg-raised text-ink placeholder:text-faint px-2 py-1 text-right text-sm tabular-nums"
                       placeholder="—"
                       value={magOf(ahOf(m).priceOpp)}
                       onChange={(e) =>
@@ -487,7 +487,7 @@ export function LineGrid({
                     />
                   </div>
                 </td>
-                <td className="py-1 pr-2 whitespace-nowrap text-xs text-gray-500">
+                <td className="py-1 pr-2 whitespace-nowrap text-xs text-muted">
                   {cur(m.line)}
                 </td>
               </tr>
@@ -500,20 +500,20 @@ export function LineGrid({
       {/* ── TOTALS (O/U) ── */}
       <div className="overflow-x-auto">
         <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-gray-600">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-muted">
             Totals (O/U)
           </h2>
           <button
             disabled={busy}
             onClick={saveOu}
-            className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-50"
+            className="rounded bg-us px-3 py-1 text-sm text-white disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save all O/U"}
           </button>
         </div>
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b text-left text-xs uppercase text-gray-500">
+            <tr className="border-b border-border text-left text-xs uppercase text-muted">
               <th className="py-1 pr-2">Match</th>
               <th className="py-1 pr-2 text-right">Goals</th>
               <th className="py-1 pr-2 text-right">Over price</th>
@@ -523,7 +523,7 @@ export function LineGrid({
           </thead>
           {dayRows(
             (m) => (
-              <tr className="border-b">
+              <tr className="border-b border-border">
                 <td className="py-1 pr-2 whitespace-nowrap">
                   {m.homeTeam} v {m.awayTeam}
                 </td>
@@ -550,8 +550,8 @@ export function LineGrid({
                       type="button"
                       className={`w-6 rounded border text-sm font-bold ${
                         isNeg(ouOf(m).price)
-                          ? "border-red-300 bg-red-50 text-red-600"
-                          : "border-green-300 bg-green-50 text-green-700"
+                          ? "border-ca/40 bg-ca/15 text-ca"
+                          : "border-mx/40 bg-mx/15 text-mx-neon"
                       }`}
                       onClick={() =>
                         setOu((p) => {
@@ -567,7 +567,7 @@ export function LineGrid({
                     </button>
                     <input
                       inputMode="decimal"
-                      className="w-14 rounded border px-2 py-1 text-right text-sm tabular-nums"
+                      className="w-14 rounded border border-border bg-raised text-ink placeholder:text-faint px-2 py-1 text-right text-sm tabular-nums"
                       placeholder="—"
                       value={magOf(ouOf(m).price)}
                       onChange={(e) =>
@@ -594,8 +594,8 @@ export function LineGrid({
                       type="button"
                       className={`w-6 rounded border text-sm font-bold ${
                         isNeg(ouOf(m).priceOpp)
-                          ? "border-red-300 bg-red-50 text-red-600"
-                          : "border-green-300 bg-green-50 text-green-700"
+                          ? "border-ca/40 bg-ca/15 text-ca"
+                          : "border-mx/40 bg-mx/15 text-mx-neon"
                       }`}
                       onClick={() =>
                         setOu((p) => {
@@ -614,7 +614,7 @@ export function LineGrid({
                     </button>
                     <input
                       inputMode="decimal"
-                      className="w-14 rounded border px-2 py-1 text-right text-sm tabular-nums"
+                      className="w-14 rounded border border-border bg-raised text-ink placeholder:text-faint px-2 py-1 text-right text-sm tabular-nums"
                       placeholder="—"
                       value={magOf(ouOf(m).priceOpp)}
                       onChange={(e) =>
@@ -635,7 +635,7 @@ export function LineGrid({
                     />
                   </div>
                 </td>
-                <td className="py-1 pr-2 whitespace-nowrap text-xs text-gray-500">
+                <td className="py-1 pr-2 whitespace-nowrap text-xs text-muted">
                   {cur(m.ouLine)}
                 </td>
               </tr>

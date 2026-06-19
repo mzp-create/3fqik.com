@@ -358,7 +358,7 @@ export default function LinesPage() {
     }));
   }
 
-  if (globalError) return <p className="text-red-600">{globalError}</p>;
+  if (globalError) return <p className="text-ca">{globalError}</p>;
 
   const today = todayMmt();
   const tomorrow = tomorrowMmt();
@@ -387,11 +387,11 @@ export default function LinesPage() {
     <main>
       <h1 className="mb-4 text-lg font-bold">Lines Desk</h1>
       <div className="flex items-center gap-2 mb-3">
-        <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
+        <div className="flex gap-1 rounded-lg bg-raised p-0.5">
           <button
             onClick={() => setView("detailed")}
             className={`rounded-md px-3 py-1 text-sm font-semibold ${
-              view === "detailed" ? "bg-white shadow-sm" : "text-gray-500"
+              view === "detailed" ? "bg-surface shadow-sm" : "text-muted"
             }`}
           >
             Detailed
@@ -399,7 +399,7 @@ export default function LinesPage() {
           <button
             onClick={() => setView("grid")}
             className={`rounded-md px-3 py-1 text-sm font-semibold ${
-              view === "grid" ? "bg-white shadow-sm" : "text-gray-500"
+              view === "grid" ? "bg-surface shadow-sm" : "text-muted"
             }`}
           >
             Grid
@@ -408,21 +408,21 @@ export default function LinesPage() {
         <button
           onClick={loadReference}
           disabled={refLoading}
-          className="ml-auto rounded bg-blue-600 px-3 py-1 text-sm font-semibold text-white disabled:opacity-50"
+          className="ml-auto rounded bg-us px-3 py-1 text-sm font-semibold text-white disabled:opacity-50"
         >
           {refLoading ? "Loading…" : "Market ref"}
         </button>
         <button
           onClick={() => setShowAll((v) => !v)}
-          className="text-xs border px-2 py-1 rounded text-gray-600"
+          className="text-xs border border-border px-2 py-1 rounded text-muted"
         >
           {showAll ? "Show relevant" : "Show all"}
         </button>
       </div>
-      {refMsg && <p className="mb-3 text-sm text-blue-700">{refMsg}</p>}
+      {refMsg && <p className="mb-3 text-sm text-us-neon">{refMsg}</p>}
 
       {visible.length === 0 && !showAll && (
-        <p className="text-gray-500 text-sm">
+        <p className="text-muted text-sm">
           No live, upcoming, or overdue matches.
         </p>
       )}
@@ -441,22 +441,22 @@ export default function LinesPage() {
           const dl = dayLabel(day, today, tomorrow);
           return (
             <section key={day} className="mb-6">
-              <div className="sticky top-0 z-10 -mx-1 mb-3 flex items-center gap-2 border-b bg-white/95 px-1 py-1.5 backdrop-blur">
+              <div className="sticky top-0 z-10 -mx-1 mb-3 flex items-center gap-2 border-b border-border bg-surface/95 px-1 py-1.5 backdrop-blur">
                 <h2 className="text-base font-bold">{dl.formatted}</h2>
                 {dl.tag && (
                   <span
                     className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
                       dl.tag === "Overdue"
-                        ? "bg-red-100 text-red-700"
+                        ? "bg-ca/15 text-ca"
                         : dl.tag === "Today"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600"
+                          ? "bg-mx/15 text-mx-neon"
+                          : "bg-raised text-muted"
                     }`}
                   >
                     {dl.tag}
                   </span>
                 )}
-                <span className="ml-auto text-xs text-gray-400">
+                <span className="ml-auto text-xs text-faint">
                   {dayMatches.length}{" "}
                   {dayMatches.length === 1 ? "match" : "matches"}
                 </span>
@@ -467,7 +467,10 @@ export default function LinesPage() {
                 const isBusy = busy[m.id] ?? false;
                 const err = errors[m.id] ?? "";
                 return (
-                  <div key={m.id} className="mb-6 rounded border p-3">
+                  <div
+                    key={m.id}
+                    className="mb-6 rounded border border-border bg-surface p-3"
+                  >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-semibold">
                         {m.homeTeam} vs {m.awayTeam}
@@ -475,8 +478,8 @@ export default function LinesPage() {
                       <span
                         className={`text-xs px-1 rounded ${
                           m.status === "live"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-600"
+                            ? "bg-mx/15 text-mx-neon"
+                            : "bg-raised text-muted"
                         }`}
                       >
                         {m.status}
@@ -488,8 +491,8 @@ export default function LinesPage() {
                       (() => {
                         const r = marketRef[m.id];
                         return (
-                          <div className="mb-3 rounded border border-blue-200 bg-blue-50 px-2 py-1.5 text-xs text-blue-900">
-                            <span className="font-semibold uppercase tracking-wide text-blue-500">
+                          <div className="mb-3 rounded border border-us/30 bg-us/10 px-2 py-1.5 text-xs text-us-neon">
+                            <span className="font-semibold uppercase tracking-wide text-us-neon">
                               Market · {r.bookmaker}
                             </span>
                             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
@@ -511,7 +514,7 @@ export default function LinesPage() {
                                 </span>
                               )}
                               {r.h2h && (
-                                <span className="text-blue-700">
+                                <span className="text-us-neon">
                                   1X2: {r.h2h.home.toFixed(2)} /{" "}
                                   {r.h2h.draw != null
                                     ? r.h2h.draw.toFixed(2)
@@ -520,7 +523,7 @@ export default function LinesPage() {
                                 </span>
                               )}
                               {!r.ah && !r.ou && (
-                                <span className="text-blue-400">
+                                <span className="text-faint">
                                   handicap/totals not offered
                                 </span>
                               )}
@@ -530,14 +533,14 @@ export default function LinesPage() {
                       })()}
 
                     {/* ── HANDICAP (AH) MARKET ── */}
-                    <div className="mb-4 rounded border border-gray-100 bg-gray-50 p-2">
-                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">
+                    <div className="mb-4 rounded border border-border bg-raised p-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted mb-2">
                         Handicap (AH)
                       </p>
 
                       {/* Current AH line summary */}
                       {m.line ? (
-                        <div className="text-sm mb-2 text-gray-700">
+                        <div className="text-sm mb-2 text-muted">
                           Line:{" "}
                           {m.line.favSide === "home" ? m.homeTeam : m.awayTeam}
                           {" −"}
@@ -549,20 +552,20 @@ export default function LinesPage() {
                           <span
                             className={`ml-2 px-1 rounded text-xs ${
                               m.line.status === "active"
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-mx/15 text-mx-neon"
                                 : m.line.status === "suspended"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-gray-200 text-gray-600"
+                                  ? "bg-gold/15 text-gold"
+                                  : "bg-raised text-muted"
                             }`}
                           >
                             {m.line.status}
                           </span>
-                          <span className="ml-2 text-xs text-gray-400">
+                          <span className="ml-2 text-xs text-faint">
                             v{m.line.version}
                           </span>
                         </div>
                       ) : (
-                        <div className="text-sm mb-2 text-gray-400">
+                        <div className="text-sm mb-2 text-faint">
                           No line posted
                         </div>
                       )}
@@ -570,9 +573,9 @@ export default function LinesPage() {
                       {/* AH Post / move form */}
                       <div className="space-y-2 mb-3">
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">Fav side</label>
+                          <label className="w-16 text-muted">Fav side</label>
                           <select
-                            className="border rounded px-1 py-0.5 text-sm"
+                            className="border border-border bg-raised text-ink rounded px-1 py-0.5 text-sm"
                             value={ahF.favSide}
                             onChange={(e) =>
                               updateAhForm(m.id, {
@@ -585,9 +588,9 @@ export default function LinesPage() {
                           </select>
                         </div>
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">Ball</label>
+                          <label className="w-16 text-muted">Ball</label>
                           <button
-                            className="border rounded px-2 py-0.5"
+                            className="border border-border rounded px-2 py-0.5"
                             onClick={() =>
                               updateAhForm(m.id, {
                                 ballQ: Math.max(0, ahF.ballQ - 1),
@@ -600,7 +603,7 @@ export default function LinesPage() {
                             {ball(ahF.ballQ)}
                           </span>
                           <button
-                            className="border rounded px-2 py-0.5"
+                            className="border border-border rounded px-2 py-0.5"
                             onClick={() =>
                               updateAhForm(m.id, {
                                 ballQ: Math.min(40, ahF.ballQ + 1),
@@ -611,15 +614,13 @@ export default function LinesPage() {
                           </button>
                         </div>
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">
-                            Fav price
-                          </label>
+                          <label className="w-16 text-muted">Fav price</label>
                           <button
                             type="button"
                             className={`border rounded w-9 py-0.5 font-bold ${
                               isNeg(ahF.priceCInput)
-                                ? "bg-red-50 text-red-600 border-red-300"
-                                : "bg-green-50 text-green-700 border-green-300"
+                                ? "bg-ca/15 text-ca border-ca/40"
+                                : "bg-mx/15 text-mx-neon border-mx/40"
                             }`}
                             onClick={() =>
                               updateAhForm(m.id, {
@@ -633,7 +634,7 @@ export default function LinesPage() {
                             type="text"
                             inputMode="decimal"
                             placeholder="0.90"
-                            className="border rounded px-2 py-0.5 w-20 text-sm"
+                            className="border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-0.5 w-20 text-sm"
                             value={magOf(ahF.priceCInput)}
                             onChange={(e) => {
                               const mag = e.target.value.replace(
@@ -646,20 +647,18 @@ export default function LinesPage() {
                               });
                             }}
                           />
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-faint">
                             {ahF.favSide === "home" ? m.homeTeam : m.awayTeam}
                           </span>
                         </div>
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">
-                            Dog price
-                          </label>
+                          <label className="w-16 text-muted">Dog price</label>
                           <button
                             type="button"
                             className={`border rounded w-9 py-0.5 font-bold ${
                               isNeg(ahF.priceOppCInput)
-                                ? "bg-red-50 text-red-600 border-red-300"
-                                : "bg-green-50 text-green-700 border-green-300"
+                                ? "bg-ca/15 text-ca border-ca/40"
+                                : "bg-mx/15 text-mx-neon border-mx/40"
                             }`}
                             onClick={() =>
                               updateAhForm(m.id, {
@@ -673,7 +672,7 @@ export default function LinesPage() {
                             type="text"
                             inputMode="decimal"
                             placeholder="0.98"
-                            className="border rounded px-2 py-0.5 w-20 text-sm"
+                            className="border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-0.5 w-20 text-sm"
                             value={magOf(ahF.priceOppCInput)}
                             onChange={(e) => {
                               const mag = e.target.value.replace(
@@ -686,14 +685,14 @@ export default function LinesPage() {
                               });
                             }}
                           />
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-faint">
                             {ahF.favSide === "home" ? m.awayTeam : m.homeTeam}
                           </span>
                         </div>
                         <button
                           disabled={isBusy}
                           onClick={() => postAhLine(m.id)}
-                          className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                          className="bg-us text-white text-sm px-3 py-1 rounded disabled:opacity-50"
                         >
                           Post / Move
                         </button>
@@ -706,7 +705,7 @@ export default function LinesPage() {
                             <button
                               disabled={isBusy}
                               onClick={() => lineAction(m.id, "ah", "suspend")}
-                              className="border text-sm px-2 py-1 rounded text-yellow-700 border-yellow-300 disabled:opacity-50"
+                              className="border text-sm px-2 py-1 rounded text-gold border-gold/40 disabled:opacity-50"
                             >
                               Suspend
                             </button>
@@ -715,7 +714,7 @@ export default function LinesPage() {
                             <button
                               disabled={isBusy}
                               onClick={() => lineAction(m.id, "ah", "resume")}
-                              className="border text-sm px-2 py-1 rounded text-green-700 border-green-300 disabled:opacity-50"
+                              className="border text-sm px-2 py-1 rounded text-mx-neon border-mx/40 disabled:opacity-50"
                             >
                               Resume
                             </button>
@@ -724,7 +723,7 @@ export default function LinesPage() {
                             <button
                               disabled={isBusy}
                               onClick={() => lineAction(m.id, "ah", "close")}
-                              className="border text-sm px-2 py-1 rounded text-gray-600 disabled:opacity-50"
+                              className="border border-border text-sm px-2 py-1 rounded text-muted disabled:opacity-50"
                             >
                               Close
                             </button>
@@ -734,14 +733,14 @@ export default function LinesPage() {
                     </div>
 
                     {/* ── TOTALS (O/U) MARKET ── */}
-                    <div className="mb-3 rounded border border-gray-100 bg-gray-50 p-2">
-                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">
+                    <div className="mb-3 rounded border border-border bg-raised p-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted mb-2">
                         Totals (O/U)
                       </p>
 
                       {/* Current O/U line summary */}
                       {m.ouLine ? (
-                        <div className="text-sm mb-2 text-gray-700">
+                        <div className="text-sm mb-2 text-muted">
                           Line: O/U {ball(m.ouLine.ballQ)} @{" "}
                           {price(m.ouLine.priceC)}
                           {" / U "}
@@ -751,20 +750,20 @@ export default function LinesPage() {
                           <span
                             className={`ml-2 px-1 rounded text-xs ${
                               m.ouLine.status === "active"
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-mx/15 text-mx-neon"
                                 : m.ouLine.status === "suspended"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-gray-200 text-gray-600"
+                                  ? "bg-gold/15 text-gold"
+                                  : "bg-raised text-muted"
                             }`}
                           >
                             {m.ouLine.status}
                           </span>
-                          <span className="ml-2 text-xs text-gray-400">
+                          <span className="ml-2 text-xs text-faint">
                             v{m.ouLine.version}
                           </span>
                         </div>
                       ) : (
-                        <div className="text-sm mb-2 text-gray-400">
+                        <div className="text-sm mb-2 text-faint">
                           No line posted
                         </div>
                       )}
@@ -772,9 +771,9 @@ export default function LinesPage() {
                       {/* O/U Post / move form */}
                       <div className="space-y-2 mb-3">
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">Goals</label>
+                          <label className="w-16 text-muted">Goals</label>
                           <button
-                            className="border rounded px-2 py-0.5"
+                            className="border border-border rounded px-2 py-0.5"
                             onClick={() =>
                               updateOuForm(m.id, {
                                 ballQ: Math.max(1, ouF.ballQ - 1),
@@ -787,7 +786,7 @@ export default function LinesPage() {
                             {ball(ouF.ballQ)}
                           </span>
                           <button
-                            className="border rounded px-2 py-0.5"
+                            className="border border-border rounded px-2 py-0.5"
                             onClick={() =>
                               updateOuForm(m.id, {
                                 ballQ: Math.min(40, ouF.ballQ + 1),
@@ -798,15 +797,13 @@ export default function LinesPage() {
                           </button>
                         </div>
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">
-                            Over price
-                          </label>
+                          <label className="w-16 text-muted">Over price</label>
                           <button
                             type="button"
                             className={`border rounded w-9 py-0.5 font-bold ${
                               isNeg(ouF.priceCInput)
-                                ? "bg-red-50 text-red-600 border-red-300"
-                                : "bg-green-50 text-green-700 border-green-300"
+                                ? "bg-ca/15 text-ca border-ca/40"
+                                : "bg-mx/15 text-mx-neon border-mx/40"
                             }`}
                             onClick={() =>
                               updateOuForm(m.id, {
@@ -820,7 +817,7 @@ export default function LinesPage() {
                             type="text"
                             inputMode="decimal"
                             placeholder="0.90"
-                            className="border rounded px-2 py-0.5 w-20 text-sm"
+                            className="border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-0.5 w-20 text-sm"
                             value={magOf(ouF.priceCInput)}
                             onChange={(e) => {
                               const mag = e.target.value.replace(
@@ -835,15 +832,13 @@ export default function LinesPage() {
                           />
                         </div>
                         <div className="flex gap-2 items-center text-sm">
-                          <label className="w-16 text-gray-600">
-                            Under price
-                          </label>
+                          <label className="w-16 text-muted">Under price</label>
                           <button
                             type="button"
                             className={`border rounded w-9 py-0.5 font-bold ${
                               isNeg(ouF.priceOppCInput)
-                                ? "bg-red-50 text-red-600 border-red-300"
-                                : "bg-green-50 text-green-700 border-green-300"
+                                ? "bg-ca/15 text-ca border-ca/40"
+                                : "bg-mx/15 text-mx-neon border-mx/40"
                             }`}
                             onClick={() =>
                               updateOuForm(m.id, {
@@ -857,7 +852,7 @@ export default function LinesPage() {
                             type="text"
                             inputMode="decimal"
                             placeholder="0.94"
-                            className="border rounded px-2 py-0.5 w-20 text-sm"
+                            className="border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-0.5 w-20 text-sm"
                             value={magOf(ouF.priceOppCInput)}
                             onChange={(e) => {
                               const mag = e.target.value.replace(
@@ -874,7 +869,7 @@ export default function LinesPage() {
                         <button
                           disabled={isBusy}
                           onClick={() => postOuLine(m.id)}
-                          className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                          className="bg-us text-white text-sm px-3 py-1 rounded disabled:opacity-50"
                         >
                           Post / Move
                         </button>
@@ -887,7 +882,7 @@ export default function LinesPage() {
                             <button
                               disabled={isBusy}
                               onClick={() => lineAction(m.id, "ou", "suspend")}
-                              className="border text-sm px-2 py-1 rounded text-yellow-700 border-yellow-300 disabled:opacity-50"
+                              className="border text-sm px-2 py-1 rounded text-gold border-gold/40 disabled:opacity-50"
                             >
                               Suspend
                             </button>
@@ -896,7 +891,7 @@ export default function LinesPage() {
                             <button
                               disabled={isBusy}
                               onClick={() => lineAction(m.id, "ou", "resume")}
-                              className="border text-sm px-2 py-1 rounded text-green-700 border-green-300 disabled:opacity-50"
+                              className="border text-sm px-2 py-1 rounded text-mx-neon border-mx/40 disabled:opacity-50"
                             >
                               Resume
                             </button>
@@ -905,7 +900,7 @@ export default function LinesPage() {
                             <button
                               disabled={isBusy}
                               onClick={() => lineAction(m.id, "ou", "close")}
-                              className="border text-sm px-2 py-1 rounded text-gray-600 disabled:opacity-50"
+                              className="border border-border text-sm px-2 py-1 rounded text-muted disabled:opacity-50"
                             >
                               Close
                             </button>
@@ -915,13 +910,13 @@ export default function LinesPage() {
                     </div>
 
                     {/* Per-match limit */}
-                    <div className="flex gap-2 items-center text-sm border-t pt-2">
-                      <label className="text-gray-600">Match limit (MMK)</label>
+                    <div className="flex gap-2 items-center text-sm border-t border-border pt-2">
+                      <label className="text-muted">Match limit (MMK)</label>
                       <input
                         type="number"
                         min="0"
                         step="1000"
-                        className="border rounded px-2 py-0.5 w-32 text-sm"
+                        className="border border-border bg-raised text-ink placeholder:text-faint rounded px-2 py-0.5 w-32 text-sm"
                         placeholder="unlimited"
                         value={limits[m.id] ?? ""}
                         onChange={(e) =>
@@ -934,18 +929,18 @@ export default function LinesPage() {
                       <button
                         disabled={isBusy}
                         onClick={() => saveLimit(m.id)}
-                        className="border text-sm px-2 py-1 rounded disabled:opacity-50"
+                        className="border border-border text-sm px-2 py-1 rounded disabled:opacity-50"
                       >
                         Save
                       </button>
                       {m.betLimitMmk != null && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted">
                           Current: {mmk(m.betLimitMmk)}
                         </span>
                       )}
                     </div>
 
-                    {err && <p className="text-red-600 text-sm mt-1">{err}</p>}
+                    {err && <p className="text-ca text-sm mt-1">{err}</p>}
                   </div>
                 );
               })}

@@ -115,6 +115,34 @@ export const en = {
   placeConfirm: "Tap again to place {n} MMK",
   placeReview: "Confirm: {pick}",
   minStakeNote: "Enter at least 10,000 MMK",
+  menuProfile: "Profile & settings",
+  menuRules: "How to bet",
+  menuAdmin: "Admin",
+  menuLogout: "Log out",
+  closeMenu: "Close",
+  marketAh: "Handicap",
+  marketOu: "Over / Under",
+  showOu: "Show Over / Under",
+  hideOu: "Hide Over / Under",
+  emptyBetsTitle: "No bets yet",
+  emptyBetsBody:
+    "Your tickets show up here once you place a bet. Pick a match and tap a price to get started.",
+  emptyBetsCta: "Browse matches",
+  emptyBalanceTitle: "No activity yet",
+  emptyBalanceBody:
+    "Your daily wins and losses appear here after each match day is settled.",
+  emptyBalanceCta: "See today's matches",
+  rulesTitle: "How to bet",
+  rulesAhTitle: "Asian handicap",
+  rulesAhBody:
+    "A team starts with a goal head-start or deficit (e.g. −1). Your pick wins if it clears the handicap.",
+  rulesOuTitle: "Over / Under",
+  rulesOuBody: "Bet whether total goals are over or under a line (e.g. 2.5).",
+  rulesPriceTitle: "Prices & payouts",
+  rulesPriceBody:
+    "Prices are Malay odds. A positive price pays a fraction of your stake on a win; a negative price risks a fraction to win your full stake.",
+  rulesPushTitle: "Refunds (push)",
+  rulesPushBody: "On a whole-number line, an exact result returns your stake.",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

@@ -169,6 +169,12 @@ export function codeFromName(name: string): string | null {
   return NORM_NAME_TO_CODE[normName(name)] ?? null;
 }
 
+/** True when `code` is a known finalist FIFA code (not a bracket placeholder
+ *  like "2A", "W73", "3rd-best"). */
+export function isFifaCode(code: string): boolean {
+  return code in FIFA_NAME || code in SPECIAL;
+}
+
 /** "Germany (GER)" for known finalists; bare code for placeholders ("1H"). */
 export function teamLabel(code: string): string {
   const name = FIFA_NAME[code];

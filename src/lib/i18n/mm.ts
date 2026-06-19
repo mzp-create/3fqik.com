@@ -171,6 +171,20 @@ export const mm: Dict = {
   obContinueBrowser: "ဘရောက်ဇာတွင် ဆက်လက်သုံးမည်",
   langEnglish: "English",
   langBurmeseNative: "မြန်မာ",
+  practiceTitle: "လေ့ကျင့်ခန်း",
+  practiceBanner: "လေ့ကျင့်မှု — ငွေအစစ်မပါ",
+  practiceBalance: "လေ့ကျင့်လက်ကျန်",
+  practiceInPlay: "လောင်းထားဆဲ",
+  practiceTry: "လေ့ကျင့်လောင်းကြေး စမ်းကြည့်ပါ",
+  practiceSimulate: "ရလဒ် စမ်းကြည့်မည်",
+  practiceReset: "လေ့ကျင့်ခန်း ပြန်စမည်",
+  practiceExit: "လေ့ကျင့်ခန်းမှ ထွက်မည်",
+  practicePlaced: "လေ့ကျင့်လောင်းကြေး ထည့်ပြီး",
+  practiceResultWon: "နိုင် (လေ့ကျင့်)",
+  practiceResultLost: "ရှုံး (လေ့ကျင့်)",
+  practiceResultPush: "ညီမျှ (လေ့ကျင့်)",
+  practiceNote:
+    "ဤသည်မှာ အက်ပ်ကို လေ့လာရန် လေ့ကျင့်မုဒ်ဖြစ်သည်။ ငွေအစစ် မပါဝင်ပါ။",
 } as const;
 
 /*

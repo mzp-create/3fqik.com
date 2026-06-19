@@ -162,6 +162,20 @@ export const en = {
   obContinueBrowser: "Continue in browser",
   langEnglish: "English",
   langBurmeseNative: "မြန်မာ",
+  practiceTitle: "Practice",
+  practiceBanner: "PRACTICE — no real money",
+  practiceBalance: "Practice balance",
+  practiceInPlay: "In play",
+  practiceTry: "Try a practice bet",
+  practiceSimulate: "Simulate result",
+  practiceReset: "Reset practice",
+  practiceExit: "Exit practice",
+  practicePlaced: "Practice bet placed",
+  practiceResultWon: "WON (practice)",
+  practiceResultLost: "LOST (practice)",
+  practiceResultPush: "PUSH (practice)",
+  practiceNote:
+    "This is practice mode to learn the app. No real money is involved.",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

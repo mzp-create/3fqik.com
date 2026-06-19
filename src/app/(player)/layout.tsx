@@ -18,7 +18,7 @@ export default async function PlayerLayout({
         <AppBar isAdmin={me.role === "admin"} name={me.displayName} />
         {children}
       </div>
-      <Tabs isAdmin={me.role === "admin"} />
+      <Tabs />
       <InstallBanner />
     </I18nProvider>
   );

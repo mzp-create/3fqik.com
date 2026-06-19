@@ -21,6 +21,21 @@ export function errMsg(t: Dict, e: unknown): string {
     if (typeof headroom === "number")
       return t.errLimit.replace("{n}", headroom.toLocaleString("en-US"));
   }
+  if (code === "tier_bet_limit") {
+    const n = (e as { extra?: Record<string, unknown> }).extra?.maxMmk;
+    if (typeof n === "number")
+      return t.errTierBetLimit.replace("{n}", n.toLocaleString("en-US"));
+  }
+  if (code === "tier_outstanding_limit") {
+    const n = (e as { extra?: Record<string, unknown> }).extra?.remainingMmk;
+    if (typeof n === "number")
+      return t.errTierOutstanding.replace("{n}", n.toLocaleString("en-US"));
+  }
+  if (code === "tier_match_bets") {
+    const n = (e as { extra?: Record<string, unknown> }).extra?.maxBets;
+    if (typeof n === "number")
+      return t.errTierMatchBets.replace("{n}", String(n));
+  }
   if (code && CODE_KEYS[code]) return t[CODE_KEYS[code]];
   return e instanceof Error ? e.message : "error";
 }

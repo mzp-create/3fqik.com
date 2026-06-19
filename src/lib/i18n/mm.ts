@@ -69,6 +69,10 @@ export const mm: Dict = {
   errMatchFinished: "ပွဲစဉ်ပြီးဆုံးသွားပြီ",
   errBettingClosed: "လောင်းကြေးပိတ်သည်",
   errBettingStarted: "လောင်းကြေးပိတ်သည် — ပွဲစတင်သွားပြီ",
+  errTierBetLimit: "သင့်အကောင့်အတွက် တစ်ကြိမ်လျှင် အများဆုံး {n} MMK",
+  errTierOutstanding:
+    "ဖွင့်ထားသော လောင်းကြေးများတွင် နောက်ထပ် {n} MMK သာ ထည့်နိုင်သည်",
+  errTierMatchBets: "သင့်အကောင့်အတွက် ပွဲတစ်ပွဲလျှင် အများဆုံး {n} ကြိမ်",
   language: "ဘာသာစကား",
   sideFav: "ပေး",
   sideDog: "ယူ",

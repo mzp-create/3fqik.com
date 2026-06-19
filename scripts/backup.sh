@@ -4,7 +4,9 @@
 # DATABASE_URL is read from .env.local unless passed/exported.
 set -euo pipefail
 
-PROJECT_DIR="/mnt/hermes-data/mmzphyo/Projects/WorldBet2026"
+# Resolve the project root from this script's location, so the backup works
+# from any checkout (dev or production) without a hardcoded path.
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Load DATABASE_URL from .env.local if not already in the environment.
 if [ -z "${DATABASE_URL:-}" ] && [ -f "$PROJECT_DIR/.env.local" ]; then
   DATABASE_URL=$(grep -E '^DATABASE_URL=' "$PROJECT_DIR/.env.local" | head -1 | cut -d= -f2-)

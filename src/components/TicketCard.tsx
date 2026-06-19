@@ -51,7 +51,7 @@ function stampClasses(status: string): string {
   if (status === "lost" || status === "half_lost") {
     return "border-ca text-ca";
   }
-  return "border-gray-400 text-gray-400";
+  return "border-border text-muted";
 }
 
 /** Stamp label — shown only for graded tickets */
@@ -136,7 +136,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
   return (
     <div>
       {/* Event-ticket card */}
-      <div className="relative overflow-hidden rounded-xl border border-dashed border-ink/30 bg-white">
+      <div className="relative overflow-hidden rounded-xl border border-dashed border-border bg-surface">
         {/* Triband top bar */}
         <div className="triband w-full" />
 
@@ -150,14 +150,14 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
         )}
 
         <div className="p-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-ink/40">
+          <p className="text-sm font-semibold uppercase tracking-widest text-faint">
             WORLDBET<span className="font-display">26</span> ·{" "}
             {t.ticket.toUpperCase()}
           </p>
           <p className="font-display mt-1 text-4xl tracking-wider text-ink">
             {b.ticketNo}
           </p>
-          <hr className="my-3 border-dashed border-ink/20" />
+          <hr className="my-3 border-dashed border-border" />
           <dl className="text-left text-base leading-loose">
             <Row k={t.player} v={b.playerName} />
             <Row
@@ -211,7 +211,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
       </div>
 
       <button
-        className="mt-2 w-full rounded-lg bg-ink p-4 text-base font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+        className="mt-2 w-full rounded-lg border border-border bg-raised p-4 text-base font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
         onClick={save}
       >
         💾 {t.saveTicket}
@@ -223,7 +223,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-ink/50">{k}</dt>
+      <dt className="text-muted">{k}</dt>
       <dd className="font-medium text-ink">{v}</dd>
     </div>
   );

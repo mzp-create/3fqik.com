@@ -35,6 +35,25 @@ type MatchRow = {
   ouLine: Line | null;
 };
 
+// Market-reference odds (from The Odds API) for a single match.
+type RefItem = {
+  matchId: number;
+  bookmaker: string;
+  ah: {
+    favCode: string;
+    line: number;
+    favMalay: number;
+    dogMalay: number;
+  } | null;
+  ou: { line: number; overMalay: number; underMalay: number } | null;
+  h2h: { home: number; draw: number | null; away: number } | null;
+};
+
+/** Format a Malay price with an explicit sign: 0.92 → "+0.92", −0.91 → "−0.91". */
+function fmtMalay(v: number): string {
+  return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2);
+}
+
 type AhFormState = {
   favSide: "home" | "away";
   offeredSide: "fav" | "dog";
@@ -106,6 +125,10 @@ export default function LinesPage() {
   const [busy, setBusy] = useState<Record<number, boolean>>({});
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [globalError, setGlobalError] = useState("");
+  // Market-reference odds, keyed by matchId, loaded on demand.
+  const [marketRef, setMarketRef] = useState<Record<number, RefItem>>({});
+  const [refLoading, setRefLoading] = useState(false);
+  const [refMsg, setRefMsg] = useState("");
 
   const reload = () =>
     api<MatchRow[]>("/api/matches")
@@ -150,6 +173,37 @@ export default function LinesPage() {
   }
   function setBusyFor(matchId: number, val: boolean) {
     setBusy((prev) => ({ ...prev, [matchId]: val }));
+  }
+
+  async function loadReference() {
+    setRefLoading(true);
+    setRefMsg("");
+    try {
+      const r = await api<{
+        configured: boolean;
+        error?: string;
+        message?: string;
+        fetchedAt?: string;
+        remaining?: number | null;
+        items: RefItem[];
+      }>("/api/admin/odds/reference");
+      const map: Record<number, RefItem> = {};
+      for (const it of r.items) map[it.matchId] = it;
+      setMarketRef(map);
+      if (r.items.length > 0) {
+        const book = r.items[0].bookmaker;
+        const left = r.remaining != null ? ` · ${r.remaining} req left` : "";
+        setRefMsg(
+          `Market reference: ${r.items.length} match${r.items.length === 1 ? "" : "es"} (${book})${left}`,
+        );
+      } else {
+        setRefMsg(r.message || "No reference odds available right now.");
+      }
+    } catch (e) {
+      setRefMsg(e instanceof Error ? e.message : "Failed to load reference");
+    } finally {
+      setRefLoading(false);
+    }
   }
 
   async function postAhLine(matchId: number) {
@@ -343,12 +397,20 @@ export default function LinesPage() {
           </button>
         </div>
         <button
+          onClick={loadReference}
+          disabled={refLoading}
+          className="ml-auto rounded bg-blue-600 px-3 py-1 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {refLoading ? "Loading…" : "Market ref"}
+        </button>
+        <button
           onClick={() => setShowAll((v) => !v)}
-          className="ml-auto text-xs border px-2 py-1 rounded text-gray-600"
+          className="text-xs border px-2 py-1 rounded text-gray-600"
         >
           {showAll ? "Show relevant" : "Show all"}
         </button>
       </div>
+      {refMsg && <p className="mb-3 text-sm text-blue-700">{refMsg}</p>}
 
       {visible.length === 0 && !showAll && (
         <p className="text-gray-500 text-sm">
@@ -411,6 +473,52 @@ export default function LinesPage() {
                         {m.status}
                       </span>
                     </div>
+
+                    {/* Market reference (The Odds API) — banker price discovery */}
+                    {marketRef[m.id] &&
+                      (() => {
+                        const r = marketRef[m.id];
+                        return (
+                          <div className="mb-3 rounded border border-blue-200 bg-blue-50 px-2 py-1.5 text-xs text-blue-900">
+                            <span className="font-semibold uppercase tracking-wide text-blue-500">
+                              Market · {r.bookmaker}
+                            </span>
+                            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                              {r.ah && (
+                                <span>
+                                  AH:{" "}
+                                  <b>
+                                    {r.ah.favCode} −{r.ah.line}
+                                  </b>{" "}
+                                  {fmtMalay(r.ah.favMalay)} / dog{" "}
+                                  {fmtMalay(r.ah.dogMalay)}
+                                </span>
+                              )}
+                              {r.ou && (
+                                <span>
+                                  O/U: <b>{r.ou.line}</b> O{" "}
+                                  {fmtMalay(r.ou.overMalay)} / U{" "}
+                                  {fmtMalay(r.ou.underMalay)}
+                                </span>
+                              )}
+                              {r.h2h && (
+                                <span className="text-blue-700">
+                                  1X2: {r.h2h.home.toFixed(2)} /{" "}
+                                  {r.h2h.draw != null
+                                    ? r.h2h.draw.toFixed(2)
+                                    : "—"}{" "}
+                                  / {r.h2h.away.toFixed(2)}
+                                </span>
+                              )}
+                              {!r.ah && !r.ou && (
+                                <span className="text-blue-400">
+                                  handicap/totals not offered
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                     {/* ── HANDICAP (AH) MARKET ── */}
                     <div className="mb-4 rounded border border-gray-100 bg-gray-50 p-2">

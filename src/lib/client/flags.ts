@@ -124,6 +124,51 @@ export function teamName(code: string): string {
   return FIFA_NAME[code] ?? code;
 }
 
+// ── Reverse lookup: external odds-feed team name → FIFA code ───────────────
+// Feeds (e.g. The Odds API) use full country names that diverge from ours
+// (Czech Republic vs Czechia, USA vs United States, Türkiye vs Turkey,
+// Ivory Coast vs Côte d'Ivoire …). Normalize aggressively, then alias the
+// known divergent spellings.
+function normName(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // strip diacritics
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const NAME_ALIASES: Record<string, string> = {
+  "czech republic": "CZE",
+  "korea republic": "KOR",
+  "south korea": "KOR",
+  usa: "USA",
+  "united states of america": "USA",
+  turkey: "TUR",
+  "ivory coast": "CIV",
+  "dr congo": "COD",
+  "democratic republic of the congo": "COD",
+  "congo dr": "COD",
+  "cabo verde": "CPV",
+  "bosnia and herzegovina": "BIH",
+  "ir iran": "IRN",
+};
+
+const NORM_NAME_TO_CODE: Record<string, string> = (() => {
+  const m: Record<string, string> = {};
+  for (const [code, name] of Object.entries(FIFA_NAME))
+    m[normName(name)] = code;
+  for (const [alias, code] of Object.entries(NAME_ALIASES))
+    m[normName(alias)] = code;
+  return m;
+})();
+
+/** Map an external feed's team name to a FIFA code, or null when unknown. */
+export function codeFromName(name: string): string | null {
+  return NORM_NAME_TO_CODE[normName(name)] ?? null;
+}
+
 /** "Germany (GER)" for known finalists; bare code for placeholders ("1H"). */
 export function teamLabel(code: string): string {
   const name = FIFA_NAME[code];

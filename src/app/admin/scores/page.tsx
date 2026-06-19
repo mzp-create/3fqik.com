@@ -38,7 +38,8 @@ export default function ScoresPage() {
           (m) =>
             m.status === "live" ||
             m.status === "finished" ||
-            (m.status === "scheduled" && m.matchDay === today),
+            // today's matches AND any overdue ones still awaiting a score
+            (m.status === "scheduled" && m.matchDay <= today),
         );
         setMatches(ms);
         setScores((prev) => {
@@ -165,7 +166,8 @@ export default function ScoresPage() {
         (m) =>
           m.status === "live" ||
           m.status === "finished" ||
-          (m.status === "scheduled" && m.matchDay === today),
+          // today's matches AND any overdue ones still awaiting a score
+          (m.status === "scheduled" && m.matchDay <= today),
       );
 
   // Group the visible matches by match day, ascending.

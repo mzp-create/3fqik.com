@@ -65,6 +65,9 @@ export function MenuDrawer({
               {t.menuAdmin}
             </Link>
           )}
+          <Link href="/practice" className={item} onClick={onClose}>
+            {t.practiceTry}
+          </Link>
           <button
             type="button"
             onClick={handleLogout}

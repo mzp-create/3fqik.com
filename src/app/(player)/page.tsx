@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
@@ -60,6 +61,13 @@ export default function MatchesPage() {
           {t.byGroup}
         </TabButton>
       </div>
+
+      <Link
+        href="/practice"
+        className="mb-4 block rounded-lg border border-gold/30 bg-gold/10 py-2 text-center text-sm font-semibold text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+      >
+        🎯 {t.practiceTry}
+      </Link>
 
       {error && <p className="mt-8 text-center text-ca">{error}</p>}
 

@@ -174,18 +174,18 @@ export default function SettlePage() {
       <h1 className="mb-3 text-lg font-bold">Settle</h1>
 
       <div className="flex gap-2 items-center mb-4">
-        <label className="text-sm text-gray-600">Date</label>
+        <label className="text-sm text-muted">Date</label>
         <input
           type="date"
-          className="border rounded px-2 py-1 text-sm"
+          className="bg-raised border-border rounded px-2 py-1 text-sm text-ink placeholder:text-faint"
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
       </div>
 
-      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      {error && <p className="text-ca text-sm mb-3">{error}</p>}
 
-      {loading && <p className="text-gray-500">Loading…</p>}
+      {loading && <p className="text-muted">Loading…</p>}
 
       {!loading && board && (
         <>
@@ -193,10 +193,10 @@ export default function SettlePage() {
             <span
               className={`text-xs px-2 py-0.5 rounded font-semibold ${
                 board.day.status === "settled"
-                  ? "bg-green-100 text-green-700"
+                  ? "bg-mx/15 text-mx-neon"
                   : board.day.status === "closed"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-gray-100 text-gray-600"
+                    ? "bg-gold/15 text-gold"
+                    : "bg-raised text-muted"
               }`}
             >
               {board.day.status}
@@ -206,15 +206,15 @@ export default function SettlePage() {
               <span
                 className={
                   board.houseNet >= 0
-                    ? "text-green-700 font-bold"
-                    : "text-red-600 font-bold"
+                    ? "text-mx-neon font-bold"
+                    : "text-ca font-bold"
                 }
               >
                 {signedMmk(board.houseNet)}
               </span>
             </span>
             {board.feeSettings && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-faint">
                 commission {board.feeSettings.commissionPct}% · discount{" "}
                 {board.feeSettings.discountPct}%
               </span>
@@ -222,10 +222,10 @@ export default function SettlePage() {
           </div>
 
           {board.rows.length > 0 && (
-            <div className="text-sm text-gray-600 mb-3 flex flex-wrap gap-3">
+            <div className="text-sm text-muted mb-3 flex flex-wrap gap-3">
               <span>
                 Pay out:{" "}
-                <span className="text-green-700 font-semibold">
+                <span className="text-mx-neon font-semibold">
                   {mmk(
                     board.rows
                       .filter((r) => r.netMmk > 0)
@@ -234,10 +234,10 @@ export default function SettlePage() {
                   MMK
                 </span>
               </span>
-              <span className="text-gray-300">·</span>
+              <span className="text-faint">·</span>
               <span>
                 Collect:{" "}
-                <span className="text-red-600 font-semibold">
+                <span className="text-ca font-semibold">
                   {mmk(
                     board.rows
                       .filter((r) => r.netMmk < 0)
@@ -250,7 +250,7 @@ export default function SettlePage() {
           )}
 
           {board.rows.length === 0 && (
-            <p className="text-gray-500 text-sm">
+            <p className="text-muted text-sm">
               No graded tickets for this date.
             </p>
           )}
@@ -272,7 +272,10 @@ export default function SettlePage() {
                   : "Mark Settled";
 
             return (
-              <div key={row.playerId} className="mb-4 rounded border">
+              <div
+                key={row.playerId}
+                className="mb-4 rounded border border-border"
+              >
                 {/* Player header */}
                 <div
                   className="flex items-center justify-between p-3 cursor-pointer"
@@ -280,7 +283,7 @@ export default function SettlePage() {
                 >
                   <div>
                     <span className="font-semibold">{row.displayName}</span>
-                    <span className="ml-2 text-xs text-gray-500">
+                    <span className="ml-2 text-xs text-muted">
                       {row.ticketCount} ticket{row.ticketCount !== 1 ? "s" : ""}
                     </span>
                     <span
@@ -290,7 +293,7 @@ export default function SettlePage() {
                           ? "text-mx"
                           : dir === "collect"
                             ? "text-ca"
-                            : "text-gray-400")
+                            : "text-faint")
                       }
                     >
                       {dir === "pay"
@@ -300,7 +303,7 @@ export default function SettlePage() {
                           : "Even"}
                     </span>
                     {isSettled && (
-                      <span className="ml-2 text-xs bg-green-100 text-green-700 px-1 rounded">
+                      <span className="ml-2 text-xs bg-mx/15 text-mx-neon px-1 rounded">
                         settled
                       </span>
                     )}
@@ -309,13 +312,13 @@ export default function SettlePage() {
                     <span
                       className={
                         row.netMmk >= 0
-                          ? "text-green-700 font-semibold"
-                          : "text-red-600 font-semibold"
+                          ? "text-mx-neon font-semibold"
+                          : "text-ca font-semibold"
                       }
                     >
                       {signedMmk(row.netMmk)}
                     </span>
-                    <span className="text-gray-400 text-sm">
+                    <span className="text-faint text-sm">
                       {isExpanded ? "▲" : "▼"}
                     </span>
                   </div>
@@ -323,7 +326,7 @@ export default function SettlePage() {
 
                 {/* Expanded ticket list */}
                 {isExpanded && (
-                  <div className="border-t px-3 pb-3">
+                  <div className="border-t border-border px-3 pb-3">
                     <div className="space-y-2 mt-2">
                       {row.tickets.map((t) => {
                         const fav =
@@ -370,12 +373,12 @@ export default function SettlePage() {
                             const feeLine =
                               fee !== 0 && board.feeSettings ? (
                                 fee < 0 ? (
-                                  <div className="text-orange-500">
+                                  <div className="text-gold">
                                     Commission −{mmk(Math.abs(fee))} (
                                     {board.feeSettings.commissionPct}%)
                                   </div>
                                 ) : (
-                                  <div className="text-blue-500">
+                                  <div className="text-us-neon">
                                     Discount +{mmk(fee)} (
                                     {board.feeSettings.discountPct}%)
                                   </div>
@@ -386,22 +389,20 @@ export default function SettlePage() {
                                 <div
                                   className={
                                     t.netMmk + fee >= 0
-                                      ? "text-green-600 font-semibold"
-                                      : "text-red-500 font-semibold"
+                                      ? "text-mx-neon font-semibold"
+                                      : "text-ca font-semibold"
                                   }
                                 >
                                   Net after fee: {signedMmk(t.netMmk + fee)}
                                 </div>
                               ) : null;
                             breakdown = (
-                              <div className="text-xs text-gray-400 mt-1 space-y-0.5 font-mono">
+                              <div className="text-xs text-faint mt-1 space-y-0.5 font-mono">
                                 <div>{bk.scoreLine}</div>
                                 <div>{bk.mathLine}</div>
                                 <div
                                   className={
-                                    bk.net >= 0
-                                      ? "text-green-600"
-                                      : "text-red-500"
+                                    bk.net >= 0 ? "text-mx-neon" : "text-ca"
                                   }
                                 >
                                   {bk.resultLine}
@@ -413,7 +414,7 @@ export default function SettlePage() {
                           }
                         } else if (t.status === "void") {
                           breakdown = (
-                            <div className="text-xs text-gray-400 mt-1 italic">
+                            <div className="text-xs text-faint mt-1 italic">
                               Voided
                             </div>
                           );
@@ -422,10 +423,10 @@ export default function SettlePage() {
                         return (
                           <div
                             key={t.ticketNo}
-                            className="text-sm flex items-start justify-between gap-2 border-b last:border-0 pb-2"
+                            className="text-sm flex items-start justify-between gap-2 border-b border-border last:border-0 pb-2"
                           >
                             <div className="flex-1 min-w-0">
-                              <div className="font-mono text-xs text-gray-500">
+                              <div className="font-mono text-xs text-muted">
                                 {t.ticketNo}
                               </div>
                               <div className="text-sm">
@@ -438,7 +439,7 @@ export default function SettlePage() {
                                 >
                                   {teamName(t.homeTeam)}
                                 </span>
-                                <span className="text-gray-400"> v </span>
+                                <span className="text-faint"> v </span>
                                 <span
                                   className={
                                     pickedTeam === t.awayTeam
@@ -449,8 +450,8 @@ export default function SettlePage() {
                                   {teamName(t.awayTeam)}
                                 </span>
                               </div>
-                              <div className="text-gray-600">{label}</div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-muted">{label}</div>
+                              <div className="text-xs text-muted">
                                 Stake: {mmk(t.stakeMmk)} · Net:{" "}
                                 {t.netMmk != null
                                   ? signedMmk(t.netMmk)
@@ -462,7 +463,7 @@ export default function SettlePage() {
                             <button
                               disabled={busy[voidKey] || t.settlementId != null}
                               onClick={() => voidTicket(t.ticketNo)}
-                              className="border border-red-300 text-red-600 text-xs px-2 py-0.5 rounded shrink-0 disabled:opacity-40"
+                              className="border border-ca text-ca text-xs px-2 py-0.5 rounded shrink-0 disabled:opacity-40"
                             >
                               Void
                             </button>
@@ -474,51 +475,49 @@ export default function SettlePage() {
                     {/* Settlement area */}
                     {isSettled ? (
                       /* Read-only settled payment detail */
-                      <div className="mt-3 rounded bg-green-50 border border-green-200 px-3 py-2 text-sm space-y-0.5">
-                        <div className="text-green-700 font-semibold text-xs uppercase tracking-wide mb-1">
+                      <div className="mt-3 rounded bg-mx/15 border border-mx/30 px-3 py-2 text-sm space-y-0.5">
+                        <div className="text-mx-neon font-semibold text-xs uppercase tracking-wide mb-1">
                           Settled · {row.ref}
                         </div>
                         {row.paymentMethod && (
-                          <div className="text-gray-700">
-                            <span className="text-gray-500 text-xs">
+                          <div className="text-ink">
+                            <span className="text-muted text-xs">
                               Payment method:
                             </span>{" "}
                             {row.paymentMethod}
                           </div>
                         )}
                         {row.paymentReference && (
-                          <div className="text-gray-700">
-                            <span className="text-gray-500 text-xs">Ref:</span>{" "}
+                          <div className="text-ink">
+                            <span className="text-muted text-xs">Ref:</span>{" "}
                             <span className="font-mono">
                               {row.paymentReference}
                             </span>
                           </div>
                         )}
                         {row.remark && (
-                          <div className="text-gray-700">
-                            <span className="text-gray-500 text-xs">
-                              Remark:
-                            </span>{" "}
+                          <div className="text-ink">
+                            <span className="text-muted text-xs">Remark:</span>{" "}
                             {row.remark}
                           </div>
                         )}
                         {!row.paymentMethod &&
                           !row.paymentReference &&
                           !row.remark && (
-                            <div className="text-gray-400 text-xs italic">
+                            <div className="text-faint text-xs italic">
                               No payment details recorded.
                             </div>
                           )}
                       </div>
                     ) : form ? (
                       /* Inline settle form */
-                      <div className="mt-3 rounded border border-gray-300 bg-gray-50 px-3 py-3 space-y-3">
-                        <div className="text-sm font-semibold text-gray-700">
+                      <div className="mt-3 rounded border border-border bg-raised px-3 py-3 space-y-3">
+                        <div className="text-sm font-semibold text-ink">
                           Record payment for {row.displayName}
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-muted mb-1">
                             Payment method
                           </label>
                           <input
@@ -532,7 +531,7 @@ export default function SettlePage() {
                               )
                             }
                             placeholder="e.g. Cash"
-                            className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                            className="w-full bg-raised border-border rounded px-2 py-1.5 text-sm text-ink placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-us"
                           />
                           <datalist id={`pm-list-${row.playerId}`}>
                             {PAYMENT_METHODS.map((m) => (
@@ -542,9 +541,9 @@ export default function SettlePage() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-muted mb-1">
                             Reference{" "}
-                            <span className="font-normal text-gray-400">
+                            <span className="font-normal text-faint">
                               (external payment ref, optional)
                             </span>
                           </label>
@@ -559,14 +558,14 @@ export default function SettlePage() {
                               )
                             }
                             placeholder="e.g. TXN123456"
-                            className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                            className="w-full bg-raised border-border rounded px-2 py-1.5 text-sm text-ink placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-us"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-muted mb-1">
                             Remark{" "}
-                            <span className="font-normal text-gray-400">
+                            <span className="font-normal text-faint">
                               (optional)
                             </span>
                           </label>
@@ -581,7 +580,7 @@ export default function SettlePage() {
                               )
                             }
                             placeholder="e.g. Paid in person"
-                            className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                            className="w-full bg-raised border-border rounded px-2 py-1.5 text-sm text-ink placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-us"
                           />
                         </div>
 
@@ -589,14 +588,14 @@ export default function SettlePage() {
                           <button
                             disabled={isBusy}
                             onClick={() => confirmSettle(row.playerId)}
-                            className="flex-1 bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded disabled:opacity-50 hover:bg-green-700 active:bg-green-800"
+                            className="flex-1 bg-mx text-white text-sm font-semibold px-4 py-2 rounded disabled:opacity-50 hover:bg-mx/90 active:bg-mx/80"
                           >
                             {isBusy ? "Settling…" : `Confirm ${actionLabel}`}
                           </button>
                           <button
                             disabled={isBusy}
                             onClick={() => closeSettleForm(row.playerId)}
-                            className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                            className="px-4 py-2 text-sm rounded border border-border bg-raised text-ink hover:bg-surface-2 disabled:opacity-50"
                           >
                             Cancel
                           </button>
@@ -607,7 +606,7 @@ export default function SettlePage() {
                       <button
                         disabled={isBusy}
                         onClick={() => openSettleForm(row.playerId)}
-                        className="mt-3 bg-green-600 text-white text-sm font-semibold px-3 py-2 rounded disabled:opacity-50 w-full hover:bg-green-700 active:bg-green-800"
+                        className="mt-3 bg-mx text-white text-sm font-semibold px-3 py-2 rounded disabled:opacity-50 w-full hover:bg-mx/90 active:bg-mx/80"
                       >
                         {actionLabel}
                       </button>

@@ -125,9 +125,9 @@ type BalancesReport = {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function netColor(n: number) {
-  if (n > 0) return "text-green-700 font-semibold";
-  if (n < 0) return "text-red-600 font-semibold";
-  return "text-gray-500";
+  if (n > 0) return "text-mx-neon font-semibold";
+  if (n < 0) return "text-ca font-semibold";
+  return "text-muted";
 }
 
 function NetCell({ n }: { n: number }) {
@@ -394,8 +394,8 @@ export default function ReportsPage() {
             }}
             className={`px-3 py-1 rounded text-sm font-medium border ${
               tab === t.id
-                ? "bg-ink text-white border-ink"
-                : "border-gray-300 text-gray-600 hover:border-gray-500"
+                ? "bg-us text-white border-us"
+                : "border-border text-muted hover:border-faint"
             }`}
           >
             {t.label}
@@ -407,9 +407,9 @@ export default function ReportsPage() {
       <div className="flex flex-wrap gap-3 items-end mb-4">
         {tab === "player" && (
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Player</label>
+            <label className="text-xs text-muted">Player</label>
             <select
-              className="border rounded px-2 py-1 text-sm"
+              className="bg-raised border-border rounded px-2 py-1 text-sm text-ink placeholder:text-faint"
               value={playerId}
               onChange={(e) =>
                 setPlayerId(e.target.value ? parseInt(e.target.value, 10) : "")
@@ -428,19 +428,19 @@ export default function ReportsPage() {
         {tab !== "balances" && (
           <>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">From</label>
+              <label className="text-xs text-muted">From</label>
               <input
                 type="date"
-                className="border rounded px-2 py-1 text-sm"
+                className="bg-raised border-border rounded px-2 py-1 text-sm text-ink placeholder:text-faint"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">To</label>
+              <label className="text-xs text-muted">To</label>
               <input
                 type="date"
-                className="border rounded px-2 py-1 text-sm"
+                className="bg-raised border-border rounded px-2 py-1 text-sm text-ink placeholder:text-faint"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
               />
@@ -451,13 +451,13 @@ export default function ReportsPage() {
         <button
           onClick={runReport}
           disabled={loading}
-          className="bg-ink text-white text-sm px-4 py-1.5 rounded disabled:opacity-50"
+          className="bg-us text-white text-sm px-4 py-1.5 rounded disabled:opacity-50"
         >
           {loading ? "Loading…" : "Run"}
         </button>
       </div>
 
-      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      {error && <p className="text-ca text-sm mb-3">{error}</p>}
 
       {/* ── Player Statement ── */}
       {tab === "player" && playerReport && (
@@ -473,8 +473,11 @@ export default function ReportsPage() {
                 ["Unsettled", playerReport.summary.unsettledNet],
               ] as [string, number][]
             ).map(([label, val]) => (
-              <div key={label} className="border rounded px-3 py-2">
-                <div className="text-xs text-gray-500">{label}</div>
+              <div
+                key={label}
+                className="border border-border rounded px-3 py-2"
+              >
+                <div className="text-xs text-muted">{label}</div>
                 <div className={netColor(val)}>{signedMmk(val)}</div>
               </div>
             ))}
@@ -486,7 +489,7 @@ export default function ReportsPage() {
             </h2>
             <button
               onClick={downloadPlayerCsv}
-              className="text-xs border rounded px-2 py-0.5 text-gray-600 hover:text-gray-900"
+              className="text-xs border border-border rounded px-2 py-0.5 text-muted hover:text-ink"
             >
               Download CSV
             </button>
@@ -495,7 +498,7 @@ export default function ReportsPage() {
           <div className="overflow-x-auto text-xs">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b text-left text-gray-500">
+                <tr className="border-b border-border text-left text-muted">
                   <th className="py-1 pr-2">Ticket</th>
                   <th className="py-1 pr-2">Day</th>
                   <th className="py-1 pr-2">Match</th>
@@ -510,7 +513,10 @@ export default function ReportsPage() {
               </thead>
               <tbody>
                 {playerReport.bets.map((b) => (
-                  <tr key={b.ticketNo} className="border-b last:border-0">
+                  <tr
+                    key={b.ticketNo}
+                    className="border-b border-border last:border-0"
+                  >
                     <td className="py-1 pr-2 font-mono">{b.ticketNo}</td>
                     <td className="py-1 pr-2">{b.matchDay}</td>
                     <td className="py-1 pr-2">
@@ -525,20 +531,18 @@ export default function ReportsPage() {
                     <td className="py-1 pr-2 text-right">
                       {b.fee !== 0 ? (
                         <span
-                          className={
-                            b.fee < 0 ? "text-orange-600" : "text-blue-600"
-                          }
+                          className={b.fee < 0 ? "text-gold" : "text-us-neon"}
                         >
                           {signedMmk(b.fee)}
                         </span>
                       ) : (
-                        <span className="text-gray-400">0</span>
+                        <span className="text-faint">0</span>
                       )}
                     </td>
                     <td className="py-1 pr-2 text-right">
                       <NetCell n={b.net} />
                     </td>
-                    <td className="py-1 pr-2 text-gray-500">
+                    <td className="py-1 pr-2 text-muted">
                       {b.settlementRef ?? "—"}
                     </td>
                   </tr>
@@ -553,14 +557,14 @@ export default function ReportsPage() {
                 <h2 className="font-semibold text-sm">Settlements</h2>
                 <button
                   onClick={downloadPlayerSettlementsCsv}
-                  className="text-xs border rounded px-2 py-0.5 text-gray-600 hover:text-gray-900"
+                  className="text-xs border border-border rounded px-2 py-0.5 text-muted hover:text-ink"
                 >
                   Download CSV
                 </button>
               </div>
               <table className="w-full border-collapse text-xs">
                 <thead>
-                  <tr className="border-b text-left text-gray-500">
+                  <tr className="border-b border-border text-left text-muted">
                     <th className="py-1 pr-2">Ref</th>
                     <th className="py-1 pr-2">Match Day</th>
                     <th className="py-1 pr-2 text-right">Net MMK</th>
@@ -572,18 +576,21 @@ export default function ReportsPage() {
                 </thead>
                 <tbody>
                   {playerReport.settlements.map((s) => (
-                    <tr key={s.ref} className="border-b last:border-0">
+                    <tr
+                      key={s.ref}
+                      className="border-b border-border last:border-0"
+                    >
                       <td className="py-1 pr-2 font-mono">{s.ref}</td>
                       <td className="py-1 pr-2">{s.matchDay}</td>
                       <td className="py-1 pr-2 text-right">
                         <NetCell n={s.netMmk} />
                       </td>
-                      <td className="py-1 pr-2 text-gray-500">{s.markedAt}</td>
+                      <td className="py-1 pr-2 text-muted">{s.markedAt}</td>
                       <td className="py-1 pr-2">{s.paymentMethod ?? "—"}</td>
                       <td className="py-1 pr-2 font-mono">
                         {s.paymentReference ?? "—"}
                       </td>
-                      <td className="py-1 pr-2 text-gray-600">
+                      <td className="py-1 pr-2 text-muted">
                         {s.remark ?? "—"}
                       </td>
                     </tr>
@@ -604,7 +611,7 @@ export default function ReportsPage() {
             </h2>
             <button
               onClick={downloadDailyCsv}
-              className="text-xs border rounded px-2 py-0.5 text-gray-600 hover:text-gray-900"
+              className="text-xs border border-border rounded px-2 py-0.5 text-muted hover:text-ink"
             >
               Download CSV
             </button>
@@ -613,7 +620,7 @@ export default function ReportsPage() {
           <div className="overflow-x-auto text-xs">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b text-left text-gray-500">
+                <tr className="border-b border-border text-left text-muted">
                   <th className="py-1 pr-2">Day</th>
                   <th className="py-1 pr-2">Player</th>
                   <th className="py-1 pr-2 text-right">Tickets</th>
@@ -655,12 +662,12 @@ export default function ReportsPage() {
                           </td>
                           <td className="py-1 pr-2">
                             {r.settled ? (
-                              <span className="text-green-600">Y</span>
+                              <span className="text-mx-neon">Y</span>
                             ) : (
-                              <span className="text-gray-400">N</span>
+                              <span className="text-faint">N</span>
                             )}
                           </td>
-                          <td className="py-1 pr-2 text-gray-500">
+                          <td className="py-1 pr-2 text-muted">
                             {r.ref ?? "—"}
                           </td>
                           <td className="py-1 pr-2">
@@ -669,7 +676,7 @@ export default function ReportsPage() {
                           <td className="py-1 pr-2 font-mono">
                             {r.paymentReference ?? "—"}
                           </td>
-                          <td className="py-1 pr-2 text-gray-600">
+                          <td className="py-1 pr-2 text-muted">
                             {r.remark ?? "—"}
                           </td>
                         </tr>
@@ -677,10 +684,10 @@ export default function ReportsPage() {
                       dt ? (
                         <tr
                           key={`total-${day}`}
-                          className="bg-gray-50 font-semibold border-b-2"
+                          className="bg-raised font-semibold border-b-2 border-border"
                         >
                           <td className="py-1 pr-2">{day}</td>
-                          <td className="py-1 pr-2 text-gray-500 italic">
+                          <td className="py-1 pr-2 text-muted italic">
                             House position
                           </td>
                           <td className="py-1 pr-2" />
@@ -695,7 +702,7 @@ export default function ReportsPage() {
                 })()}
               </tbody>
               <tfoot>
-                <tr className="bg-gray-100 font-bold">
+                <tr className="bg-surface-2 font-bold">
                   <td colSpan={2} className="py-1 pr-2">
                     Grand Total
                   </td>
@@ -707,8 +714,8 @@ export default function ReportsPage() {
                   </td>
                   <td colSpan={5} />
                 </tr>
-                <tr className="bg-gray-100 font-bold">
-                  <td colSpan={2} className="py-1 pr-2 text-gray-500 italic">
+                <tr className="bg-surface-2 font-bold">
+                  <td colSpan={2} className="py-1 pr-2 text-muted italic">
                     House Grand Total
                   </td>
                   <td />
@@ -732,7 +739,7 @@ export default function ReportsPage() {
             </h2>
             <button
               onClick={downloadPnlCsv}
-              className="text-xs border rounded px-2 py-0.5 text-gray-600 hover:text-gray-900"
+              className="text-xs border border-border rounded px-2 py-0.5 text-muted hover:text-ink"
             >
               Download CSV
             </button>
@@ -752,8 +759,11 @@ export default function ReportsPage() {
                 ["House Net", pnlReport.houseNet, true],
               ] as [string, number, boolean][]
             ).map(([label, val, signed]) => (
-              <div key={label} className="border rounded px-3 py-2">
-                <div className="text-xs text-gray-500">{label}</div>
+              <div
+                key={label}
+                className="border border-border rounded px-3 py-2"
+              >
+                <div className="text-xs text-muted">{label}</div>
                 {signed ? (
                   <div className={netColor(val)}>{signedMmk(val)}</div>
                 ) : (
@@ -774,27 +784,27 @@ export default function ReportsPage() {
             </h2>
             <button
               onClick={downloadBalancesCsv}
-              className="text-xs border rounded px-2 py-0.5 text-gray-600 hover:text-gray-900"
+              className="text-xs border border-border rounded px-2 py-0.5 text-muted hover:text-ink"
             >
               Download CSV
             </button>
           </div>
 
           <div className="flex flex-wrap gap-4 mb-3 text-sm">
-            <div className="border rounded px-3 py-2">
-              <div className="text-xs text-gray-500">To Pay</div>
-              <div className="text-green-700 font-semibold">
+            <div className="border border-border rounded px-3 py-2">
+              <div className="text-xs text-muted">To Pay</div>
+              <div className="text-mx-neon font-semibold">
                 {mmk(balancesReport.totals.totalToPay)}
               </div>
             </div>
-            <div className="border rounded px-3 py-2">
-              <div className="text-xs text-gray-500">To Collect</div>
-              <div className="text-red-600 font-semibold">
+            <div className="border border-border rounded px-3 py-2">
+              <div className="text-xs text-muted">To Collect</div>
+              <div className="text-ca font-semibold">
                 {mmk(balancesReport.totals.totalToCollect)}
               </div>
             </div>
-            <div className="border rounded px-3 py-2">
-              <div className="text-xs text-gray-500">Settled Total</div>
+            <div className="border border-border rounded px-3 py-2">
+              <div className="text-xs text-muted">Settled Total</div>
               <div className={netColor(balancesReport.totals.totalSettled)}>
                 {signedMmk(balancesReport.totals.totalSettled)}
               </div>
@@ -804,7 +814,7 @@ export default function ReportsPage() {
           <div className="overflow-x-auto text-xs">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b text-left text-gray-500">
+                <tr className="border-b border-border text-left text-muted">
                   <th className="py-1 pr-2">Player</th>
                   <th className="py-1 pr-2 text-right">Unsettled Net</th>
                   <th className="py-1 pr-2">Direction</th>
@@ -813,22 +823,25 @@ export default function ReportsPage() {
               </thead>
               <tbody>
                 {balancesReport.rows.map((r) => (
-                  <tr key={r.playerId} className="border-b last:border-0">
+                  <tr
+                    key={r.playerId}
+                    className="border-b border-border last:border-0"
+                  >
                     <td className="py-1 pr-2 font-medium">{r.playerName}</td>
                     <td className="py-1 pr-2 text-right">
                       <NetCell n={r.unsettledNet} />
                     </td>
                     <td className="py-1 pr-2">
                       {r.unsettledNet > 0 ? (
-                        <span className="text-green-700 font-semibold text-xs uppercase">
+                        <span className="text-mx-neon font-semibold text-xs uppercase">
                           Pay
                         </span>
                       ) : r.unsettledNet < 0 ? (
-                        <span className="text-red-600 font-semibold text-xs uppercase">
+                        <span className="text-ca font-semibold text-xs uppercase">
                           Collect
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-xs">Even</span>
+                        <span className="text-faint text-xs">Even</span>
                       )}
                     </td>
                     <td className="py-1 pr-2 text-right">
@@ -848,7 +861,7 @@ export default function ReportsPage() {
         !pnlReport &&
         !balancesReport &&
         !error && (
-          <p className="text-gray-400 text-sm">
+          <p className="text-faint text-sm">
             Set filters and click Run to generate the report.
           </p>
         )}

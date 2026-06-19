@@ -1029,3 +1029,274 @@ it("recordBet succeeds on a live match (admin path bypasses started gate)", asyn
   expect(bet2.scoreHomeAtBet).toBe(1);
   expect(bet2.scoreAwayAtBet).toBe(0);
 });
+
+// ── USER TIERS & LIMITS (Task 2 — MONEY CORE) ────────────────────────────────
+
+it("standard tier: rejects a bet over the per-bet cap", async () => {
+  const m = await seedMatch(db);
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  await expect(
+    placeBet(
+      db,
+      2,
+      {
+        matchId: m.id,
+        market: "ah",
+        lineVersion: line.version,
+        side: "fav",
+        stakeMmk: 600_000,
+      },
+      NOW,
+    ),
+  ).rejects.toThrow(/per bet/i);
+});
+
+it("standard tier: rejects when outstanding cap would be exceeded", async () => {
+  const m = await seedMatch(db);
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  await placeBet(
+    db,
+    2,
+    {
+      matchId: m.id,
+      market: "ah",
+      lineVersion: line.version,
+      side: "fav",
+      stakeMmk: 500_000,
+    },
+    NOW,
+  );
+  const m2 = await seedMatch(db, { homeTeam: "ARG", awayTeam: "GER" });
+  const l2 = await postLine(
+    db,
+    1,
+    {
+      matchId: m2.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  await placeBet(
+    db,
+    2,
+    {
+      matchId: m2.id,
+      market: "ah",
+      lineVersion: l2.version,
+      side: "fav",
+      stakeMmk: 500_000,
+    },
+    NOW,
+  );
+  const m3 = await seedMatch(db, { homeTeam: "FRA", awayTeam: "ESP" });
+  const l3 = await postLine(
+    db,
+    1,
+    {
+      matchId: m3.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  await expect(
+    placeBet(
+      db,
+      2,
+      {
+        matchId: m3.id,
+        market: "ah",
+        lineVersion: l3.version,
+        side: "fav",
+        stakeMmk: 10_000,
+      },
+      NOW,
+    ),
+  ).rejects.toThrow(/open bets/i);
+});
+
+it("standard tier: rejects more than max bets per match", async () => {
+  const m = await seedMatch(db);
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  await placeBet(
+    db,
+    2,
+    {
+      matchId: m.id,
+      market: "ah",
+      lineVersion: line.version,
+      side: "fav",
+      stakeMmk: 50_000,
+    },
+    NOW,
+  );
+  await placeBet(
+    db,
+    2,
+    {
+      matchId: m.id,
+      market: "ah",
+      lineVersion: line.version,
+      side: "dog",
+      stakeMmk: 50_000,
+    },
+    NOW,
+  );
+  await expect(
+    placeBet(
+      db,
+      2,
+      {
+        matchId: m.id,
+        market: "ah",
+        lineVersion: line.version,
+        side: "fav",
+        stakeMmk: 50_000,
+      },
+      NOW,
+    ),
+  ).rejects.toThrow(/per match/i);
+});
+
+it("pro tier: bypasses per-bet and outstanding caps", async () => {
+  await db
+    .update(schema.players)
+    .set({ tier: "pro" })
+    .where(eq(schema.players.id, 2));
+  const m = await seedMatch(db);
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  const bet = await placeBet(
+    db,
+    2,
+    {
+      matchId: m.id,
+      market: "ah",
+      lineVersion: line.version,
+      side: "fav",
+      stakeMmk: 5_000_000,
+    },
+    NOW,
+  );
+  expect(bet.stakeMmk).toBe(5_000_000);
+});
+
+it("recordBet bypasses tier caps", async () => {
+  const m = await seedMatch(db);
+  await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  const bet = await recordBet(
+    db,
+    1,
+    {
+      playerId: 2,
+      matchId: m.id,
+      market: "ah",
+      side: "fav",
+      stakeMmk: 9_000_000,
+    },
+    NOW,
+  );
+  expect(bet.stakeMmk).toBe(9_000_000);
+});
+
+it("pro still bound by the house daily pool", async () => {
+  await db
+    .update(schema.players)
+    .set({ tier: "pro" })
+    .where(eq(schema.players.id, 2));
+  await db.update(schema.settings).set({ dailyTotalLimitMmk: 300_000 });
+  const m = await seedMatch(db);
+  const line = await postLine(
+    db,
+    1,
+    {
+      matchId: m.id,
+      market: "ah",
+      favSide: "home",
+      ballQ: 3,
+      priceC: 92,
+      priceOppC: -98,
+    },
+    NOW,
+  );
+  await expect(
+    placeBet(
+      db,
+      2,
+      {
+        matchId: m.id,
+        market: "ah",
+        lineVersion: line.version,
+        side: "fav",
+        stakeMmk: 400_000,
+      },
+      NOW,
+    ),
+  ).rejects.toThrow(/house can accept/i);
+});

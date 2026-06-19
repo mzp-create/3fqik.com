@@ -175,6 +175,64 @@ export async function placeBet(
       }
     }
 
+    // Per-user tier caps — standard only. Pro bypasses; house limits above
+    // already applied to everyone. recordBet() does not run this block.
+    const [bettor] = await tx
+      .select({ tier: schema.players.tier })
+      .from(schema.players)
+      .where(eq(schema.players.id, playerId));
+    if (bettor?.tier !== "pro") {
+      const [cfg2] = await tx.select().from(schema.settings);
+      const maxStake = cfg2?.stdMaxStakeMmk ?? 500_000;
+      const maxOutstanding = cfg2?.stdOutstandingMmk ?? 1_000_000;
+      const maxPerMatch = cfg2?.stdMaxBetsPerMatch ?? 2;
+      if (input.stakeMmk > maxStake)
+        throw err(
+          `max ${fmt(maxStake)} MMK per bet for your account`,
+          400,
+          "tier_bet_limit",
+          { maxMmk: maxStake },
+        );
+      const [pend] = await tx
+        .select({
+          s: sql<number>`coalesce(sum(${schema.bets.stakeMmk}), 0)`.mapWith(
+            Number,
+          ),
+        })
+        .from(schema.bets)
+        .where(
+          and(
+            eq(schema.bets.playerId, playerId),
+            eq(schema.bets.status, "pending"),
+          ),
+        );
+      const remaining = maxOutstanding - pend.s;
+      if (input.stakeMmk > remaining)
+        throw err(
+          `you can place only ${fmt(Math.max(remaining, 0))} MMK more in open bets`,
+          409,
+          "tier_outstanding_limit",
+          { remainingMmk: Math.max(remaining, 0) },
+        );
+      const [cnt] = await tx
+        .select({ c: sql<number>`count(*)`.mapWith(Number) })
+        .from(schema.bets)
+        .where(
+          and(
+            eq(schema.bets.playerId, playerId),
+            eq(schema.bets.matchId, match.id),
+            ne(schema.bets.status, "void"),
+          ),
+        );
+      if (cnt.c >= maxPerMatch)
+        throw err(
+          `max ${maxPerMatch} bets per match for your account`,
+          409,
+          "tier_match_bets",
+          { maxBets: maxPerMatch },
+        );
+    }
+
     const rest = {
       playerId,
       matchId: match.id,

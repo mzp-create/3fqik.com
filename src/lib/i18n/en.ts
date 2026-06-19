@@ -76,6 +76,8 @@ export const en = {
   copied: "Copied!",
   invitesUsed: "{used} of {max} invites used",
   friendsInvited: "You invited {n} friends",
+  shareInvite: "Share invite",
+  inviteShareMsg: "Join me on 3fqik — bet on the 2026 World Cup!",
   outNarrowMiss: "Narrow miss",
   outNarrowMissRange: "−¼ to −¾ stake",
   outClearMiss: "Clear miss",

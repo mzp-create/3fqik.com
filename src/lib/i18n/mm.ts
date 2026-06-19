@@ -82,6 +82,8 @@ export const mm: Dict = {
   copied: "ကူးယူပြီး!",
   invitesUsed: "ဖိတ်ကြားမှု {max} ခုမှ {used} ခု သုံးပြီး",
   friendsInvited: "သင် {n} ယောက်ကို ဖိတ်ကြားပြီး",
+  shareInvite: "ဖိတ်ကြားစာ မျှဝေမည်",
+  inviteShareMsg: "3fqik မှာ ကျွန်တော်နဲ့အတူ ၂၀၂၆ ကမ္ဘာ့ဖလား လောင်းကစားပါ!",
   outNarrowMiss: "နည်းနည်းလွဲ",
   outNarrowMissRange: "−¼ မှ −¾ လောင်းငွေ",
   outClearMiss: "လုံးဝလွဲ",

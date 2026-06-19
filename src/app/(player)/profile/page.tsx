@@ -107,6 +107,24 @@ export default function ProfilePage() {
     navigator.clipboard.writeText(invite.link).then(flash).catch(fallback);
   }
 
+  // Native share sheet (WhatsApp, Viber, Telegram, SMS, …); falls back to copy.
+  async function handleShare() {
+    if (!invite) return;
+    if (!navigator.share) {
+      handleCopy();
+      return;
+    }
+    try {
+      await navigator.share({
+        title: t.appName,
+        text: t.inviteShareMsg,
+        url: invite.link,
+      });
+    } catch {
+      // user dismissed the share sheet, or share unavailable — no-op
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-sm p-6">
       {/* Section header */}
@@ -199,6 +217,12 @@ export default function ProfilePage() {
               <p className="font-semibold text-ink">{t.inviteFriends}</p>
             </div>
             <p className="mb-2 text-sm text-muted">{t.inviteLink}</p>
+            <button
+              className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg bg-mx p-4 text-base font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+              onClick={handleShare}
+            >
+              📤 {t.shareInvite}
+            </button>
             <div className="flex gap-2">
               <input
                 className="min-w-0 flex-1 rounded-lg border border-border bg-raised p-4 text-base text-ink placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"

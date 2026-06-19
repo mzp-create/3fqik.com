@@ -5,7 +5,7 @@ import { api } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 
 export function RegisterForm({ code }: { code: string }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const router = useRouter();
   const [form, setForm] = useState({
     phone: "",
@@ -34,6 +34,7 @@ export function RegisterForm({ code }: { code: string }) {
         phone: form.phone,
         name: form.name,
         pin: form.pin,
+        language: lang,
       });
       router.push("/");
     } catch (e) {

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
-import { I18nProvider } from "@/lib/i18n";
 import { RegisterForm } from "@/components/RegisterForm";
 
 export default async function RegisterPage({
@@ -52,9 +51,5 @@ export default async function RegisterPage({
     redirect("/invite-only");
   }
 
-  return (
-    <I18nProvider initial="en">
-      <RegisterForm code={code!} />
-    </I18nProvider>
-  );
+  return <RegisterForm code={code!} />;
 }

@@ -21,7 +21,13 @@ function err(message: string, httpStatus: number, code = "error") {
 
 export async function registerPlayer(
   db: Db,
-  input: { code: string; phone: string; name: string; pin: string },
+  input: {
+    code: string;
+    phone: string;
+    name: string;
+    pin: string;
+    language?: string;
+  },
   nowIso: string,
 ) {
   if (
@@ -33,6 +39,7 @@ export async function registerPlayer(
     throw err("invalid input", 400, "bad_input");
 
   const phone = normalizePhone(input.phone);
+  const language: "en" | "mm" = input.language === "mm" ? "mm" : "en";
 
   return db.transaction(async (tx) => {
     const [code] = await tx
@@ -59,6 +66,7 @@ export async function registerPlayer(
         phone,
         pinHash,
         displayName: input.name.trim(),
+        language,
         createdAt: nowIso,
         referredBy: code.createdBy,
       })

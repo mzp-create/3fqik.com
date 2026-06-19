@@ -4,7 +4,13 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useSse } from "@/lib/client/useSse";
 import { useT } from "@/lib/i18n";
-import { mmk, ball, priceSigned, winNeed } from "@/lib/client/format";
+import {
+  mmk,
+  ball,
+  priceSigned,
+  winNeed,
+  matchStarted,
+} from "@/lib/client/format";
 import { flag, teamName, teamLabel } from "@/lib/client/flags";
 import { errMsg } from "@/lib/client/errMsg";
 import type { MatchRow, LineRow } from "@/components/MatchCard";
@@ -134,6 +140,8 @@ function BetPageInner() {
   const fav = line.favSide === "home" ? m.homeTeam : m.awayTeam;
   const dog = line.favSide === "home" ? m.awayTeam : m.homeTeam;
   const suspended = line.status === "suspended";
+  // Betting is closed once the match has started (mirrors the server guard).
+  const started = matchStarted(m);
 
   // The two outcomes for this market — Polymarket-style pick-a-side.
   const outcomes: {
@@ -174,7 +182,7 @@ function BetPageInner() {
 
   const selPrice = sidePrice(line, side);
   const p = selPrice != null ? preview(stake, selPrice, line.ballQ) : null;
-  const valid = stake >= 10_000 && selPrice != null && !suspended;
+  const valid = stake >= 10_000 && selPrice != null && !suspended && !started;
   const pickWord = outcomes.find((o) => o.side === side);
   const pickText = pickWord ? `${pickWord.label} ${pickWord.sub}` : "";
   // Plain-language "what result wins this bet" for the selected side.
@@ -187,23 +195,44 @@ function BetPageInner() {
     live: m.status === "live",
   });
 
+  // Match header — make "which match" unmissable. Shared by the betting view
+  // and the started/closed view below.
+  const header = (
+    <div className="mt-2 rounded-xl border border-border bg-surface px-3 py-3 text-center">
+      <div className="text-lg font-semibold text-ink">
+        {flag(m.homeTeam)} {teamLabel(m.homeTeam)} vs {teamLabel(m.awayTeam)}{" "}
+        {flag(m.awayTeam)}
+      </div>
+      <div className="text-sm text-faint">{m.stage}</div>
+      {m.status === "live" && (
+        <div className="text-sm font-semibold text-ca">
+          {t.scoreNow}: {m.homeScore}–{m.awayScore} · {t.liveNote}
+        </div>
+      )}
+    </div>
+  );
+
+  // Match started → betting is closed. Show only the header + a clear notice;
+  // the confirm path is unreachable (also gated by `started` in `valid`).
+  if (started)
+    return (
+      <main className="min-h-screen bg-canvas p-4">
+        <BackBar onBack={() => router.back()} label={t.backToMatches} />
+        {header}
+        <div className="mt-4 rounded-xl border border-border bg-surface p-6 text-center">
+          <div className="text-3xl">⏸</div>
+          <p className="mt-2 font-display text-xl text-ink">
+            {t.matchStartedNote}
+          </p>
+        </div>
+      </main>
+    );
+
   return (
     <main className="min-h-screen bg-canvas p-4">
       <BackBar onBack={() => router.back()} label={t.backToMatches} />
 
-      {/* Match header — make "which match" unmissable */}
-      <div className="mt-2 rounded-xl border border-border bg-surface px-3 py-3 text-center">
-        <div className="text-lg font-semibold text-ink">
-          {flag(m.homeTeam)} {teamLabel(m.homeTeam)} vs {teamLabel(m.awayTeam)}{" "}
-          {flag(m.awayTeam)}
-        </div>
-        <div className="text-sm text-faint">{m.stage}</div>
-        {m.status === "live" && (
-          <div className="text-sm font-semibold text-ca">
-            {t.scoreNow}: {m.homeScore}–{m.awayScore} · {t.liveNote}
-          </div>
-        )}
-      </div>
+      {header}
 
       {/* Pick a side — two big, clear outcome buttons */}
       <p className="mt-4 text-base text-muted">{t.betBacking}</p>

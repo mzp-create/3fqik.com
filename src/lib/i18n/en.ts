@@ -34,6 +34,7 @@ export const en = {
   backToMatches: "Back",
   betPageTitle: "Place your bet",
   winIf: "You win if",
+  matchStartedNote: "Betting closed — match started",
   player: "Player",
   match: "Match",
   pick: "Pick",

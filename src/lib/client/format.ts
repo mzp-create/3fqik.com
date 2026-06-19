@@ -7,6 +7,17 @@ export const price = (c: number) => (c / 100).toFixed(2);
 export const priceSigned = (c: number) =>
   (c > 0 ? "+" : "−") + (Math.abs(c) / 100).toFixed(2);
 
+/** A match is "started" (betting closed) once it is live/finished OR its kickoff
+ *  time has passed. Mirrors the server-side placement guard. */
+export function matchStarted(m: {
+  status: string;
+  kickoffUtc: string;
+}): boolean {
+  return (
+    m.status !== "scheduled" || new Date(m.kickoffUtc).getTime() <= Date.now()
+  );
+}
+
 /** Today's date in Myanmar Time (MMT, UTC+6:30), formatted YYYY-MM-DD. */
 export function todayMmt(): string {
   return new Intl.DateTimeFormat("en-CA", {

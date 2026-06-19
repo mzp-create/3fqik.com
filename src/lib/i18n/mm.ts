@@ -39,6 +39,7 @@ export const mm: Dict = {
   backToMatches: "နောက်သို့",
   betPageTitle: "လောင်းကြေးထည့်ပါ",
   winIf: "အနိုင်ရရန်",
+  matchStartedNote: "လောင်းကြေးပိတ်သည် — ပွဲစတင်ပြီ",
   player: "ကစားသမား",
   match: "ပွဲစဉ်",
   pick: "ရွေးချယ်မှု",

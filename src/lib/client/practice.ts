@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { gradeBet, type GradeInput } from "@/lib/engine/grade";
 
 /** Starting demo bankroll, in demo MMK. */
@@ -96,38 +96,54 @@ export function usePractice() {
   // setState-in-effect (SSR returns the empty default; client reads storage).
   const [state, setState] = useState<PracticeState>(loadState);
 
-  // Persist on every change (no setState here).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
-
-  const placeDemo = useCallback((input: PlaceInput) => {
-    setState((prev) => ({
-      ...prev,
-      bets: [
-        ...prev.bets,
-        {
-          ...input,
-          id: newId(),
-          ts: Date.now(),
-          status: "pending",
-          netMmk: null,
-          simHome: null,
-          simAway: null,
-        },
-      ],
-    }));
+  // Persist SYNCHRONOUSLY to localStorage, then update React state. The bet
+  // page writes a demo bet then immediately navigates to /practice; a
+  // useEffect-based persist would not flush before the board remounts and
+  // re-reads localStorage (which is why test bets appeared to vanish). Actions
+  // read the freshest state back from localStorage (`loadState`) rather than a
+  // render-time ref, so the persisted store is always the source of truth.
+  const persist = useCallback((next: PracticeState) => {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // storage may be unavailable (private mode / quota) — ignore
+      }
+    }
+    setState(next);
   }, []);
 
-  const simulate = useCallback((id: string) => {
-    setState((prev) => {
+  const placeDemo = useCallback(
+    (input: PlaceInput) => {
+      const prev = loadState();
+      persist({
+        ...prev,
+        bets: [
+          ...prev.bets,
+          {
+            ...input,
+            id: newId(),
+            ts: Date.now(),
+            status: "pending",
+            netMmk: null,
+            simHome: null,
+            simAway: null,
+          },
+        ],
+      });
+    },
+    [persist],
+  );
+
+  const simulate = useCallback(
+    (id: string) => {
+      const prev = loadState();
       const bet = prev.bets.find((b) => b.id === id);
-      if (!bet || bet.status !== "pending") return prev;
+      if (!bet || bet.status !== "pending") return;
       const home = Math.floor(Math.random() * 5); // 0..4
       const away = Math.floor(Math.random() * 5); // 0..4
       const result = resolveDemo(bet, home, away);
-      return {
+      persist({
         balanceMmk: applyResult(prev.balanceMmk, result),
         bets: prev.bets.map((b) =>
           b.id === id
@@ -140,13 +156,14 @@ export function usePractice() {
               }
             : b,
         ),
-      };
-    });
-  }, []);
+      });
+    },
+    [persist],
+  );
 
   const reset = useCallback(() => {
-    setState({ balanceMmk: START_BALANCE, bets: [] });
-  }, []);
+    persist({ balanceMmk: START_BALANCE, bets: [] });
+  }, [persist]);
 
   const inPlayMmk = state.bets.reduce(
     (sum, b) => (b.status === "pending" ? sum + b.stakeMmk : sum),

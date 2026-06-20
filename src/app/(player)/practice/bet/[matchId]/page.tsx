@@ -344,7 +344,7 @@ function PracticeBetInner() {
       <button
         disabled={!valid || busy}
         className={`w-full rounded-lg p-5 text-xl font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us disabled:opacity-40 ${
-          armed ? "bg-ca" : "bg-mx"
+          armed ? "bg-mx" : "bg-us"
         }`}
         onClick={onButton}
       >

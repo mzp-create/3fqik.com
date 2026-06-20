@@ -119,7 +119,7 @@ export const en = {
   ifPush: "If exact — stake back",
   ifLose: "If you lose",
   placeBtn: "Place {n} MMK",
-  placeConfirm: "Tap again to place {n} MMK",
+  placeConfirm: "Confirm bet — {n} MMK",
   placeReview: "Confirm: {pick}",
   minStakeNote: "Enter at least 10,000 MMK",
   menuProfile: "Profile & settings",

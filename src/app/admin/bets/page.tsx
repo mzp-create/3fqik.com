@@ -553,8 +553,7 @@ export default function BetsPage() {
                         const voidKey = `void-${t.ticketNo}`;
                         const canVoid =
                           t.status !== "void" &&
-                          t.settlementId == null &&
-                          t.matchStatus === "finished";
+                          t.settlementId == null;
                         const voidDisabledReason =
                           t.status === "void"
                             ? "voided"

@@ -126,7 +126,7 @@ export const mm: Dict = {
   ifPush: "ညီမျှလျှင် — ထိုးငွေပြန်ရ",
   ifLose: "ရှုံးလျှင်",
   placeBtn: "{n} MMK ထိုးမည်",
-  placeConfirm: "{n} MMK ထိုးရန် ထပ်နှိပ်ပါ",
+  placeConfirm: "လောင်းကြေး အတည်ပြု — {n} MMK",
   placeReview: "အတည်ပြု — {pick}",
   minStakeNote: "အနည်းဆုံး ၁၀,၀၀၀ MMK ထည့်ပါ",
   menuProfile: "ပရိုဖိုင်နှင့် ဆက်တင်",

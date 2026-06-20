@@ -37,7 +37,6 @@ export default function ScoresPage() {
         const relevant = ms.filter(
           (m) =>
             m.status === "live" ||
-            m.status === "finished" ||
             // today's matches AND any overdue ones still awaiting a score
             (m.status === "scheduled" && m.matchDay <= today),
         );
@@ -165,7 +164,6 @@ export default function ScoresPage() {
     : matches.filter(
         (m) =>
           m.status === "live" ||
-          m.status === "finished" ||
           // today's matches AND any overdue ones still awaiting a score
           (m.status === "scheduled" && m.matchDay <= today),
       );

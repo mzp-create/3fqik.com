@@ -126,7 +126,7 @@ export function InstallBanner() {
       <div className="flex-shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/icon-192.png"
+          src="/icon-192-v2.png"
           alt="3fqik26"
           width={44}
           height={44}

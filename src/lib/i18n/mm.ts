@@ -167,6 +167,13 @@ export const mm: Dict = {
   obInstallAndroid: "အက်ပ်ထည့်မည်",
   obInstallIosSteps:
     "Safari တွင်: Share ကိုနှိပ်ပြီး 'Add to Home Screen' ကိုရွေးပါ။",
+  obInstallIosStep1: "Safari အောက်ခြေရှိ Share ခလုတ်ကို နှိပ်ပါ",
+  obInstallIosStep2: "အောက်သို့ဆွဲချပြီး 'Add to Home Screen' ကိုရွေးပါ။",
+  obInstallIosStep3:
+    "'Add' ကိုနှိပ်ပါ — ထို့နောက် ပင်မဖန်သားပြင်မှ 3fqik ကိုဖွင့်ပါ။",
+  obInstallIosSafariNote:
+    "'Add to Home Screen' သည် Safari တွင်သာ အလုပ်လုပ်သည်။ ဤလင့်ခ်ကို အခြားအက်ပ် (Facebook, Messenger, Chrome…) ထဲမှ ဖွင့်ထားပါက ⋯ သို့မဟုတ် share မီနူးကိုနှိပ်ပြီး 'Open in Safari' ကို ဦးစွာရွေးပါ။",
+  obBackupPrompt: "သို့မဟုတ် ထည့်သွင်းခြင်းမပြုဘဲ ဆက်လက်ဆောင်ရွက်ပါ —",
   obOpenInstalled: "ထည့်သွင်းပြီးနောက် ပင်မဖန်သားပြင်မှ 3fqik ကိုဖွင့်ပါ။",
   obContinueBrowser: "ဘရောက်ဇာတွင် ဆက်လက်သုံးမည်",
   langEnglish: "English",

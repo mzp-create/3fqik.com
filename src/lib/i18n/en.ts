@@ -158,6 +158,12 @@ export const en = {
   obInstallAndroid: "Install app",
   obInstallIosSteps:
     "In Safari: tap the Share icon, then 'Add to Home Screen'.",
+  obInstallIosStep1: "Tap the Share button at the bottom of Safari",
+  obInstallIosStep2: "Scroll down and choose 'Add to Home Screen'.",
+  obInstallIosStep3: "Tap 'Add' — then open 3fqik from your home screen.",
+  obInstallIosSafariNote:
+    "'Add to Home Screen' only works in Safari. If you opened this link inside another app (Facebook, Messenger, Chrome…), tap the ⋯ or share menu and choose 'Open in Safari' first.",
+  obBackupPrompt: "Or continue without installing:",
   obOpenInstalled: "After installing, open 3fqik from your home screen.",
   obContinueBrowser: "Continue in browser",
   langEnglish: "English",

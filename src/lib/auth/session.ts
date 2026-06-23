@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { timingSafeEqual } from "crypto";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 
@@ -64,8 +65,46 @@ export async function clearSessionCookie() {
   (await cookies()).delete(COOKIE);
 }
 
+/**
+ * Constant-time check of an `Authorization: Bearer <token>` header against the
+ * service secret. Pure (no I/O) so it can be unit-tested. Returns false unless
+ * the secret is set, ≥32 chars, and matches exactly.
+ */
+export function bearerMatches(
+  authHeader: string | null | undefined,
+  secret: string | undefined,
+): boolean {
+  if (!secret || secret.length < 32) return false;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return false;
+  const presented = Buffer.from(authHeader.slice("Bearer ".length));
+  const expected = Buffer.from(secret);
+  // Length must match for timingSafeEqual; differing length = no match.
+  if (presented.length !== expected.length) return false;
+  return timingSafeEqual(presented, expected);
+}
+
+/**
+ * Service-account path for the admin MCP server: a request bearing
+ * MCP_ADMIN_TOKEN resolves to the dedicated bot-admin player (by
+ * BOT_ADMIN_PHONE). Returns the player row only if it is role:admin, else null.
+ */
+async function serviceActor() {
+  if (!process.env.MCP_ADMIN_TOKEN || !process.env.BOT_ADMIN_PHONE) return null;
+  const auth = (await headers()).get("authorization");
+  if (!bearerMatches(auth, process.env.MCP_ADMIN_TOKEN)) return null;
+  const db = getDb();
+  const [p] = await db
+    .select()
+    .from(schema.players)
+    .where(eq(schema.players.phone, process.env.BOT_ADMIN_PHONE));
+  return p && p.role === "admin" ? p : null;
+}
+
 /** Returns the player row or null. Epoch mismatch (PIN reset) = invalid. */
 export async function currentPlayer() {
+  // Service bearer (MCP) takes precedence over the session cookie.
+  const svc = await serviceActor();
+  if (svc) return svc;
   const tok = (await cookies()).get(COOKIE)?.value;
   if (!tok) return null;
   const s = await verifySessionToken(tok);

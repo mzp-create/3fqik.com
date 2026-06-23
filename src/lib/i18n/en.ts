@@ -156,6 +156,11 @@ export const en = {
   obInstallWhy:
     "Install 3fqik to your home screen for the full app experience.",
   obInstallAndroid: "Install app",
+  obInstallAndroidStep1: "Tap the menu button at the top-right of Chrome",
+  obInstallAndroidStep2:
+    "Choose 'Install app' (or 'Add to Home screen'), then tap Install.",
+  obInstallAndroidNote:
+    "Installing only works in Chrome. If you opened this link inside another app (Facebook, Messenger…), tap the ⋯ menu and choose 'Open in Chrome' first.",
   obInstallIosSteps:
     "In Safari: tap the Share icon, then 'Add to Home Screen'.",
   obInstallIosStep1: "Tap the Share button at the bottom of Safari",

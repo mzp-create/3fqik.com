@@ -165,6 +165,11 @@ export const mm: Dict = {
   obInstallWhy:
     "အပြည့်အဝ အသုံးပြုနိုင်ရန် 3fqik ကို ပင်မဖန်သားပြင်တွင် ထည့်သွင်းပါ။",
   obInstallAndroid: "အက်ပ်ထည့်မည်",
+  obInstallAndroidStep1: "Chrome ၏ ညာဘက်အပေါ်ထောင့်ရှိ မီနူးခလုတ်ကို နှိပ်ပါ",
+  obInstallAndroidStep2:
+    "'Install app' (သို့မဟုတ် 'Add to Home screen') ကိုရွေးပြီး Install ကိုနှိပ်ပါ။",
+  obInstallAndroidNote:
+    "ထည့်သွင်းခြင်းသည် Chrome တွင်သာ အလုပ်လုပ်သည်။ ဤလင့်ခ်ကို အခြားအက်ပ် (Facebook, Messenger…) ထဲမှ ဖွင့်ထားပါက ⋯ မီနူးကိုနှိပ်ပြီး 'Open in Chrome' ကို ဦးစွာရွေးပါ။",
   obInstallIosSteps:
     "Safari တွင်: Share ကိုနှိပ်ပြီး 'Add to Home Screen' ကိုရွေးပါ။",
   obInstallIosStep1: "Safari အောက်ခြေရှိ Share ခလုတ်ကို နှိပ်ပါ",

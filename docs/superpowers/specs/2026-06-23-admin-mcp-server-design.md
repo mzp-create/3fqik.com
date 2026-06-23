@@ -131,6 +131,25 @@ existing endpoint; no new app endpoints are added (only the auth shim).
    attributed to the bot admin.
 3. End-to-end via hermes-agent on staging; then deploy and point at prod.
 
+## Rehearsal log (2026-06-23)
+
+Built, deployed, and activated on **staging + prod**. Bot-admin `3fqik Bot`
+(phone `6594559552`) — id 4 (staging), id 7 (prod); separate `MCP_ADMIN_TOKEN`
+per env. Verified the bearer path (no/wrong token → 401, valid → 200) and ran a
+full tool rehearsal via a stdio MCP client against staging (33 tools;
+`get_dashboard`, `find_matches`, `post_line` with human units → encoded
+ballQ/priceC + mirror, `set_tier`, and off-grid validation rejection).
+
+**Cleanup:** the staging rehearsal posted test AH lines on matches 9 (GER) and
+10 (NED); both were subsequently **closed** via `close_line`, so neither is
+bettable. O/U lines were untouched. No prod test data was created (prod was
+verified read-only). One-off `seed-bot-admin.ts` / `rehearse.ts` helpers were
+removed after use.
+
+**Audit note:** money actions (settle, void, final/correct score, record-bet,
+player changes, settings) write `audit_log`; line/score posts are attributed via
+the row's `postedBy` instead — both give bot attribution.
+
 ## Scope boundaries
 
 - No new admin endpoints — only the auth shim + the MCP client.

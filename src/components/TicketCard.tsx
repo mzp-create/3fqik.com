@@ -103,7 +103,15 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
         [t.placed, formatMmt(b.placedAt)],
         [t.statusLbl, t[statusKey(b.status)]],
       ];
-      if (ft) rows.splice(5, 0, [t.finalScore, ft]);
+      // Insert the final-score row right before "Placed" (after "Score at bet"),
+      // anchored by label so it survives any future reordering of the rows above.
+      if (ft) {
+        const placedIdx = rows.findIndex(([k]) => k === t.placed);
+        rows.splice(placedIdx === -1 ? rows.length : placedIdx, 0, [
+          t.finalScore,
+          ft,
+        ]);
+      }
       if (hasNet) {
         if (hasFee) {
           // gross net (before fee)

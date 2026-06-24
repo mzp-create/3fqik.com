@@ -10,6 +10,7 @@ import { errMsg } from "@/lib/client/errMsg";
 import {
   todayMmt,
   tomorrowMmt,
+  yesterdayMmt,
   dayLabel,
   stageSection,
 } from "@/lib/client/format";
@@ -17,12 +18,14 @@ import { flag, teamLabel } from "@/lib/client/flags";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
 
 type View = "day" | "group";
+type DateBucket = "previous" | "today" | "tomorrow";
 
 export default function MatchesPage() {
   const { t } = useT();
   const router = useRouter();
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [view, setView] = useState<View>("day");
+  const [dateBucket, setDateBucket] = useState<DateBucket>("today");
   const [error, setError] = useState("");
 
   const reload = () =>
@@ -50,6 +53,13 @@ export default function MatchesPage() {
     };
   }
 
+  const targetDay =
+    dateBucket === "previous"
+      ? yesterdayMmt()
+      : dateBucket === "tomorrow"
+        ? tomorrowMmt()
+        : todayMmt();
+
   return (
     <main className="p-3">
       {/* View toggle */}
@@ -62,6 +72,29 @@ export default function MatchesPage() {
         </TabButton>
       </div>
 
+      {view === "day" && (
+        <div className="mb-4 flex gap-1 rounded-xl bg-surface-2 p-1">
+          <TabButton
+            active={dateBucket === "previous"}
+            onClick={() => setDateBucket("previous")}
+          >
+            {t.previous}
+          </TabButton>
+          <TabButton
+            active={dateBucket === "today"}
+            onClick={() => setDateBucket("today")}
+          >
+            {t.today}
+          </TabButton>
+          <TabButton
+            active={dateBucket === "tomorrow"}
+            onClick={() => setDateBucket("tomorrow")}
+          >
+            {t.tomorrow}
+          </TabButton>
+        </div>
+      )}
+
       <Link
         href="/practice"
         className="mb-4 block rounded-lg border border-gold/30 bg-gold/10 py-2 text-center text-sm font-semibold text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
@@ -72,7 +105,7 @@ export default function MatchesPage() {
       {error && <p className="mt-8 text-center text-ca">{error}</p>}
 
       {view === "day" ? (
-        <ByDay matches={matches} onPick={onPick} t={t} />
+        <ByDay matches={matches} onPick={onPick} t={t} targetDay={targetDay} />
       ) : (
         <ByGroup matches={matches} t={t} />
       )}
@@ -124,17 +157,20 @@ function ByDay({
   matches,
   onPick,
   t,
+  targetDay,
 }: {
   matches: MatchRow[];
   onPick: (
     m: MatchRow,
   ) => (market: "ah" | "ou", side: "fav" | "dog" | "over" | "under") => void;
   t: Dict;
+  targetDay: string;
 }) {
   const today = todayMmt();
   const tomorrow = tomorrowMmt();
+  // Show only the matches for the selected date bucket (Previous/Today/Tomorrow).
   // All statuses share the uniform card; finished matches show as COMPLETED.
-  const board = matches;
+  const board = matches.filter((m) => m.matchDay === targetDay);
 
   const dayGroups = (() => {
     const map = new Map<string, MatchRow[]>();
@@ -147,7 +183,7 @@ function ByDay({
   })();
 
   if (dayGroups.length === 0)
-    return <p className="mt-8 text-center text-faint">{t.noBets}</p>;
+    return <p className="mt-8 text-center text-faint">{t.noMatchesDay}</p>;
 
   return (
     <>

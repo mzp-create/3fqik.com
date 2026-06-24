@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { finalScore } from "./format";
+import { finalScore, yesterdayMmt, todayMmt } from "./format";
 
 describe("finalScore", () => {
   it("returns 'home–away' (en-dash) for a finished match with both scores", () => {
@@ -15,5 +15,16 @@ describe("finalScore", () => {
     expect(finalScore("finished", null, 1)).toBeNull();
     expect(finalScore("finished", 2, null)).toBeNull();
     expect(finalScore("finished", undefined, undefined)).toBeNull();
+  });
+});
+
+describe("yesterdayMmt", () => {
+  it("is formatted YYYY-MM-DD", () => {
+    expect(yesterdayMmt()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+  it("is exactly one day before todayMmt()", () => {
+    const y = new Date(`${yesterdayMmt()}T00:00:00Z`).getTime();
+    const today = new Date(`${todayMmt()}T00:00:00Z`).getTime();
+    expect(today - y).toBe(86_400_000);
   });
 });

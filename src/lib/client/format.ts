@@ -53,6 +53,16 @@ export function tomorrowMmt(): string {
   }).format(new Date(Date.now() + 86400000));
 }
 
+/** Yesterday's date in MMT, formatted YYYY-MM-DD. */
+export function yesterdayMmt(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Yangon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(Date.now() - 86_400_000));
+}
+
 /** Friendly heading for a match day (YYYY-MM-DD) plus a relative tag. */
 export function dayLabel(
   day: string,

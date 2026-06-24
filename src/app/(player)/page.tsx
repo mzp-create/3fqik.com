@@ -133,7 +133,8 @@ function ByDay({
 }) {
   const today = todayMmt();
   const tomorrow = tomorrowMmt();
-  const board = matches.filter((m) => m.status !== "finished");
+  // All statuses share the uniform card; finished matches show as COMPLETED.
+  const board = matches;
 
   const dayGroups = (() => {
     const map = new Map<string, MatchRow[]>();

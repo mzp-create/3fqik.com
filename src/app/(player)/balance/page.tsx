@@ -4,7 +4,7 @@ import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 import { errMsg } from "@/lib/client/errMsg";
 import { statusKey } from "@/lib/client/status";
-import { signedMmk, mmk, pickLabel } from "@/lib/client/format";
+import { signedMmk, mmk, pickLabel, finalScore } from "@/lib/client/format";
 import { teamName } from "@/lib/client/flags";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -23,6 +23,9 @@ type BalanceItem = {
   market: "ah" | "ou";
   homeTeam: string;
   awayTeam: string;
+  finalHomeScore: number | null;
+  finalAwayScore: number | null;
+  matchStatus: "scheduled" | "live" | "finished";
 };
 
 type BalanceDay = {
@@ -156,6 +159,11 @@ export default function BalancePage() {
                   item.side,
                   { over: t.over, under: t.under },
                 );
+                const ft = finalScore(
+                  item.matchStatus,
+                  item.finalHomeScore,
+                  item.finalAwayScore,
+                );
                 const fee = item.feeMmk ?? 0;
                 const effectiveNet = (item.netMmk ?? 0) + fee;
                 return (
@@ -172,6 +180,11 @@ export default function BalancePage() {
                       {teamName(item.homeTeam)} vs {teamName(item.awayTeam)}
                     </div>
                     <div className="text-base text-ink">{pickStr}</div>
+                    {ft && (
+                      <div className="text-sm text-faint">
+                        {t.finished} {ft}
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm text-faint">
                       <span>
                         {t.stake}: {mmk(item.stakeMmk)} MMK

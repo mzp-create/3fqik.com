@@ -12,6 +12,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:create-admin": "tsx scripts/create-admin.ts",
     "db:unlock": "tsx scripts/unlock.ts",
+    "db:fetch-teams": "tsx scripts/fetch-team-wiki.ts",
     "db:setup": "npm run db:migrate && npm run db:seed",
     "db:regrade": "tsx scripts/regrade.ts",
     "db:cutover": "node scripts/migrate-sqlite-to-pg.mjs",

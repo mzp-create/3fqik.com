@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { requirePlayer } from "@/lib/auth/session";
 import { latestLine } from "@/lib/lines/manage";
@@ -21,10 +21,22 @@ export async function GET(
       .from(schema.matches)
       .where(eq(schema.matches.id, id));
     if (!m) return fail("not_found", "match not found");
+    const wikiRows = await db
+      .select()
+      .from(schema.teamWiki)
+      .where(inArray(schema.teamWiki.code, [m.homeTeam, m.awayTeam]));
+    const teamWiki: Record<string, unknown> = {};
+    for (const r of wikiRows) {
+      teamWiki[r.code] = {
+        ...r,
+        recentResults: r.recentResults ? JSON.parse(r.recentResults) : [],
+      };
+    }
     return ok({
       ...m,
       line: await latestLine(db, m.id, "ah"),
       ouLine: await latestLine(db, m.id, "ou"),
+      teamWiki, // keyed by team code; missing team → absent key
     });
   });
 }

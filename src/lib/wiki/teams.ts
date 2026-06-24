@@ -93,3 +93,96 @@ export function parseRecentResults(wikitext: string): ResultRow[] {
   }
   return rows;
 }
+
+const UA = "WorldBet2026/1.0 (match detail)";
+
+export type TeamSummary = {
+  extract: string | null;
+  thumbnailUrl: string | null;
+  articleUrl: string | null;
+};
+
+/** Wikipedia REST summary (clean JSON, follows redirects). */
+export async function fetchTeamSummary(title: string): Promise<TeamSummary> {
+  const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
+    title,
+  )}`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": UA },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`wiki summary ${title}: HTTP ${res.status}`);
+  const j = (await res.json()) as {
+    extract?: string;
+    thumbnail?: { source?: string };
+    content_urls?: { desktop?: { page?: string } };
+  };
+  return {
+    extract: j.extract ?? null,
+    thumbnailUrl: j.thumbnail?.source ?? null,
+    articleUrl: j.content_urls?.desktop?.page ?? null,
+  };
+}
+
+/** Raw article wikitext for infobox + recent-results parsing. */
+export async function fetchTeamWikitext(title: string): Promise<string> {
+  const url = `https://en.wikipedia.org/wiki/${encodeURIComponent(
+    title,
+  )}?action=raw`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": UA },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`wiki raw ${title}: HTTP ${res.status}`);
+  return res.text();
+}
+
+export type TeamWikiRow = {
+  code: string;
+  title: string;
+  extract: string | null;
+  thumbnailUrl: string | null;
+  articleUrl: string | null;
+  fifaRank: number | null;
+  confederation: string | null;
+  coach: string | null;
+  nickname: string | null;
+  recentResults: string | null; // JSON string
+  fetchedAt: string;
+};
+
+/** Compose a cache row for a code: summary + infobox facts + recent results.
+ *  Network failures for the wikitext fall back to nulls/[]; the summary failing
+ *  throws (caller in the script catches and reports). */
+export async function buildTeamWiki(
+  code: string,
+  nowIso: string,
+): Promise<TeamWikiRow | null> {
+  const title = wikiTitle(code);
+  if (!title) return null;
+  const summary = await fetchTeamSummary(title);
+  let facts: TeamFacts = {
+    fifaRank: null,
+    confederation: null,
+    coach: null,
+    nickname: null,
+  };
+  let results: ResultRow[] = [];
+  try {
+    const wikitext = await fetchTeamWikitext(title);
+    facts = parseInfobox(wikitext);
+    results = parseRecentResults(wikitext);
+  } catch {
+    // keep summary; facts/results stay empty (best-effort)
+  }
+  return {
+    code,
+    title,
+    extract: summary.extract,
+    thumbnailUrl: summary.thumbnailUrl,
+    articleUrl: summary.articleUrl,
+    ...facts,
+    recentResults: JSON.stringify(results),
+    fetchedAt: nowIso,
+  };
+}

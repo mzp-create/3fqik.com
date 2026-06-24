@@ -53,6 +53,7 @@ export const mm: Dict = {
   placed: "ထည့်သွင်းသည့်ရက်",
   statusLbl: "အခြေအနေ",
   scoreAtBet: "လောင်းချိန်ဂိုးရလဒ်",
+  finalScore: "နောက်ဆုံးရလဒ်",
   net: "အသားတင်",
   stPending: "စောင့်ဆိုင်းဆဲ",
   stWon: "နိုင်သည်",

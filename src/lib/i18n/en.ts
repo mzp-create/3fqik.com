@@ -48,6 +48,7 @@ export const en = {
   placed: "Placed",
   statusLbl: "Status",
   scoreAtBet: "Score at bet",
+  finalScore: "Final score",
   net: "Net",
   stPending: "PENDING",
   stWon: "WON",

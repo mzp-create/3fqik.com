@@ -197,6 +197,17 @@ export const en = {
   practiceResultPush: "PUSH (practice)",
   practiceNote:
     "This is practice mode to learn the app. No real money is involved.",
+  matchDetails: "Match details",
+  aboutTeam: "About",
+  keyFacts: "Key facts",
+  fifaRank: "FIFA ranking",
+  confederation: "Confederation",
+  coach: "Head coach",
+  nickname: "Nickname",
+  recentForm: "Recent form",
+  readMoreWiki: "Read more on Wikipedia",
+  infoComingSoon: "More info coming soon",
+  formUnavailable: "Recent form unavailable",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

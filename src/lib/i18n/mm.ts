@@ -207,6 +207,17 @@ export const mm: Dict = {
   practiceResultPush: "ညီမျှ (လေ့ကျင့်)",
   practiceNote:
     "ဤသည်မှာ အက်ပ်ကို လေ့လာရန် လေ့ကျင့်မုဒ်ဖြစ်သည်။ ငွေအစစ် မပါဝင်ပါ။",
+  matchDetails: "ပွဲစဉ်အသေးစိတ်",
+  aboutTeam: "အကြောင်း",
+  keyFacts: "အဓိကအချက်များ",
+  fifaRank: "FIFA အဆင့်",
+  confederation: "ကွန်ဖက်ဒရေးရှင်း",
+  coach: "နည်းပြ",
+  nickname: "အမည်ပြောင်",
+  recentForm: "မကြာသေးမီ ဖောင်",
+  readMoreWiki: "Wikipedia တွင် ဆက်ဖတ်ရန်",
+  infoComingSoon: "အချက်အလက် မကြာမီ ထည့်ပါမည်",
+  formUnavailable: "မကြာသေးမီ ဖောင် မရရှိနိုင်ပါ",
 } as const;
 
 /*

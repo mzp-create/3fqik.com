@@ -7,6 +7,21 @@ export const price = (c: number) => (c / 100).toFixed(2);
 export const priceSigned = (c: number) =>
   (c > 0 ? "+" : "−") + (Math.abs(c) / 100).toFixed(2);
 
+/** "2–1" (en-dash) only when the match is finished and both scores are present;
+ *  otherwise null. Caller-agnostic — pass the match status plus the two scores
+ *  from whichever shape the caller has (nested match.* for bets, flat
+ *  matchStatus/finalHomeScore for balance). Used to show a final result line so
+ *  players can cross-reference grading. */
+export function finalScore(
+  status: string | undefined,
+  homeScore: number | null | undefined,
+  awayScore: number | null | undefined,
+): string | null {
+  if (status !== "finished" || homeScore == null || awayScore == null)
+    return null;
+  return `${homeScore}–${awayScore}`;
+}
+
 /** A match is "started" (betting closed) once it is live/finished OR its kickoff
  *  time has passed. Mirrors the server-side placement guard. */
 export function matchStarted(m: {

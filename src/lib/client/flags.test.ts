@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { flag, teamName, teamLabel } from "./flags";
+import { flag, teamName, teamLabel, flagSrc } from "./flags";
 
 describe("flag", () => {
   it("maps FIFA codes to emoji flags", () => {
@@ -35,6 +35,24 @@ describe("teamName / teamLabel", () => {
     for (const code of ["1H", "W73", "XYZ"]) {
       expect(teamName(code)).toBe(code);
       expect(teamLabel(code)).toBe(code);
+    }
+  });
+});
+
+describe("flagSrc", () => {
+  it("maps finalist codes to lowercase iso2 svg paths", () => {
+    expect(flagSrc("MEX")).toBe("/flags/mx.svg");
+    expect(flagSrc("RSA")).toBe("/flags/za.svg"); // South Africa → za
+    expect(flagSrc("SUI")).toBe("/flags/ch.svg"); // Switzerland → ch
+    expect(flagSrc("USA")).toBe("/flags/us.svg");
+  });
+  it("maps England and Scotland to GB regional svgs", () => {
+    expect(flagSrc("ENG")).toBe("/flags/gb-eng.svg");
+    expect(flagSrc("SCO")).toBe("/flags/gb-sct.svg");
+  });
+  it("returns null for knockout placeholders and unknowns", () => {
+    for (const code of ["1H", "W73", "3C/D/F", "XYZ", ""]) {
+      expect(flagSrc(code)).toBeNull();
     }
   });
 });

@@ -66,6 +66,22 @@ export function flag(code: string): string {
     .join("");
 }
 
+// flag-icons uses GB regional SVGs for England/Scotland (no ISO2 of their own).
+const SPECIAL_ISO: Record<string, string> = {
+  ENG: "gb-eng",
+  SCO: "gb-sct",
+};
+
+/** Path to the bundled square SVG (in /public/flags) for a FIFA code, or null
+ *  for bracket placeholders / unknowns (e.g. "W73"). Rendered circular by the
+ *  FlagCircle component. */
+export function flagSrc(code: string): string | null {
+  if (SPECIAL_ISO[code]) return `/flags/${SPECIAL_ISO[code]}.svg`;
+  const iso = FIFA_TO_ISO2[code];
+  if (!iso) return null;
+  return `/flags/${iso.toLowerCase()}.svg`;
+}
+
 // FIFA 3-letter code → full country name, for the 48 WC2026 finalists.
 // Knockout placeholders ("1H", "W73", "3rd-best") have no entry.
 const FIFA_NAME: Record<string, string> = {

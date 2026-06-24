@@ -14,7 +14,8 @@
     "db:setup": "npm run db:migrate && npm run db:seed",
     "db:regrade": "tsx scripts/regrade.ts",
     "db:cutover": "node scripts/migrate-sqlite-to-pg.mjs",
-    "mcp": "tsx mcp/server.ts"
+    "mcp": "tsx mcp/server.ts",
+    "flags:copy": "tsx scripts/copy-flags.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.2",
@@ -42,6 +43,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "flag-icons": "^7.5.0",
     "playwright": "^1.60.0",
     "prettier": "^3.8.4",
     "tailwindcss": "^4",

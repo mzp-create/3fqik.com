@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useT } from "@/lib/i18n";
 import type { Dict } from "@/lib/i18n/en";
 import { ball, priceSigned, matchStarted } from "@/lib/client/format";
@@ -256,25 +257,30 @@ export function MatchCard({
 
   return (
     <div className="mb-2 rounded-xl border border-border bg-surface p-4 shadow-sm">
-      {/* Row 1 — status + stage */}
-      <div className="mb-3 flex items-center justify-between">
-        <StatusChip status={m.status} t={t} />
-        <span className="text-xs font-semibold uppercase tracking-wider text-faint">
-          {m.stage}
-        </span>
-      </div>
-
-      {/* Rows 2–4 — names/codes, flags, score */}
-      <div className="flex items-start gap-2">
-        <TeamColumn code={m.homeTeam} />
-        <div className="flex flex-col items-center self-center px-1">
-          <CenterCell m={m} t={t} />
+      <Link
+        href={`/match/${m.id}`}
+        className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+      >
+        {/* Row 1 — status + stage */}
+        <div className="mb-3 flex items-center justify-between">
+          <StatusChip status={m.status} t={t} />
+          <span className="text-xs font-semibold uppercase tracking-wider text-faint">
+            {m.stage}
+          </span>
         </div>
-        <TeamColumn code={m.awayTeam} />
-      </div>
 
-      {/* Row 5 — schedule */}
-      <p className="mt-3 text-center text-sm text-muted">{schedule}</p>
+        {/* Rows 2–4 — names/codes, flags, score */}
+        <div className="flex items-start gap-2">
+          <TeamColumn code={m.homeTeam} />
+          <div className="flex flex-col items-center self-center px-1">
+            <CenterCell m={m} t={t} />
+          </div>
+          <TeamColumn code={m.awayTeam} />
+        </div>
+
+        {/* Row 5 — schedule */}
+        <p className="mt-3 text-center text-sm text-muted">{schedule}</p>
+      </Link>
 
       {/* Row 6 — action area */}
       <div className="mt-2">{renderAction()}</div>

@@ -11,6 +11,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",
     "db:create-admin": "tsx scripts/create-admin.ts",
+    "db:unlock": "tsx scripts/unlock.ts",
     "db:setup": "npm run db:migrate && npm run db:seed",
     "db:regrade": "tsx scripts/regrade.ts",
     "db:cutover": "node scripts/migrate-sqlite-to-pg.mjs",

@@ -30,7 +30,7 @@ Stack: **Next.js 16** App Router, TypeScript, **Tailwind v4** (dark "Dark Stadiu
 ## Commands
 
 - `npm run dev` — dev server (port 3000) · `npm run build` — prod build (incl. TS check) · `npm run lint` · `npm test` (vitest, ~231 tests)
-- `npm run db:migrate` — apply Drizzle migrations (reads `DATABASE_URL`) · `npm run db:seed` (idempotent) · `npm run db:setup` · `npm run db:create-admin <phone> <pin> <name>`
+- `npm run db:migrate` — apply Drizzle migrations (reads `DATABASE_URL`) · `npm run db:seed` (idempotent) · `npm run db:setup` · `npm run db:create-admin <phone> <pin> <name>` · `npm run db:unlock <phone>` (clears a PIN lockout)
 - **Migrations affect TWO databases**: production `worldbet` (`.env.local`) and staging `worldbet_staging` (`.env.staging`). When a change adds a migration, run `db:migrate` against **both** at deploy (export each `DATABASE_URL`). Latest migration: `drizzle/0005_user_tiers.sql`.
 
 ## Deploy topology (important)

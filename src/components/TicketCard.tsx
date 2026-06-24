@@ -1,6 +1,6 @@
 "use client";
 import { useT } from "@/lib/i18n";
-import { mmk, signedMmk, pickLabel } from "@/lib/client/format";
+import { mmk, signedMmk, pickLabel, finalScore } from "@/lib/client/format";
 import { statusKey } from "@/lib/client/status";
 
 export type TicketRow = {
@@ -21,6 +21,8 @@ export type TicketRow = {
     awayTeam: string;
     stage: string;
     status?: "scheduled" | "live" | "finished";
+    homeScore?: number | null;
+    awayScore?: number | null;
   };
   line: {
     favSide: "home" | "away";
@@ -69,6 +71,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
   const { t } = useT();
   const stamp = stampLabel(b.status);
   const ouLabels = { over: t.over, under: t.under };
+  const ft = finalScore(b.match.status, b.match.homeScore, b.match.awayScore);
 
   async function save() {
     try {
@@ -76,7 +79,8 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
       const fee = b.feeMmk ?? 0;
       const hasFee = hasNet && fee !== 0;
       // No QR: base 360, +40 for net, +72 for fee lines (each extra row +36).
-      const canvasHeight = hasNet ? (hasFee ? 472 : 400) : 360;
+      const canvasHeight =
+        (hasNet ? (hasFee ? 472 : 400) : 360) + (ft ? 36 : 0);
       const canvas = document.createElement("canvas");
       canvas.width = 360;
       canvas.height = canvasHeight;
@@ -99,6 +103,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
         [t.placed, formatMmt(b.placedAt)],
         [t.statusLbl, t[statusKey(b.status)]],
       ];
+      if (ft) rows.splice(5, 0, [t.finalScore, ft]);
       if (hasNet) {
         if (hasFee) {
           // gross net (before fee)
@@ -173,6 +178,7 @@ export function TicketCard({ ticket: b }: { ticket: TicketRow }) {
               k={t.scoreAtBet}
               v={`${b.scoreHomeAtBet}–${b.scoreAwayAtBet}`}
             />
+            {ft && <Row k={t.finalScore} v={ft} />}
             <Row k={t.placed} v={formatMmt(b.placedAt)} />
             <Row k={t.statusLbl} v={t[statusKey(b.status)]} />
             {b.netMmk != null &&

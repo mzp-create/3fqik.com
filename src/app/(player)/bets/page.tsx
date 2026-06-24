@@ -4,7 +4,7 @@ import { api, redirectIfPinChange } from "@/lib/client/api";
 import { useT } from "@/lib/i18n";
 import { errMsg } from "@/lib/client/errMsg";
 import { statusKey } from "@/lib/client/status";
-import { pickLabel } from "@/lib/client/format";
+import { pickLabel, finalScore } from "@/lib/client/format";
 import { teamName } from "@/lib/client/flags";
 import { TicketCard, type TicketRow } from "@/components/TicketCard";
 import { EmptyState } from "@/components/EmptyState";
@@ -75,36 +75,48 @@ export default function BetsPage() {
           ctaHref="/"
         />
       )}
-      {tickets.map((b) => (
-        <button
-          key={b.ticketNo}
-          className="mb-2 w-full rounded-xl border border-border bg-surface p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
-          onClick={() => setSelected(b)}
-        >
-          <div className="flex items-center justify-between">
-            <span className="font-display text-xl font-bold text-ink">
-              {b.ticketNo}
-            </span>
-            <span
-              className={`rounded-full px-3 py-1 text-sm font-bold ${STATUS_COLORS[b.status] ?? "bg-surface-2 text-muted"}`}
-            >
-              {t[statusKey(b.status)]}
-            </span>
-          </div>
-          <div className="mt-1 text-base font-medium text-ink">
-            {teamName(b.match.homeTeam)} vs {teamName(b.match.awayTeam)}
-          </div>
-          <div className="text-base text-muted">
-            {pickLabel(b.line, b.match, b.side, {
-              over: t.over,
-              under: t.under,
-            })}
-          </div>
-          <div className="text-base text-faint">
-            {t.stake}: {b.stakeMmk.toLocaleString("en-US")} MMK
-          </div>
-        </button>
-      ))}
+      {tickets.map((b) => {
+        const ft = finalScore(
+          b.match.status,
+          b.match.homeScore,
+          b.match.awayScore,
+        );
+        return (
+          <button
+            key={b.ticketNo}
+            className="mb-2 w-full rounded-xl border border-border bg-surface p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-us"
+            onClick={() => setSelected(b)}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-display text-xl font-bold text-ink">
+                {b.ticketNo}
+              </span>
+              <span
+                className={`rounded-full px-3 py-1 text-sm font-bold ${STATUS_COLORS[b.status] ?? "bg-surface-2 text-muted"}`}
+              >
+                {t[statusKey(b.status)]}
+              </span>
+            </div>
+            <div className="mt-1 text-base font-medium text-ink">
+              {teamName(b.match.homeTeam)} vs {teamName(b.match.awayTeam)}
+            </div>
+            <div className="text-base text-muted">
+              {pickLabel(b.line, b.match, b.side, {
+                over: t.over,
+                under: t.under,
+              })}
+            </div>
+            {ft && (
+              <div className="text-base text-faint">
+                {t.finished} {ft}
+              </div>
+            )}
+            <div className="text-base text-faint">
+              {t.stake}: {b.stakeMmk.toLocaleString("en-US")} MMK
+            </div>
+          </button>
+        );
+      })}
 
       {selected && (
         <div

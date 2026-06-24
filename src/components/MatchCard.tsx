@@ -114,10 +114,12 @@ function ActionNote({ children }: { children: React.ReactNode }) {
 function MarketTiles({
   line: l,
   labels,
+  subLabels,
   onPick,
 }: {
   line: LineRow;
   labels: { fav: string; dog: string };
+  subLabels: { fav: string; dog: string };
   onPick: (side: "fav" | "dog" | "over" | "under") => void;
 }) {
   const isOu = l.market === "ou";
@@ -135,9 +137,7 @@ function MarketTiles({
         <span className="block pl-2 text-base font-bold uppercase tracking-wider text-ink">
           {labels.fav}
         </span>
-        <span className="block pl-2 text-base text-muted">
-          {isOu ? "Over" : `−${ball(l.ballQ)}`}
-        </span>
+        <span className="block pl-2 text-base text-muted">{subLabels.fav}</span>
         <span className="font-display block pl-2 text-3xl text-mx-neon">
           {priceSigned(l.priceC)}
         </span>
@@ -154,7 +154,7 @@ function MarketTiles({
             {labels.dog}
           </span>
           <span className="block pl-2 text-base text-muted">
-            {isOu ? "Under" : `+${ball(l.ballQ)}`}
+            {subLabels.dog}
           </span>
           <span className="font-display block pl-2 text-3xl text-us-neon">
             {priceSigned(l.priceOppC)}
@@ -214,6 +214,10 @@ export function MatchCard({
             <MarketTiles
               line={{ ...l!, market: "ah" }}
               labels={{ fav: teamName(favLabel), dog: teamName(dogLabel) }}
+              subLabels={{
+                fav: `−${ball(l!.ballQ)}`,
+                dog: `+${ball(l!.ballQ)}`,
+              }}
               onPick={(side) => onPick("ah", side)}
             />
           ))}
@@ -240,6 +244,7 @@ export function MatchCard({
                     fav: `O ${ball(ou!.ballQ)}`,
                     dog: `U ${ball(ou!.ballQ)}`,
                   }}
+                  subLabels={{ fav: t.over, dog: t.under }}
                   onPick={(side) => onPick("ou", side)}
                 />
               ))}

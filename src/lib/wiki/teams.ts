@@ -96,6 +96,24 @@ export function parseRecentResults(wikitext: string): ResultRow[] {
 
 const UA = "WorldBet2026/1.0 (match detail)";
 
+/** GET with a custom UA that retries on HTTP 429 (rate limit) with backoff,
+ *  honoring Retry-After when present. Up to 5 attempts. */
+async function wikiFetch(url: string): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, {
+      headers: { "User-Agent": UA },
+      cache: "no-store",
+    });
+    if (res.status !== 429 || attempt >= 4) return res;
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const waitMs =
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : 1000 * 2 ** attempt; // 1s,2s,4s,8s
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+}
+
 export type TeamSummary = {
   extract: string | null;
   thumbnailUrl: string | null;
@@ -107,10 +125,7 @@ export async function fetchTeamSummary(title: string): Promise<TeamSummary> {
   const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
     title,
   )}`;
-  const res = await fetch(url, {
-    headers: { "User-Agent": UA },
-    cache: "no-store",
-  });
+  const res = await wikiFetch(url);
   if (!res.ok) throw new Error(`wiki summary ${title}: HTTP ${res.status}`);
   const j = (await res.json()) as {
     extract?: string;
@@ -129,10 +144,7 @@ export async function fetchTeamWikitext(title: string): Promise<string> {
   const url = `https://en.wikipedia.org/wiki/${encodeURIComponent(
     title,
   )}?action=raw`;
-  const res = await fetch(url, {
-    headers: { "User-Agent": UA },
-    cache: "no-store",
-  });
+  const res = await wikiFetch(url);
   if (!res.ok) throw new Error(`wiki raw ${title}: HTTP ${res.status}`);
   return res.text();
 }

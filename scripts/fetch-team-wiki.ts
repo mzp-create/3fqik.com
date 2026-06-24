@@ -78,6 +78,7 @@ async function main() {
     } catch (e) {
       failed.push(`${code}: ${e instanceof Error ? e.message : e}`);
     }
+    await new Promise((r) => setTimeout(r, 800));
   }
   console.log(`team_wiki: upserted ${ok}/${CODES.length}`);
   if (noExtract.length) console.log(`  no extract: ${noExtract.join(", ")}`);

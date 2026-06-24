@@ -23,6 +23,7 @@ export async function playerDayItems(db: Db, playerId: number, date: string) {
       scoreAwayAtBet: schema.bets.scoreAwayAtBet,
       finalHomeScore: schema.matches.homeScore,
       finalAwayScore: schema.matches.awayScore,
+      matchStatus: schema.matches.status,
     })
     .from(schema.bets)
     .innerJoin(schema.lines, eq(schema.bets.lineId, schema.lines.id))

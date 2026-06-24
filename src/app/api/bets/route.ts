@@ -100,6 +100,8 @@ export async function GET() {
           awayTeam: schema.matches.awayTeam,
           stage: schema.matches.stage,
           status: schema.matches.status,
+          homeScore: schema.matches.homeScore,
+          awayScore: schema.matches.awayScore,
         },
         line: {
           favSide: schema.lines.favSide,

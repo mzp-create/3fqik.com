@@ -120,6 +120,8 @@ export const mm: Dict = {
   byGroup: "အုပ်စုအလိုက်",
   today: "ယနေ့",
   tomorrow: "မနက်ဖြန်",
+  previous: "ယခင်",
+  noMatchesDay: "ပွဲစဉ်မရှိပါ",
   roundOf32: "Round of 32",
   roundOf16: "Round of 16",
   quarterFinals: "ကွာတားဖိုင်နယ်",

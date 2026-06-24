@@ -113,6 +113,8 @@ export const en = {
   byGroup: "By group",
   today: "Today",
   tomorrow: "Tomorrow",
+  previous: "Previous",
+  noMatchesDay: "No matches",
   roundOf32: "Round of 32",
   roundOf16: "Round of 16",
   quarterFinals: "Quarter-finals",

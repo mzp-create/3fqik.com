@@ -212,3 +212,17 @@ export const auditLog = pgTable("audit_log", {
   detail: text("detail"),
   at: text("at").notNull(),
 });
+
+export const teamWiki = pgTable("team_wiki", {
+  code: text("code").primaryKey(), // FIFA 3-letter code, e.g. "ESP"
+  title: text("title").notNull(), // Wikipedia article title used
+  extract: text("extract"), // intro summary paragraph
+  thumbnailUrl: text("thumbnail_url"), // crest/lead image
+  articleUrl: text("article_url"), // canonical desktop URL
+  fifaRank: integer("fifa_rank"),
+  confederation: text("confederation"),
+  coach: text("coach"),
+  nickname: text("nickname"),
+  recentResults: text("recent_results"), // JSON array of {date,team1,team2,score}
+  fetchedAt: text("fetched_at").notNull(),
+});

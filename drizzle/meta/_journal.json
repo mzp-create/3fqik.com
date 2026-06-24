@@ -43,6 +43,13 @@
       "when": 1781897103930,
       "tag": "0005_user_tiers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782284005837,
+      "tag": "0006_third_purple_man",
+      "breakpoints": true
     }
   ]
 }

@@ -20,7 +20,7 @@ export type Breakdown = {
   scoreLine: string;
   mathLine: string;
   resultLine: string;
-  result: "win" | "push" | "lose";
+  result: "win" | "push" | "lose" | "half-win" | "half-lose";
   net: number;
 };
 
@@ -64,19 +64,20 @@ export function gradeBreakdown(b: BreakdownInput): Breakdown | null {
     }
 
     const net = d.netMmk;
+    const win = d.result === "win" || d.result === "half-win";
+    const half = d.result === "half-win" || d.result === "half-lose";
+    const priceTerm =
+      b.priceC > 0
+        ? `${priceSigned(b.priceC)} × ${mmk(b.stakeMmk)}`
+        : `${mmk(b.stakeMmk)} ÷ ${(Math.abs(b.priceC) / 100).toFixed(2)}`;
     let resultLine: string;
     if (d.result === "push") {
       resultLine = "PUSH — stake refunded";
-    } else if (d.result === "win") {
-      resultLine =
-        b.priceC > 0
-          ? `WON +${mmk(net)} (${priceSigned(b.priceC)} × ${mmk(b.stakeMmk)})`
-          : `WON +${mmk(net)} (full stake)`;
+    } else if (win) {
+      resultLine = `${half ? "HALF-WON" : "WON"} +${mmk(net)} (${priceTerm}${half ? ", half stake" : ""})`;
     } else {
-      resultLine =
-        b.priceC > 0
-          ? `LOST −${mmk(Math.abs(net))} (full stake)`
-          : `LOST −${mmk(Math.abs(net))} (${priceSigned(b.priceC)} × ${mmk(b.stakeMmk)})`;
+      // lose / half-lose: a loss is always the full (leg) stake
+      resultLine = `${half ? "HALF-LOST" : "LOST"} −${mmk(Math.abs(net))} (full ${half ? "half-" : ""}stake)`;
     }
 
     return { scoreLine, mathLine, resultLine, result: d.result, net };

@@ -1,19 +1,15 @@
-// Malay signed-price grading model (replaces the A3 even-money model).
-// A line offers ONE side at a signed price p (−1.00…+1.00, stored ×100).
-// Whole-number lines push (refund) on an exact result. See
-// docs/superpowers/specs/2026-06-18-malay-pricing-model.md.
+// Canonical Malay signed-price grading with Asian-handicap quarter-line splitting.
+// See docs/superpowers/specs/2026-06-26-true-malay-engine-design.md.
 //
-//   AH fav:  win margin>N · push margin=N · lose margin<N   (margin = effFav−effDog)
-//   AH dog:  win margin<N · push margin=N · lose margin>N
-//   OU over: win total>N  · push total=N  · lose total<N    (total = effFav+effDog)
-//   OU under:win total<N  · push total=N  · lose total>N
-//
-//   WIN  → p>0: +p·S   p<0: +S
-//   LOSE → p>0: −S     p<0: −|p|·S
+// Payout per leg (signed price p = priceC ×100; leg stake s):
+//   WIN  → p>0: +(p/100)·s   p<0: +s·100/|p|
+//   LOSE → −s   (full leg stake, both signs)
 //   PUSH → 0
+// A quarter line (ballQ odd) splits into two s = S/2 legs on the two nearest
+// lines. Raw leg nets are summed, then rounded half-away-from-zero ONCE.
 
 export type GradeInput = {
-  ballQ: number; // handicap / goals line ×4, integer 0–40
+  ballQ: number; // line ×4, integer 0–40
   priceC: number; // signed Malay price ×100, integer in [−100,−1] ∪ [1,100]
   stake: number; // MMK, integer > 0
   effFav: number; // favourite's (home's) effective goals for this bet
@@ -28,21 +24,50 @@ export type GradeResult = {
   netMmk: number;
 };
 
+export type LegDetail = {
+  lineGoals: number; // this leg's line N
+  result: "win" | "push" | "lose";
+  net: number; // this leg's raw (un-rounded) net
+};
+
 export type GradeDetail = {
   status: "won" | "push" | "lost";
   netMmk: number;
   market: "ah" | "ou";
-  lineGoals: number; // N
-  value: number; // margin (ah) or total (ou) — the integer compared to N
-  result: "win" | "push" | "lose";
-  priceC: number; // signed price ×100
+  lineGoals: number; // the bet's nominal line N (ballQ/4)
+  value: number; // margin (ah) or total (ou)
+  result: "win" | "push" | "lose" | "half-win" | "half-lose";
+  priceC: number;
+  legs: LegDetail[]; // 1 (whole/half) or 2 (quarter)
 };
 
 function roundHalfAwayFromZero(x: number): number {
   return Math.sign(x) * Math.round(Math.abs(x)) || 0;
 }
 
-/** Shared computation kernel — validates input and computes full detail. */
+function legResultFor(
+  side: "fav" | "dog" | "over" | "under",
+  value: number,
+  N: number,
+): "win" | "push" | "lose" {
+  if (value === N) return "push";
+  const beyond = side === "fav" || side === "over" ? value > N : value < N;
+  return beyond ? "win" : "lose";
+}
+
+function legNetFor(
+  result: "win" | "push" | "lose",
+  priceC: number,
+  legStake: number,
+): number {
+  if (result === "push") return 0;
+  if (result === "lose") return -legStake;
+  // win: positive price pays p·s; negative price pays s/|p| (canonical Malay)
+  return priceC > 0
+    ? (priceC * legStake) / 100
+    : (legStake * 100) / Math.abs(priceC);
+}
+
 function compute(i: GradeInput): GradeDetail {
   if (i.market !== "ah" && i.market !== "ou") throw new Error("invalid market");
   if (i.market === "ah") {
@@ -52,10 +77,8 @@ function compute(i: GradeInput): GradeDetail {
     if (i.side !== "over" && i.side !== "under")
       throw new Error("invalid side for market");
   }
-
   if (!Number.isInteger(i.ballQ) || i.ballQ < 0 || i.ballQ > 40)
     throw new Error("invalid ballQ: must be integer 0–40");
-  // Malay model: signed price, magnitude 1–100, never 0.
   if (
     !Number.isInteger(i.priceC) ||
     i.priceC < -100 ||
@@ -73,39 +96,44 @@ function compute(i: GradeInput): GradeDetail {
   )
     throw new Error("invalid effective score: must be non-negative integers");
 
-  const N = i.ballQ / 4; // line in goals
+  const N = i.ballQ / 4;
+  const value = i.market === "ah" ? i.effFav - i.effDog : i.effFav + i.effDog;
 
-  // `value` is the integer we compare to the line; `beyond` is true when it
-  // clears the line on the bet's winning side.
-  let value: number;
-  let beyond: boolean;
-  if (i.market === "ah") {
-    value = i.effFav - i.effDog; // margin
-    beyond = i.side === "fav" ? value > N : value < N;
+  // Quarter line (ballQ odd) splits into the two nearest lines; whole/half lines
+  // (ballQ even) are a single leg on N.
+  const isQuarter = i.ballQ % 2 === 1;
+  const legLines = isQuarter ? [(i.ballQ - 1) / 4, (i.ballQ + 1) / 4] : [N];
+  const legStake = i.stake / legLines.length;
+
+  const legs: LegDetail[] = legLines.map((Nk) => {
+    const result = legResultFor(i.side, value, Nk);
+    return {
+      lineGoals: Nk,
+      result,
+      net: legNetFor(result, i.priceC, legStake),
+    };
+  });
+
+  const netMmk = roundHalfAwayFromZero(legs.reduce((s, l) => s + l.net, 0));
+
+  const wins = legs.filter((l) => l.result === "win").length;
+  const loses = legs.filter((l) => l.result === "lose").length;
+  const pushes = legs.filter((l) => l.result === "push").length;
+
+  // Adjacent quarter legs differ by 0.5 with an integer `value`, so win+lose can
+  // never co-occur. Status is therefore unambiguous from the leg counts.
+  let status: "won" | "push" | "lost";
+  let result: GradeDetail["result"];
+  if (wins > 0 && loses === 0) {
+    status = "won";
+    result = pushes > 0 ? "half-win" : "win";
+  } else if (loses > 0 && wins === 0) {
+    status = "lost";
+    result = pushes > 0 ? "half-lose" : "lose";
   } else {
-    value = i.effFav + i.effDog; // total
-    beyond = i.side === "over" ? value > N : value < N;
-  }
-  const onLine = value === N; // exact → push (only possible on whole lines)
-
-  let result: "win" | "push" | "lose";
-  let rawNet: number;
-  if (onLine) {
+    status = "push"; // all legs push
     result = "push";
-    rawNet = 0;
-  } else if (beyond) {
-    result = "win";
-    // p>0 → +p·S ; p<0 → +S
-    rawNet = i.priceC > 0 ? (i.priceC * i.stake) / 100 : i.stake;
-  } else {
-    result = "lose";
-    // p>0 → −S ; p<0 → −|p|·S  (priceC<0 makes the product negative)
-    rawNet = i.priceC > 0 ? -i.stake : (i.priceC * i.stake) / 100;
   }
-
-  const netMmk = roundHalfAwayFromZero(rawNet);
-  const status: "won" | "push" | "lost" =
-    result === "push" ? "push" : result === "win" ? "won" : "lost";
 
   return {
     status,
@@ -115,6 +143,7 @@ function compute(i: GradeInput): GradeDetail {
     value,
     result,
     priceC: i.priceC,
+    legs,
   };
 }
 

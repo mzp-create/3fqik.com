@@ -130,8 +130,22 @@ lives only in `gradeDetail`/displays, not in the `bets.status` enum.
    `settleMatch.gradeMatchTickets` (corrected engine), then re-close/re-settle days
    exactly as the normal flow does.
 5. Print a per-player old-vs-new net summary for eyeballing.
+6. **Emit a machine-readable dump** (`scripts/out/regrade-bets.json`, gitignored) of
+   every bet with its full grade result, for the Excel export below.
 
 Destructive → **backup first; run on staging first, then prod.**
+
+### Excel export of all bets + grade results
+
+After the engine + regrade are done, produce `docs/out/regrade-bets.xlsx` from the
+JSON dump (via the xlsx skill). One row per bet, columns:
+
+`ticketNo · player · match (home–away) · final score · market · side · line (ball,
+N) · price (signed Malay) · stake · leg breakdown (each leg's line/result/net) ·
+old net · new net · Δ · status (won/lost/push, flagged half-win/half-loss)`.
+
+This is the owner's verification artifact for the re-grade — it is the
+acceptance gate before running on production.
 
 ## Test impact (the bulk of the work)
 

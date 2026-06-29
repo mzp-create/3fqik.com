@@ -24,9 +24,11 @@ export type GradeResult = {
   netMmk: number;
 };
 
+export type LegResult = "win" | "push" | "lose";
+
 export type LegDetail = {
   lineGoals: number; // this leg's line N
-  result: "win" | "push" | "lose";
+  result: LegResult;
   net: number; // this leg's raw (un-rounded) net
 };
 
@@ -49,14 +51,14 @@ function legResultFor(
   side: "fav" | "dog" | "over" | "under",
   value: number,
   N: number,
-): "win" | "push" | "lose" {
+): LegResult {
   if (value === N) return "push";
   const beyond = side === "fav" || side === "over" ? value > N : value < N;
   return beyond ? "win" : "lose";
 }
 
 function legNetFor(
-  result: "win" | "push" | "lose",
+  result: LegResult,
   priceC: number,
   legStake: number,
 ): number {
@@ -130,9 +132,13 @@ function compute(i: GradeInput): GradeDetail {
   } else if (loses > 0 && wins === 0) {
     status = "lost";
     result = pushes > 0 ? "half-lose" : "lose";
-  } else {
-    status = "push"; // all legs push
+  } else if (pushes === legs.length) {
+    status = "push"; // every leg pushed
     result = "push";
+  } else {
+    // Unreachable: adjacent quarter legs differ by 0.5 vs an integer value, so a
+    // win+lose mix can't occur. Fail loud rather than silently divergent.
+    throw new Error("grade: inconsistent leg results (win+lose mix)");
   }
 
   return {

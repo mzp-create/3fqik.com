@@ -153,29 +153,50 @@ export function winNeed(opts: {
   favName: string;
   dogName: string;
   live: boolean;
-}): { text: string; push?: string } {
+}): { text: string; push?: string; half?: string } {
   const { market, side, ballQ, favName, dogName, live } = opts;
   const N = ballQ / 4;
   const whole = ballQ % 4 === 0;
+  const quarter = ballQ % 2 === 1;
   const from = live ? " from now" : "";
-  const pushGoals = whole
-    ? `exactly ${N} goal${N === 1 ? "" : "s"}${from} — stake back`
-    : undefined;
+  // Leg lines: a quarter splits into the two nearest lines; the integer one is
+  // where a leg can push (→ a half outcome). The non-integer leg never pushes.
+  const legs = quarter ? [(ballQ - 1) / 4, (ballQ + 1) / 4] : [N];
+  const intLeg = legs.find((l) => Number.isInteger(l));
 
   if (market === "ou") {
     if (side === "over") {
-      const min = whole ? N + 1 : Math.floor(N) + 1;
-      return { text: `${min} or more goals${from}`, push: pushGoals };
+      const hi = Math.max(...legs);
+      const min = Math.floor(hi) + 1; // smallest integer total > the farther leg
+      const push = whole
+        ? `exactly ${N} goal${N === 1 ? "" : "s"}${from} — stake back`
+        : undefined;
+      // over half: total === intLeg. Upper int leg (N=k.75) → half-win; lower (N=k.25) → half-loss.
+      const half =
+        quarter && intLeg !== undefined
+          ? `exactly ${intLeg} goal${intLeg === 1 ? "" : "s"}${from} — ${intLeg === Math.max(...legs) ? "half win" : "half loss"}`
+          : undefined;
+      return { text: `${min} or more goals${from}`, push, half };
     }
-    const max = whole ? N - 1 : Math.floor(N);
+    // under
+    const lo = Math.min(...legs);
+    const max = Math.ceil(lo) - 1; // largest integer total < the nearer leg
+    const push = whole
+      ? `exactly ${N} goal${N === 1 ? "" : "s"}${from} — stake back`
+      : undefined;
+    // under half: total === intLeg. Lower int leg (N=k.25) → half-win; upper (N=k.75) → half-loss.
+    const half =
+      quarter && intLeg !== undefined
+        ? `exactly ${intLeg} goal${intLeg === 1 ? "" : "s"}${from} — ${intLeg === Math.min(...legs) ? "half win" : "half loss"}`
+        : undefined;
     return {
       text: max <= 0 ? `no goals${from}` : `${max} or fewer goals${from}`,
-      push: pushGoals,
+      push,
+      half,
     };
   }
 
-  // Asian handicap. Push (whole lines) happens when the favourite wins by
-  // exactly N — phrase the stake-back note in those terms.
+  // Asian handicap.
   const pushAh =
     whole && N >= 1
       ? `${favName} ${live ? `outscores ${dogName}` : "wins"} by exactly ${N}${from} — stake back`
@@ -184,17 +205,28 @@ export function winNeed(opts: {
         : undefined;
 
   if (side === "fav") {
-    const by = whole ? N + 1 : Math.floor(N) + 1; // smallest integer margin > N
+    const hi = Math.max(...legs);
+    const by = Math.floor(hi) + 1; // smallest integer margin clearing the farther leg
     const verb = live ? `outscores ${dogName}` : "wins";
     const text =
       by <= 1
         ? `${favName} ${verb}${from}`
         : `${favName} ${verb} by ${by}+${from}`;
-    return { text, push: pushAh };
+    // fav half: margin === intLeg. Upper int leg (N=k.75) → half-win; lower (N=k.25, incl 0) → half-loss.
+    let half: string | undefined;
+    if (quarter && intLeg !== undefined) {
+      const kind = intLeg === Math.max(...legs) ? "half win" : "half loss";
+      half =
+        intLeg === 0
+          ? `a draw${from} — ${kind}`
+          : `${favName} ${verb} by exactly ${intLeg}${from} — ${kind}`;
+    }
+    return { text, push: pushAh, half };
   }
 
-  // dog: wins when margin < N → favourite's margin is at most `maxMargin`.
-  const maxMargin = whole ? N - 1 : Math.floor(N);
+  // dog: wins when margin < N.
+  const lo = Math.min(...legs);
+  const maxMargin = Math.ceil(lo) - 1; // largest integer margin strictly below the nearer leg
   let text: string;
   if (maxMargin < 0) {
     text = live ? `${dogName} outscores ${favName}${from}` : `${dogName} wins`;
@@ -207,7 +239,16 @@ export function winNeed(opts: {
       ? `${dogName} not outscored by ${maxMargin + 1}+${from}`
       : `${dogName} wins, draws, or loses by ${maxMargin}`;
   }
-  return { text, push: pushAh };
+  // dog half: margin === intLeg. Lower int leg (N=k.25) → half-win; upper (N=k.75) → half-loss.
+  let half: string | undefined;
+  if (quarter && intLeg !== undefined) {
+    const kind = intLeg === Math.min(...legs) ? "half win" : "half loss";
+    half =
+      intLeg === 0
+        ? `a draw${from} — ${kind}`
+        : `${favName} ${live ? `outscores ${dogName}` : "wins"} by exactly ${intLeg}${from} — ${kind}`;
+  }
+  return { text, push: pushAh, half };
 }
 
 export function pickLabel(

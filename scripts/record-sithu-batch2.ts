@@ -130,7 +130,7 @@ async function main() {
     let lineId = line.id;
     let priceC = line.priceC;
 
-    if (b.side !== line.offeredSide) {
+    if (b.side !== (b.market === "ah" ? "fav" : "over")) {
       // Flipped side — historical line at the flipped price, then re-post offered.
       priceC = -line.priceC;
       const version = line.version + 1;
@@ -149,7 +149,6 @@ async function main() {
             market: b.market,
             version,
             favSide: line.favSide,
-            offeredSide: b.side,
             ballQ: line.ballQ,
             priceC,
             status: "closed",
@@ -178,7 +177,7 @@ async function main() {
         status: "pending",
       });
 
-    if (b.side !== line.offeredSide && !dry) {
+    if (b.side !== (b.market === "ah" ? "fav" : "over") && !dry) {
       // restore the offered line as the active latest version
       await postLine(
         db,

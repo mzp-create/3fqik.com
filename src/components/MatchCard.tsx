@@ -10,7 +10,6 @@ export type LineRow = {
   id: number;
   version: number;
   favSide: "home" | "away";
-  offeredSide: "fav" | "dog" | "over" | "under";
   ballQ: number;
   priceC: number; // primary side (fav/over)
   priceOppC: number | null; // opposite side (dog/under)

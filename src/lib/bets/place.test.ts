@@ -870,7 +870,6 @@ it("two-sided: fav snapshots priceC, dog snapshots priceOppC; unpriced side reje
       market: "ah",
       version: 1,
       favSide: "home",
-      offeredSide: "fav",
       ballQ: 3,
       priceC: 92,
       priceOppC: null,

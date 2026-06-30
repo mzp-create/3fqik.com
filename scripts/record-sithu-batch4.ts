@@ -24,17 +24,83 @@ type Bet = {
 };
 
 const BETS: Bet[] = [
-  { label: "Ghana: level 0 (fav)", matchId: 23, market: "ah", side: "fav", stake: 400_000 },
-  { label: "England: Under 2", matchId: 22, market: "ou", side: "under", stake: 400_000 },
-  { label: "Portugal: -2 (fav)", matchId: 21, market: "ah", side: "fav", stake: 400_000 },
-  { label: "Portugal: Congo +2 (dog)", matchId: 21, market: "ah", side: "dog", stake: 1_000_000 },
-  { label: "Portugal: Under 3", matchId: 21, market: "ou", side: "under", stake: 1_000_000 },
-  { label: "England: Croatia +1 (dog)", matchId: 22, market: "ah", side: "dog", stake: 1_000_000 },
-  { label: "England: Under 2", matchId: 22, market: "ou", side: "under", stake: 1_000_000 },
-  { label: "Ghana: Panama level 0 (dog)", matchId: 23, market: "ah", side: "dog", stake: 1_000_000 },
-  { label: "Ghana: Under 2", matchId: 23, market: "ou", side: "under", stake: 1_000_000 },
-  { label: "Colombia: Uzbekistan +1 (dog)", matchId: 24, market: "ah", side: "dog", stake: 3_000_000 },
-  { label: "Colombia: Under 2", matchId: 24, market: "ou", side: "under", stake: 1_000_000 },
+  {
+    label: "Ghana: level 0 (fav)",
+    matchId: 23,
+    market: "ah",
+    side: "fav",
+    stake: 400_000,
+  },
+  {
+    label: "England: Under 2",
+    matchId: 22,
+    market: "ou",
+    side: "under",
+    stake: 400_000,
+  },
+  {
+    label: "Portugal: -2 (fav)",
+    matchId: 21,
+    market: "ah",
+    side: "fav",
+    stake: 400_000,
+  },
+  {
+    label: "Portugal: Congo +2 (dog)",
+    matchId: 21,
+    market: "ah",
+    side: "dog",
+    stake: 1_000_000,
+  },
+  {
+    label: "Portugal: Under 3",
+    matchId: 21,
+    market: "ou",
+    side: "under",
+    stake: 1_000_000,
+  },
+  {
+    label: "England: Croatia +1 (dog)",
+    matchId: 22,
+    market: "ah",
+    side: "dog",
+    stake: 1_000_000,
+  },
+  {
+    label: "England: Under 2",
+    matchId: 22,
+    market: "ou",
+    side: "under",
+    stake: 1_000_000,
+  },
+  {
+    label: "Ghana: Panama level 0 (dog)",
+    matchId: 23,
+    market: "ah",
+    side: "dog",
+    stake: 1_000_000,
+  },
+  {
+    label: "Ghana: Under 2",
+    matchId: 23,
+    market: "ou",
+    side: "under",
+    stake: 1_000_000,
+  },
+  {
+    label: "Colombia: Uzbekistan +1 (dog)",
+    matchId: 24,
+    market: "ah",
+    side: "dog",
+    stake: 3_000_000,
+  },
+  {
+    label: "Colombia: Under 2",
+    matchId: 24,
+    market: "ou",
+    side: "under",
+    stake: 1_000_000,
+  },
 ];
 
 async function main() {
@@ -78,7 +144,7 @@ async function main() {
     let lineId = line.id;
     let priceC = line.priceC;
 
-    if (b.side !== line.offeredSide) {
+    if (b.side !== (b.market === "ah" ? "fav" : "over")) {
       // Flipped side — historical line at the flipped price, then re-post offered.
       priceC = -line.priceC;
       const version = line.version + 1;
@@ -97,7 +163,6 @@ async function main() {
             market: b.market,
             version,
             favSide: line.favSide,
-            offeredSide: b.side,
             ballQ: line.ballQ,
             priceC,
             status: "closed",
@@ -126,7 +191,7 @@ async function main() {
         status: "pending",
       });
 
-    if (b.side !== line.offeredSide && !dry) {
+    if (b.side !== (b.market === "ah" ? "fav" : "over") && !dry) {
       // restore the offered line as the active latest version
       await postLine(
         db,

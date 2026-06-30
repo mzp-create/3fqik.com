@@ -126,7 +126,6 @@ async function main() {
             market: b.market,
             version,
             favSide: b.favSide,
-            offeredSide: b.side,
             ballQ: b.ballQ,
             priceC: b.priceC,
             status: "closed",

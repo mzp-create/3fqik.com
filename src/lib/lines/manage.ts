@@ -105,9 +105,6 @@ export async function postLine(
         market: input.market,
         version: (prev?.version ?? 0) + 1,
         favSide: input.favSide,
-        // Vestigial: both sides are now offered. Kept to satisfy the NOT NULL
-        // column; no longer read by placement/grading/display.
-        offeredSide: input.market === "ah" ? "fav" : "over",
         ballQ: input.ballQ,
         priceC: input.priceC,
         priceOppC,

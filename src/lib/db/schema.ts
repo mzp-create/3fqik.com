@@ -89,12 +89,6 @@ export const lines = pgTable(
       .default("ah"),
     version: integer("version").notNull(),
     favSide: text("fav_side", { enum: ["home", "away"] }).notNull(),
-    // The single side this line offers for betting (Malay one-sided lines).
-    offeredSide: text("offered_side", {
-      enum: ["fav", "dog", "over", "under"],
-    })
-      .notNull()
-      .default("fav"),
     ballQ: integer("ball_q").notNull(), // ball ×4, ≥ 0
     priceC: integer("price_c").notNull(), // signed Malay price ×100 for the primary side (fav/over)
     // Two-sided lines: signed Malay price ×100 for the opposite side (dog/under).

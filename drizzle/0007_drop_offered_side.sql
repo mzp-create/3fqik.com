@@ -1,0 +1,1 @@
+ALTER TABLE "lines" DROP COLUMN "offered_side";

@@ -53,3 +53,4 @@ backups/
 *.dump
 # Private betting ledger / spreadsheets — never commit
 *.xlsx
+scripts/out/

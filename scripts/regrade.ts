@@ -36,23 +36,6 @@ async function main() {
   const commissionPct = settingsRow?.commissionPct ?? 3;
   const discountPct = settingsRow?.discountPct ?? 2;
 
-  // ── 1+2: wipe settlement effects ──
-  if (!dryRun) {
-    await db
-      .update(schema.bets)
-      .set({ settlementId: null })
-      .where(isNotNull(schema.bets.settlementId));
-    await db.delete(schema.settlements);
-    await db
-      .update(schema.matchDays)
-      .set({ status: "closed" })
-      .where(eq(schema.matchDays.status, "settled"));
-  }
-
-  const finished = await db
-    .select()
-    .from(schema.matches)
-    .where(eq(schema.matches.status, "finished"));
   const players = await db
     .select({ id: schema.players.id, name: schema.players.displayName })
     .from(schema.players);
@@ -62,84 +45,108 @@ async function main() {
   const dump: Record<string, unknown>[] = [];
   let regraded = 0;
 
-  for (const match of finished) {
-    const finalHome = match.homeScore!;
-    const finalAway = match.awayScore!;
-    const linesRows = await db
-      .select()
-      .from(schema.lines)
-      .where(eq(schema.lines.matchId, match.id));
-    const lines = new Map(linesRows.map((l) => [l.id, l]));
-    const bets = await db
-      .select()
-      .from(schema.bets)
-      .where(
-        and(eq(schema.bets.matchId, match.id), ne(schema.bets.status, "void")),
-      );
-
-    for (const bet of bets) {
-      const line = lines.get(bet.lineId);
-      if (!line) {
-        console.warn(`SKIP ${bet.ticketNo}: line ${bet.lineId} missing`);
-        continue;
-      }
-      const effHome = Math.max(finalHome - bet.scoreHomeAtBet, 0);
-      const effAway = Math.max(finalAway - bet.scoreAwayAtBet, 0);
-      const effFav = line.favSide === "home" ? effHome : effAway;
-      const effDog = line.favSide === "home" ? effAway : effHome;
-
-      const d = gradeDetail({
-        market: line.market,
-        side: bet.side,
-        ballQ: line.ballQ,
-        priceC: bet.priceC ?? line.priceC, // snapshot price; fall back for legacy rows
-        stake: bet.stakeMmk,
-        effFav,
-        effDog,
-      } as GradeInput);
-      const newFee = computeFee(d.netMmk, commissionPct, discountPct);
-
-      const oldEff = (bet.netMmk ?? 0) + (bet.feeMmk ?? 0);
-      const newEff = d.netMmk + newFee;
-      const cur = byPlayer.get(bet.playerId) ?? { old: 0, neu: 0, n: 0 };
-      cur.old += oldEff;
-      cur.neu += newEff;
-      cur.n += 1;
-      byPlayer.set(bet.playerId, cur);
-
-      dump.push({
-        ticketNo: bet.ticketNo,
-        player: nameOf.get(bet.playerId) ?? bet.playerId,
-        match: `${match.homeTeam} v ${match.awayTeam}`,
-        finalScore: `${finalHome}-${finalAway}`,
-        market: line.market,
-        side: bet.side,
-        ballQ: line.ballQ,
-        lineGoals: d.lineGoals,
-        priceC: bet.priceC ?? line.priceC,
-        stakeMmk: bet.stakeMmk,
-        legs: d.legs,
-        result: d.result,
-        status: d.status,
-        oldNet: bet.netMmk ?? 0,
-        newNet: d.netMmk,
-        newFee,
-        deltaEff: newEff - oldEff,
-      });
-
-      if (!dryRun)
-        await db
-          .update(schema.bets)
-          .set({
-            status: d.status,
-            netMmk: d.netMmk,
-            feeMmk: newFee,
-            settledAt: null,
-          })
-          .where(eq(schema.bets.id, bet.id));
-      regraded++;
+  await db.transaction(async (tx) => {
+    // ── 1+2: wipe settlement effects ──
+    if (!dryRun) {
+      await tx
+        .update(schema.bets)
+        .set({ settlementId: null })
+        .where(isNotNull(schema.bets.settlementId));
+      await tx.delete(schema.settlements);
+      await tx
+        .update(schema.matchDays)
+        .set({ status: "closed" })
+        .where(eq(schema.matchDays.status, "settled"));
     }
-  }
+
+    const finished = await tx
+      .select()
+      .from(schema.matches)
+      .where(eq(schema.matches.status, "finished"));
+
+    for (const match of finished) {
+      const finalHome = match.homeScore!;
+      const finalAway = match.awayScore!;
+      const linesRows = await tx
+        .select()
+        .from(schema.lines)
+        .where(eq(schema.lines.matchId, match.id));
+      const lines = new Map(linesRows.map((l) => [l.id, l]));
+      const bets = await tx
+        .select()
+        .from(schema.bets)
+        .where(
+          and(
+            eq(schema.bets.matchId, match.id),
+            ne(schema.bets.status, "void"),
+          ),
+        );
+
+      for (const bet of bets) {
+        const line = lines.get(bet.lineId);
+        if (!line) {
+          console.warn(`SKIP ${bet.ticketNo}: line ${bet.lineId} missing`);
+          continue;
+        }
+        const effHome = Math.max(finalHome - bet.scoreHomeAtBet, 0);
+        const effAway = Math.max(finalAway - bet.scoreAwayAtBet, 0);
+        const effFav = line.favSide === "home" ? effHome : effAway;
+        const effDog = line.favSide === "home" ? effAway : effHome;
+
+        const d = gradeDetail({
+          market: line.market,
+          side: bet.side,
+          ballQ: line.ballQ,
+          priceC: bet.priceC ?? line.priceC, // snapshot price; fall back for legacy rows
+          stake: bet.stakeMmk,
+          effFav,
+          effDog,
+        } as GradeInput);
+        const newFee = computeFee(d.netMmk, commissionPct, discountPct);
+
+        const oldEff = (bet.netMmk ?? 0) + (bet.feeMmk ?? 0);
+        const newEff = d.netMmk + newFee;
+        const cur = byPlayer.get(bet.playerId) ?? { old: 0, neu: 0, n: 0 };
+        cur.old += oldEff;
+        cur.neu += newEff;
+        cur.n += 1;
+        byPlayer.set(bet.playerId, cur);
+
+        dump.push({
+          ticketNo: bet.ticketNo,
+          player: nameOf.get(bet.playerId) ?? bet.playerId,
+          match: `${match.homeTeam} v ${match.awayTeam}`,
+          finalScore: `${finalHome}-${finalAway}`,
+          market: line.market,
+          side: bet.side,
+          ballQ: line.ballQ,
+          lineGoals: d.lineGoals,
+          priceC: bet.priceC ?? line.priceC,
+          stakeMmk: bet.stakeMmk,
+          legs: d.legs,
+          result: d.result,
+          status: d.status,
+          oldNet: bet.netMmk ?? 0,
+          oldFee: bet.feeMmk ?? 0,
+          newNet: d.netMmk,
+          newFee,
+          deltaEff: newEff - oldEff,
+        });
+
+        if (!dryRun)
+          await tx
+            .update(schema.bets)
+            .set({
+              status: d.status,
+              netMmk: d.netMmk,
+              feeMmk: newFee,
+              settledAt: null,
+            })
+            .where(eq(schema.bets.id, bet.id));
+        regraded++;
+      }
+    }
+  });
 
   mkdirSync("scripts/out", { recursive: true });
   writeFileSync("scripts/out/regrade-bets.json", JSON.stringify(dump, null, 2));

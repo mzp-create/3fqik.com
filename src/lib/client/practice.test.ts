@@ -19,9 +19,11 @@ const favBet = {
 >;
 
 it("resolveDemo grades a demo bet via the real engine (home fav wins 2-1)", () => {
+  // ballQ 3 (0.75) quarter splits [0.5,1.0] at margin 1: leg0.5 win +46,000,
+  // leg1.0 push (==1) 0 → half-win +46,000.
   const r = resolveDemo(favBet, 2, 1);
   expect(r.status).toBe("won");
-  expect(r.netMmk).toBe(92_000);
+  expect(r.netMmk).toBe(46_000);
 });
 it("resolveDemo: home fav loses 0-1 → lost, net -100,000", () => {
   const r = resolveDemo(favBet, 0, 1);

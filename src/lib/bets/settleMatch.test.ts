@@ -94,8 +94,9 @@ async function bet(matchId: number, side: "fav" | "dog", stake: number) {
 it("grades all pending tickets; closes the day when last match graded", async () => {
   const b1 = await bet(1, "fav", 100_000); // BRA -0.75 @ +0.92
   const b2 = await bet(2, "dog", 200_000); // JPN +0.75 @ +0.92
-  // Malay: BRA 2-1 → effFav=2,effDog=1 → margin=1 > N=0.75 → fav WIN.
-  //        priceC=+92 → +0.92×100k = +92,000
+  // Malay: BRA 2-1 → effFav=2,effDog=1 → margin=1. Quarter line 0.75 splits
+  //        into legs [0.5,1.0]: leg0.5 win +0.92×50k=+46,000, leg1.0 push (==1) 0
+  //        → half-win +46,000.
   await confirmFinalScore(db, 1, 1, 2, 1, NOW);
   let day = (await db.select().from(schema.matchDays))[0];
   expect(day.status).toBe("open"); // match 2 not graded yet
@@ -104,7 +105,7 @@ it("grades all pending tickets; closes the day when last match graded", async ()
     .from(schema.bets)
     .where(eq(schema.bets.id, b1.id));
   expect(g1.status).toBe("won");
-  expect(g1.netMmk).toBe(92_000);
+  expect(g1.netMmk).toBe(46_000);
 
   // Malay: draw 0-0 → effFav=0,effDog=0 → margin=0 < N=0.75 → dog WIN.
   //        priceC=+92 → +0.92×200k = +184,000
@@ -473,9 +474,10 @@ it("both markets graded correctly: ah fav, ou over live at 1-0, ou under", async
     .from(schema.bets)
     .where(eq(schema.bets.id, betC.id));
 
-  // Bet A: AH fav pre-match → margin 1>0.75 → WIN, +0.92×100k = +92,000
+  // Bet A: AH fav pre-match → margin 1, quarter 0.75 splits [0.5,1.0]:
+  //        leg0.5 win +0.92×50k=+46,000, leg1.0 push (==1) 0 → half-win +46,000
   expect(gA.status).toBe("won");
-  expect(gA.netMmk).toBe(92_000);
+  expect(gA.netMmk).toBe(46_000);
 
   // Bet B: OU over live at 1-0 → total 2<2.5 → LOSE, priceC>0 → −S = −200,000
   expect(gB.status).toBe("lost");
@@ -546,7 +548,8 @@ it("two-sided line: fav and dog grade from their own snapshot prices", async () 
   // fav: priceC=+92 → +0.92×100k = +92,000
   expect(gFav.status).toBe("won");
   expect(gFav.netMmk).toBe(92_000);
-  // dog: priceOppC=−98 → lose, p<0 → −0.98×100k = −98,000
+  // dog: lose → canonical loss is always full stake −S = −100,000
+  //      (price only affects wins; fee/discount applied separately by accounting)
   expect(gDog.status).toBe("lost");
-  expect(gDog.netMmk).toBe(-98_000);
+  expect(gDog.netMmk).toBe(-100_000);
 });
